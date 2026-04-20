@@ -3,68 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SkyView: GPS + Brújula Automática</title>
+    <title>SkyView: Interfaz Minimalista & Raycasting</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #0b0c10; color: #fff; font-family: 'Segoe UI', Tahoma, sans-serif; text-align: center; }
+        :root { --bg-dark: #0a0a0c; --accent: #ffffff; --text-muted: #888888; }
+        body { margin: 0; overflow: hidden; background: var(--bg-dark); color: var(--accent); font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; }
+        
         #canvas-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
-        #ui-layer { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(11, 12, 16, 0.95); z-index: 10; padding: 20px; transition: opacity 0.5s; }
-        h1 { color: #66fcf1; }
-        .instruccion { font-size: 1.1rem; margin: 20px 0; max-width: 320px; color: #c5c6c7; line-height: 1.5; }
-        button { background: #45a29e; color: #fff; border: none; padding: 15px 30px; font-size: 1.1rem; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(69, 162, 158, 0.4); }
-        button:active { transform: scale(0.95); }
-        .crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 20px; height: 20px; border: 2px solid rgba(102,252,241,0.5); border-radius: 50%; z-index: 5; }
+        
+        /* Pantalla de Carga Sobria */
+        #ui-layer { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; background: var(--bg-dark); z-index: 20; transition: opacity 0.4s ease; }
+        .title-flat { font-size: 24px; font-weight: 600; letter-spacing: -0.5px; margin-bottom: 8px; }
+        .subtitle-flat { font-size: 14px; color: var(--text-muted); margin-bottom: 32px; text-transform: uppercase; letter-spacing: 1px; }
+        button { background: var(--accent); color: var(--bg-dark); border: none; padding: 16px 32px; font-size: 14px; font-weight: 600; border-radius: 4px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: transform 0.1s; }
+        button:active { transform: scale(0.98); }
+
+        /* HUD Minimalista */
+        .crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; z-index: 5; pointer-events: none; }
+        .crosshair::before, .crosshair::after { content: ''; position: absolute; background: rgba(255,255,255,0.4); }
+        .crosshair::before { top: 11px; left: -8px; width: 40px; height: 2px; }
+        .crosshair::after { top: -8px; left: 11px; width: 2px; height: 40px; }
+
+        /* Etiqueta Flotante de Información */
+        #target-hud { position: absolute; top: 20%; left: 50%; transform: translateX(-50%); text-align: center; z-index: 10; opacity: 0; transition: opacity 0.2s ease; pointer-events: none; }
+        .pill { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); padding: 8px 24px; border-radius: 50px; font-size: 20px; font-weight: 600; letter-spacing: 1px; }
+        .target-type { display: block; font-size: 10px; text-transform: uppercase; color: var(--text-muted); margin-top: 6px; letter-spacing: 2px; }
+
+        #sys-info { position: absolute; bottom: 24px; left: 24px; font-size: 10px; color: var(--text-muted); z-index: 5; font-family: monospace; text-transform: uppercase; letter-spacing: 1px; }
         .oculto { opacity: 0; pointer-events: none; }
-        #info-panel { position: absolute; bottom: 20px; left: 20px; text-align: left; z-index: 5; font-size: 12px; color: #66fcf1; pointer-events: none; text-shadow: 1px 1px 2px black; line-height: 1.6; }
     </style>
 </head>
 <body>
 
     <div class="crosshair" id="mira" style="display: none;"></div>
-    <div id="canvas-container"></div>
-    <div id="info-panel" class="oculto">
-        <span id="txt-gps">Buscando GPS...</span><br>
-        <span id="txt-brujula">Brújula: Desconectada</span>
+    
+    <div id="target-hud">
+        <div class="pill" id="target-name">--</div>
+        <span class="target-type" id="target-desc">--</span>
     </div>
 
+    <div id="canvas-container"></div>
+    <div id="sys-info" class="oculto">SYS.ONLINE // NO.GPS</div>
+
     <div id="ui-layer">
-        <div id="step-content">
-            <h1>Sincronización Total</h1>
-            <p class="instruccion">Permite el acceso a tu Ubicación (GPS) y Sensores de Movimiento para alinear automáticamente la bóveda celeste.</p>
-            <button onclick="iniciarApp()">Conectar con el Cielo</button>
-        </div>
+        <div class="title-flat">OBSERVATORIO</div>
+        <div class="subtitle-flat">Alineación de Sensores</div>
+        <button onclick="iniciarApp()">Conectar</button>
     </div>
 
 <script>
     let scene, camera, renderer, starGroup;
+    let raycaster, centerScreen;
+    let hoverRing; // El aro que aparecerá al enfocar
+    let objetosInteractivos = []; // Arreglo para detectar colisiones
+    
     const uiLayer = document.getElementById('ui-layer');
-    const panelGPS = document.getElementById('txt-gps');
-    const panelBrujula = document.getElementById('txt-brujula');
+    const hud = document.getElementById('target-hud');
+    const hudName = document.getElementById('target-name');
+    const hudDesc = document.getElementById('target-desc');
     
     let usuarioLat = 0, usuarioLon = 0;
     let brujulaDetectada = false;
-    let headingOffset = 0; // Guardará la desviación del Norte
+    let headingOffset = 0;
     let currentAlpha = 0, currentBeta = 0, currentGamma = 0;
     
-    const planetas = ['Sun', 'Moon', 'Venus', 'Mars', 'Jupiter', 'Saturn'];
-    const coloresPlanetas = { 'Sun': 0xffdd00, 'Moon': 0xffffff, 'Venus': 0xffd700, 'Mars': 0xff4400, 'Jupiter': 0xffaa66, 'Saturn': 0xeedd88 };
+    const planetas = ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn'];
+    
+    // Catálogo de estrellas notables con sus coordenadas reales (RA, Dec)
+    const estrellas = [
+        { id: 'sirius', n: "Sirio", ra: 6.75, dec: -16.71 },
+        { id: 'canopus', n: "Canopus", ra: 6.39, dec: -52.69 },
+        { id: 'betelgeuse', n: "Betelgeuse", ra: 5.91, dec: 7.4 },
+        { id: 'rigel', n: "Rigel", ra: 5.24, dec: -8.2 },
+        { id: 'bellatrix', n: "Bellatrix", ra: 5.41, dec: 6.34 },
+        { id: 'alnilam', n: "Alnilam", ra: 5.6, dec: -1.2 },
+        { id: 'alnitak', n: "Alnitak", ra: 5.67, dec: -1.94 },
+        { id: 'mintaka', n: "Mintaka", ra: 5.53, dec: -0.29 },
+        { id: 'saiph', n: "Saiph", ra: 5.79, dec: -9.66 },
+        { id: 'acrux', n: "Acrux", ra: 12.44, dec: -63.09 },
+        { id: 'mimosa', n: "Mimosa", ra: 12.78, dec: -59.68 },
+        { id: 'gacrux', n: "Gacrux", ra: 12.51, dec: -57.11 },
+        { id: 'imai', n: "Imai", ra: 12.25, dec: -58.74 },
+        { id: 'polaris', n: "Estrella Polar", ra: 2.53, dec: 89.26 }
+    ];
+
+    // Conexiones para dibujar constelaciones
+    const constelaciones = [
+        // Cinturón y cuerpo de Orión
+        ['betelgeuse', 'bellatrix'], ['bellatrix', 'rigel'], ['rigel', 'saiph'], ['saiph', 'betelgeuse'],
+        ['mintaka', 'alnilam'], ['alnilam', 'alnitak'],
+        // Cruz del Sur
+        ['gacrux', 'acrux'], ['mimosa', 'imai']
+    ];
 
     function init3D() {
         scene = new THREE.Scene();
-        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 2000);
-        renderer = new THREE.WebGLRenderer({ antialias: true });
+        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 2500);
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.getElementById('canvas-container').appendChild(renderer.domElement);
         
         starGroup = new THREE.Group();
         scene.add(starGroup);
 
-        crearEtiqueta("Norte", 0, 0, -500, "#66fcf1");
-        crearEtiqueta("Sur", 0, 0, 500, "#ff7043");
-        crearEtiqueta("Este", 500, 0, 0, "#ffffff");
-        crearEtiqueta("Oeste", -500, 0, 0, "#ffffff");
-        
+        // Inicializar Raycaster (El láser central)
+        raycaster = new THREE.Raycaster();
+        raycaster.params.Points.threshold = 15; // Mayor margen de error al apuntar a estrellas
+        centerScreen = new THREE.Vector2(0, 0); // (0,0) es el centro exacto en coordenadas normalizadas de ThreeJS
+
+        // Crear el Aro (Halo) de selección
+        const ringGeo = new THREE.RingGeometry(22, 24, 32);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+        hoverRing = new THREE.Mesh(ringGeo, ringMat);
+        hoverRing.visible = false;
+        scene.add(hoverRing);
+
         animar();
     }
 
@@ -82,126 +136,141 @@
         const fechaActual = new Date();
         const observador = new Astronomy.Observer(usuarioLat, usuarioLon, 0);
 
+        // 1. DIBUJAR PLANETAS
         planetas.forEach(cuerpo => {
             const equ_2000 = Astronomy.Equator(cuerpo, fechaActual, observador, true, true);
             const horizonte = Astronomy.Horizon(fechaActual, observador, equ_2000.ra, equ_2000.dec, 'normal');
-            const pos = azAltToVector(horizonte.azimuth, horizonte.altitude);
+            const pos = azAltToVector(horizonte.azimuth, horizonte.altitude, 500);
             
-            const size = (cuerpo === 'Sun' || cuerpo === 'Moon') ? 15 : 6;
-            const mesh = new THREE.Mesh(new THREE.SphereGeometry(size, 32, 32), new THREE.MeshBasicMaterial({ color: coloresPlanetas[cuerpo] }));
+            const size = (cuerpo === 'Sun' || cuerpo === 'Moon') ? 12 : 5;
+            const mat = new THREE.MeshBasicMaterial({ color: cuerpo === 'Sun' ? 0xffdd44 : 0xeeeeee });
+            const mesh = new THREE.Mesh(new THREE.SphereGeometry(size, 32, 32), mat);
             mesh.position.copy(pos);
+            
+            // Inyectar datos para el Raycaster
+            let nombrePlaneta = cuerpo === 'Sun' ? 'Sol' : cuerpo === 'Moon' ? 'Luna' : cuerpo;
+            mesh.userData = { nombre: nombrePlaneta, tipo: 'Sistema Solar' };
+            
             starGroup.add(mesh);
-            crearEtiqueta(cuerpo === 'Sun' ? 'Sol' : cuerpo === 'Moon' ? 'Luna' : cuerpo, pos.x, pos.y - 20, pos.z, coloresPlanetas[cuerpo], 20);
+            objetosInteractivos.push(mesh); // Añadir a la lista de colisiones
         });
 
-        // Estrellas de fondo
-        const starGeo = new THREE.BufferGeometry();
-        const starVerts = [];
-        for (let i = 0; i < 800; i++) {
-            const rPos = azAltToVector(Math.random() * 360, (Math.random() * 180) - 90, 800);
-            starVerts.push(rPos.x, rPos.y, rPos.z);
+        // 2. DIBUJAR ESTRELLAS (Diccionario para las líneas)
+        const posicionesEstrellas = {};
+
+        estrellas.forEach(estrella => {
+            const horizonte = Astronomy.Horizon(fechaActual, observador, estrella.ra, estrella.dec, 'normal');
+            const pos = azAltToVector(horizonte.azimuth, horizonte.altitude, 800); // Estrellas más lejos
+            posicionesEstrellas[estrella.id] = pos;
+
+            const mesh = new THREE.Mesh(new THREE.SphereGeometry(2, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+            mesh.position.copy(pos);
+            mesh.userData = { nombre: estrella.n, tipo: 'Estrella' };
+            
+            starGroup.add(mesh);
+            objetosInteractivos.push(mesh);
+        });
+
+        // 3. DIBUJAR CONSTELACIONES
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2 });
+        constelaciones.forEach(par => {
+            if (posicionesEstrellas[par[0]] && posicionesEstrellas[par[1]]) {
+                const puntos = [posicionesEstrellas[par[0]], posicionesEstrellas[par[1]]];
+                const lineGeo = new THREE.BufferGeometry().setFromPoints(puntos);
+                const linea = new THREE.Line(lineGeo, lineMaterial);
+                starGroup.add(linea);
+            }
+        });
+
+        // Fondo de polvo estelar
+        const dustGeo = new THREE.BufferGeometry();
+        const dustVerts = [];
+        for (let i = 0; i < 1500; i++) {
+            const rPos = azAltToVector(Math.random() * 360, (Math.random() * 180) - 90, 1000);
+            dustVerts.push(rPos.x, rPos.y, rPos.z);
         }
-        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starVerts, 3));
-        starGroup.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0x888888, size: 1.5 })));
+        dustGeo.setAttribute('position', new THREE.Float32BufferAttribute(dustVerts, 3));
+        starGroup.add(new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: 0x555555, size: 1 })));
     }
 
-    function crearEtiqueta(texto, x, y, z, color, textSize = 30) {
-        const canvas = document.createElement('canvas');
-        canvas.width = 256; canvas.height = 128;
-        const ctx = canvas.getContext('2d');
-        ctx.font = `Bold ${textSize}px sans-serif`;
-        ctx.fillStyle = color;
-        ctx.textAlign = "center";
-        ctx.fillText(texto, 128, 64);
-        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true }));
-        sprite.position.set(x, y, z);
-        sprite.scale.set(80, 40, 1);
-        scene.add(sprite);
-    }
-
-    // --- LA MAGIA DE LA BRÚJULA AUTOMÁTICA ---
+    // --- MANEJO DE SENSORES Y GPS ---
     function procesarSensores(e) {
         if (e.alpha === null) return;
-
-        currentAlpha = e.alpha;
-        currentBeta = e.beta;
-        currentGamma = e.gamma;
-
-        // Si es iOS, tiene webkitCompassHeading
-        if (e.webkitCompassHeading !== undefined) {
-            headingOffset = e.webkitCompassHeading;
-            brujulaDetectada = true;
-            panelBrujula.innerText = `Brújula (iOS): ${headingOffset.toFixed(0)}° Norte`;
-        } 
-        // Si es Android, usamos la orientación absoluta si está disponible
-        else if (e.absolute || e.alpha !== null) {
-            // En Android, Alpha = 360 - brújula
-            headingOffset = 360 - e.alpha;
-            brujulaDetectada = true;
-            panelBrujula.innerText = `Brújula (Andr): ${headingOffset.toFixed(0)}° Norte`;
-        }
+        currentAlpha = e.alpha; currentBeta = e.beta; currentGamma = e.gamma;
+        if (e.webkitCompassHeading !== undefined) { headingOffset = e.webkitCompassHeading; brujulaDetectada = true; } 
+        else if (e.absolute || e.alpha !== null) { headingOffset = 360 - e.alpha; brujulaDetectada = true; }
     }
 
     async function iniciarApp() {
-        document.getElementById('step-content').innerHTML = `<h2 style="color:#66fcf1;">Calculando...</h2>`;
+        document.querySelector('.title-flat').innerText = "SINCRONIZANDO...";
         
         navigator.geolocation.getCurrentPosition(async (pos) => {
-            usuarioLat = pos.coords.latitude;
-            usuarioLon = pos.coords.longitude;
-            panelGPS.innerText = `GPS: Lat ${usuarioLat.toFixed(1)} / Lon ${usuarioLon.toFixed(1)}`;
-            document.getElementById('info-panel').classList.remove('oculto');
+            usuarioLat = pos.coords.latitude; usuarioLon = pos.coords.longitude;
+            document.getElementById('sys-info').innerText = `SYS.ON // LAT:${usuarioLat.toFixed(2)} LON:${usuarioLon.toFixed(2)}`;
+            document.getElementById('sys-info').classList.remove('oculto');
 
             generarCieloReal();
 
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 const permiso = await DeviceOrientationEvent.requestPermission();
-                if (permiso !== 'granted') return alert("Necesitamos sensores para orientarte.");
+                if (permiso !== 'granted') return alert("Permiso de sensores denegado.");
             }
             
-            // Intentamos obtener el sensor absoluto para Android
-            if ('ondeviceorientationabsolute' in window) {
-                window.addEventListener('deviceorientationabsolute', procesarSensores);
-            } else {
-                // Fallback para iOS y navegadores estándar
-                window.addEventListener('deviceorientation', procesarSensores);
-            }
+            if ('ondeviceorientationabsolute' in window) { window.addEventListener('deviceorientationabsolute', procesarSensores); } 
+            else { window.addEventListener('deviceorientation', procesarSensores); }
 
-            // Ocultar UI y empezar
             setTimeout(() => {
                 uiLayer.classList.add('oculto');
                 document.getElementById('mira').style.display = 'block';
-            }, 1000);
+            }, 500);
 
-        }, (err) => alert("Error GPS: " + err.message));
+        }, (err) => alert("Error GPS. Actívalo para ver las estrellas."));
     }
 
-    // --- CÁMARA ACTUALIZADA CON BRÚJULA ---
+    // --- EL CEREBRO DE LA CÁMARA Y EL RAYCASTING ---
     function actualizarCamara() {
         if (!brujulaDetectada) return;
-
-        // Combinamos la rotación del usuario (Alpha) con el Offset detectado por la brújula
         let alphaRad = THREE.MathUtils.degToRad(currentAlpha);
-        
-        // Si detectamos el norte, forzamos que Alpha mire en esa dirección
-        if (headingOffset !== 0) {
-           alphaRad = THREE.MathUtils.degToRad(360 - headingOffset);
-        }
-
+        if (headingOffset !== 0) { alphaRad = THREE.MathUtils.degToRad(360 - headingOffset); }
         let betaRad = THREE.MathUtils.degToRad(currentBeta);
         let gammaRad = THREE.MathUtils.degToRad(currentGamma);
         let screenRot = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
 
-        const euler = new THREE.Euler(betaRad, alphaRad, -gammaRad, 'YXZ');
-        const qDispositivo = new THREE.Quaternion().setFromEuler(euler);
+        const qDispositivo = new THREE.Quaternion().setFromEuler(new THREE.Euler(betaRad, alphaRad, -gammaRad, 'YXZ'));
         qDispositivo.multiply(new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)));
         qDispositivo.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -screenRot));
-        
         camera.quaternion.copy(qDispositivo);
+    }
+
+    function verificarIntersecciones() {
+        // Disparar el láser desde el centro de la cámara hacia adelante
+        raycaster.setFromCamera(centerScreen, camera);
+        const colisiones = raycaster.intersectObjects(objetosInteractivos);
+
+        if (colisiones.length > 0) {
+            // Obtener el objeto más cercano apuntado
+            const objetivo = colisiones[0].object;
+            
+            // Mover el aro a la posición del objeto y hacer que mire hacia la cámara
+            hoverRing.position.copy(objetivo.position);
+            hoverRing.lookAt(camera.position);
+            hoverRing.visible = true;
+
+            // Actualizar Interfaz HTML
+            hudName.innerText = objetivo.userData.nombre;
+            hudDesc.innerText = objetivo.userData.tipo;
+            hud.style.opacity = 1;
+        } else {
+            // Apagar UI si apuntamos al vacío
+            hoverRing.visible = false;
+            hud.style.opacity = 0;
+        }
     }
 
     function animar() {
         requestAnimationFrame(animar);
         actualizarCamara();
+        verificarIntersecciones(); // Revisar si apuntamos a un astro
         renderer.render(scene, camera);
     }
 
