@@ -3,131 +3,181 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SkyView Calibrador Pro</title>
+    <title>SkyView Web Clone</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body { margin: 0; background: #020617; color: #f8fafc; font-family: system-ui; overflow: hidden; text-align: center; }
-        canvas { display: block; width: 100vw; height: 100vh; }
-        #ui { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(2, 6, 23, 0.9); z-index: 10; padding: 20px; transition: 0.5s; }
-        .instruccion { margin-bottom: 20px; font-size: 1.2rem; }
-        .flecha { font-size: 4rem; margin: 20px; animation: bounce 1s infinite; }
-        button { background: #38bdf8; border: none; padding: 15px 30px; border-radius: 50px; font-weight: bold; font-size: 1rem; cursor: pointer; }
-        #debug { position: absolute; top: 10px; left: 10px; font-family: monospace; font-size: 10px; text-align: left; pointer-events: none; opacity: 0.7; }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-        .hidden { opacity: 0; pointer-events: none; }
+        body { margin: 0; overflow: hidden; background: #000; color: #fff; font-family: sans-serif; text-align: center; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+        #ui-layer { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(0, 0, 0, 0.9); z-index: 10; padding: 20px; transition: opacity 0.5s; }
+        h1 { color: #4fc3f7; }
+        .instruccion { font-size: 1.2rem; margin: 20px 0; max-width: 300px; }
+        .icono { font-size: 5rem; margin-bottom: 30px; animation: flotar 2s ease-in-out infinite; }
+        button { background: #4fc3f7; color: #000; border: none; padding: 15px 40px; font-size: 1.1rem; border-radius: 30px; font-weight: bold; cursor: pointer; }
+        .crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; z-index: 5; pointer-events: none; }
+        .crosshair::after { content: ''; position: absolute; top: 9px; left: -5px; width: 30px; height: 2px; background: rgba(255,255,255,0.3); }
+        .crosshair::before { content: ''; position: absolute; top: -5px; left: 9px; width: 2px; height: 30px; background: rgba(255,255,255,0.3); }
+        @keyframes flotar { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        .oculto { opacity: 0; pointer-events: none; }
     </style>
 </head>
 <body>
 
-<div id="debug">A: 0 | B: 0 | G: 0</div>
+    <div class="crosshair" id="mira" style="display: none;"></div>
 
-<div id="ui">
-    <div id="step-content">
-        <h1>Calibración de Bóveda</h1>
-        <p class="instruccion">Primero, pon el móvil plano y gíralo a la izquierda.</p>
-        <div class="flecha">⬅️</div>
-        <button onclick="proximoPaso()">Siguiente</button>
+    <div id="canvas-container"></div>
+
+    <div id="ui-layer">
+        <div id="step-content">
+            <h1>Calibrador Espacial</h1>
+            <p class="instruccion">Alinearemos los sensores de tu dispositivo con la bóveda celeste.</p>
+            <button onclick="iniciarCalibracion()">Comenzar</button>
+        </div>
     </div>
-</div>
-
-<canvas id="skyCanvas"></canvas>
 
 <script>
-    const canvas = document.getElementById('skyCanvas');
-    const ctx = canvas.getContext('2d');
-    const debug = document.getElementById('debug');
-    const ui = document.getElementById('ui');
+    // --- VARIABLES DE INTERFAZ ---
+    const uiLayer = document.getElementById('ui-layer');
     const stepContent = document.getElementById('step-content');
-
-    let step = 0;
-    let sensors = { a: 0, b: 0, g: 0 };
-    let offset = { a: 0, b: 0, g: 0 };
-    let active = false;
+    const mira = document.getElementById('mira');
+    let pasoActual = 0;
+    
+    // El offset nos permite definir qué es "Adelante" según la posición en la que el usuario inicia
+    let alphaOffset = 0; 
+    let eventoSensoresActual = null;
 
     const pasos = [
-        { txt: "Gira el móvil a la IZQUIERDA (plano)", icon: "⬅️" },
-        { txt: "Gira el móvil a la DERECHA (plano)", icon: "➡️" },
-        { txt: "Levanta el móvil hacia el CIELO (Cénit)", icon: "⬆️" },
-        { txt: "Gira sobre su eje lateral", icon: "🔄" }
+        { txt: "1. Mantén el celular plano y gíralo 90° a tu IZQUIERDA.", icon: "⬅️" },
+        { txt: "2. Ahora gíralo 180° a tu DERECHA.", icon: "➡️" },
+        { txt: "3. Levanta el celular apuntando la cámara hacia el CIELO (Cénit).", icon: "⬆️" },
+        { txt: "4. Gira el celular sobre su eje como un volante.", icon: "🔄" }
     ];
 
-    function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+    // --- CONFIGURACIÓN DE THREE.JS (La Bóveda Celeste 3D) ---
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    // 1. Crear Estrellas Aleatorias en una esfera gigante
+    const starGeometry = new THREE.BufferGeometry();
+    const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 1.5 });
+    const starVertices = [];
+    for (let i = 0; i < 2000; i++) {
+        // Coordenadas esféricas aleatorias
+        const theta = 2 * Math.PI * Math.random();
+        const phi = Math.acos(2 * Math.random() - 1);
+        const radio = 500;
+        const x = radio * Math.sin(phi) * Math.cos(theta);
+        const y = radio * Math.sin(phi) * Math.sin(theta);
+        const z = radio * Math.cos(phi);
+        starVertices.push(x, y, z);
     }
-    window.addEventListener('resize', resize);
-    resize();
+    starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+    const stars = new THREE.Points(starGeometry, starMaterial);
+    scene.add(stars);
 
-    async function proximoPaso() {
-        if (step === 0) {
-            // Solicitar permisos en iOS
-            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                const resp = await DeviceOrientationEvent.requestPermission();
-                if (resp !== 'granted') return alert("Permiso denegado");
-            }
-            window.addEventListener('deviceorientation', e => {
-                sensors.a = e.alpha || 0;
-                sensors.b = e.beta || 0;
-                sensors.g = e.gamma || 0;
-                debug.innerText = `A: ${sensors.a.toFixed(1)} B: ${sensors.b.toFixed(1)} G: ${sensors.g.toFixed(1)}`;
-            });
+    // 2. Función para agregar textos flotantes (Puntos Cardinales y Cénit)
+    function crearEtiqueta(texto, x, y, z, color) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256; canvas.height = 128;
+        const context = canvas.getContext('2d');
+        context.font = "Bold 40px Arial";
+        context.fillStyle = color;
+        context.textAlign = "center";
+        context.fillText(texto, 128, 64);
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+        const sprite = new THREE.Sprite(spriteMaterial);
+        sprite.position.set(x, y, z);
+        sprite.scale.set(50, 25, 1);
+        scene.add(sprite);
+    }
+
+    // Agregar referencias visuales a 100 unidades de distancia
+    crearEtiqueta("Norte (Tu Inicio)", 0, 0, -100, "#4fc3f7");
+    crearEtiqueta("Sur", 0, 0, 100, "#ff7043");
+    crearEtiqueta("Este", 100, 0, 0, "#fff");
+    crearEtiqueta("Oeste", -100, 0, 0, "#fff");
+    crearEtiqueta("⭐ CÉNIT (Arriba) ⭐", 0, 100, 0, "#ffee58"); // Punto más alto
+    crearEtiqueta("Nadir (Abajo)", 0, -100, 0, "#888");       // Punto más bajo
+
+    // --- LÓGICA DE CALIBRACIÓN Y SENSORES ---
+    async function iniciarCalibracion() {
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            const permiso = await DeviceOrientationEvent.requestPermission();
+            if (permiso !== 'granted') return alert("Necesitamos acceso a los sensores.");
         }
+        
+        // Escuchar los sensores
+        window.addEventListener('deviceorientation', (e) => {
+            eventoSensoresActual = e;
+        });
 
-        if (step < pasos.length) {
-            const p = pasos[step];
-            stepContent.innerHTML = `<h1>Paso ${step + 1}</h1><p class="instruccion">${p.txt}</p><div class="flecha">${p.icon}</div><button onclick="proximoPaso()">Siguiente</button>`;
-            step++;
+        avanzarPaso();
+    }
+
+    function avanzarPaso() {
+        if (pasoActual < pasos.length) {
+            const p = pasos[pasoActual];
+            stepContent.innerHTML = `
+                <div class="icono">${p.icon}</div>
+                <p class="instruccion">${p.txt}</p>
+                <button onclick="avanzarPaso()">Siguiente</button>
+            `;
+            pasoActual++;
         } else {
-            // Calibrar: Guardamos la posición actual como referencia
-            offset.a = sensors.a;
-            offset.b = sensors.b; 
-            ui.classList.add('hidden');
-            active = true;
-            render();
+            // CALIBRACIÓN FINAL: Guardamos hacia dónde mira el usuario para que ese sea el "Norte/Frente"
+            if (eventoSensoresActual && eventoSensoresActual.alpha !== null) {
+                alphaOffset = eventoSensoresActual.alpha;
+            }
+            uiLayer.classList.add('oculto');
+            mira.style.display = 'block';
         }
     }
 
-    function render() {
-        if (!active) return;
+    // --- EL CEREBRO DE LA ROTACIÓN (Cálculo de Cuaterniones) ---
+    // Esta función traduce el giroscopio a movimiento 3D sin el error de "Gimbal Lock"
+    function actualizarCamara() {
+        if (!eventoSensoresActual || eventoSensoresActual.alpha === null) return;
 
-        ctx.fillStyle = '#020617';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // 1. Obtener grados de los sensores
+        let alpha = eventoSensoresActual.alpha ? THREE.MathUtils.degToRad(eventoSensoresActual.alpha - alphaOffset) : 0;
+        let beta = eventoSensoresActual.beta ? THREE.MathUtils.degToRad(eventoSensoresActual.beta) : 0;
+        let gamma = eventoSensoresActual.gamma ? THREE.MathUtils.degToRad(eventoSensoresActual.gamma) : 0;
+        let orientacionPantalla = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
 
-        // --- LÓGICA DE MOVIMIENTO ---
-        // Alpha es el giro horizontal (brújula)
-        let deltaA = sensors.a - offset.a;
-        if (deltaA > 180) deltaA -= 360;
-        if (deltaA < -180) deltaA += 360;
+        // 2. Orden de rotación YXZ específico para móviles
+        const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
+        const qDispositivo = new THREE.Quaternion().setFromEuler(euler);
 
-        // Beta es la inclinación vertical (mirar arriba/abajo)
-        // Usamos la diferencia con respecto a la inclinación de calibración
-        let deltaB = sensors.b - offset.b;
+        // 3. Ajustar la cámara para que mire hacia adelante (Z negativo) y compensar la rotación del hardware
+        const qAjuste = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)); // -90 grados en X
+        qDispositivo.multiply(qAjuste);
 
-        // Mapeo de coordenadas al centro de la pantalla
-        // Sensibilidad: 15px por grado
-        const sens = 15;
-        let x = (canvas.width / 2) - (deltaA * sens);
-        let y = (canvas.height / 2) - (deltaB * sens);
+        // 4. Compensar si el usuario pone el celular en horizontal (Landscape)
+        const qPantalla = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -orientacionPantalla);
+        qDispositivo.multiply(qPantalla);
 
-        // Dibujar Cénit (Guía visual)
-        ctx.strokeStyle = '#38bdf8';
-        ctx.setLineDash([5, 5]);
-        ctx.beginPath();
-        ctx.arc(x, y, 50, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Dibujar "Estrella"
-        ctx.setLineDash([]);
-        ctx.fillStyle = '#f8fafc';
-        ctx.beginPath();
-        ctx.arc(x, y, 10, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Etiqueta
-        ctx.font = "bold 16px sans-serif";
-        ctx.fillText("OBJETO CELESTE", x + 15, y + 5);
-
-        requestAnimationFrame(render);
+        // Aplicar la rotación final a la cámara
+        camera.quaternion.copy(qDispositivo);
     }
+
+    // --- BUCLE DE RENDERIZADO ---
+    function animar() {
+        requestAnimationFrame(animar);
+        actualizarCamara();
+        renderer.render(scene, camera);
+    }
+    animar();
+
+    // Reajustar tamaño si se voltea el celular
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
 </script>
 </body>
 </html>
