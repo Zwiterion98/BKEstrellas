@@ -3,189 +3,999 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Sky Dome Explorer</title>
-  <link rel="stylesheet" href="./style.css" />
+  <title>Calibración Bóveda Celeste</title>
+
+  <style>
+    :root {
+      --bg: #050814;
+      --panel: rgba(12, 18, 34, 0.86);
+      --border: rgba(255, 255, 255, 0.12);
+      --text: #eef4ff;
+      --muted: #9eb1d0;
+      --accent: #7cc7ff;
+      --good: #70e0a3;
+      --warn: #ffd166;
+      --danger: #ff7b7b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(124, 199, 255, 0.15), transparent 30%),
+        linear-gradient(180deg, #081324 0%, #03050c 100%);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .app {
+      min-height: 100vh;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 16px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.24);
+    }
+
+    h1,
+    h2 {
+      margin: 0;
+      line-height: 1.1;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid rgba(124, 199, 255, 0.35);
+      background: rgba(124, 199, 255, 0.16);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      border-color: rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .status {
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .status strong {
+      color: var(--text);
+    }
+
+    .good { color: var(--good); }
+    .warn { color: var(--warn); }
+    .danger { color: var(--danger); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .dome-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      min-height: 320px;
+      border-radius: 22px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #030711;
+    }
+
+    #domeCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+
+    .hud {
+      position: absolute;
+      inset: 0;
+      padding: 14px;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .hud-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      background: rgba(5, 10, 20, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      padding: 9px 11px;
+      font-size: 12px;
+      color: var(--muted);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .chip strong {
+      display: block;
+      color: var(--text);
+      font-size: 14px;
+      margin-top: 3px;
+    }
+
+    .steps {
+      display: grid;
+      gap: 10px;
+    }
+
+    .step-box {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .step-title {
+      font-weight: 900;
+      font-size: 16px;
+      margin-bottom: 6px;
+    }
+
+    .step-instruction {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .progress {
+      height: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 14px;
+    }
+
+    .progress span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--good));
+      border-radius: inherit;
+      transition: width 0.25s ease;
+    }
+
+    .debug {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .metric {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .metric strong {
+      font-size: 18px;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: #cfe0ff;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .debug {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 
 <body>
   <div class="app">
     <div class="card">
-      <h1>Sky Dome Explorer</h1>
+      <h1>Calibración dentro de la bóveda celeste</h1>
       <p>
-        Explorador de bóveda celeste. En desktop podés arrastrar para mirar alrededor.
-        En celular, podés activar sensores y recorrer el cielo moviendo el dispositivo.
+        Este MVP no usa astros reales. Sirve solo para calibrar cómo el celular recorre una bóveda:
+        horizonte en el borde, zenit en el centro, y dirección en 360°.
       </p>
-    </div>
 
-    <div class="card">
       <div class="buttons">
-        <button id="getSkyBtn">Obtener cielo actual</button>
-        <button id="enableMotionBtn">Activar movimiento del dispositivo</button>
-        <button id="recenterBtn" class="secondary">Recentrar vista</button>
-        <button id="refreshBtn" class="secondary">Actualizar posiciones</button>
+        <button id="enableBtn">Activar sensores</button>
+        <button id="startCalibrationBtn">Iniciar calibración</button>
+        <button id="saveStepBtn" class="secondary">Guardar paso</button>
+        <button id="resetBtn" class="secondary">Reset</button>
       </div>
 
       <div id="status" class="status">
-        <strong>Estado:</strong> listo para obtener ubicación y explorar el cielo.
+        <strong>Estado:</strong> esperando sensores.
       </div>
     </div>
 
-    <div class="card">
-      <h2>Calibración de sensores</h2>
-      <p class="section-description">
-        Este flujo aprende offsets, signos y sensibilidad de los ejes del teléfono para que el movimiento sea consistente en esta web.
-        Hacelo en HTTPS, lejos de imanes o metal pesado.
-      </p>
-
-      <div class="buttons calibration-buttons">
-        <button id="startCalibrationBtn">Iniciar calibración guiada</button>
-        <button id="captureCalibrationBtn" class="secondary">Guardar este paso</button>
-        <button id="resetCalibrationBtn" class="secondary">Reset calibración</button>
-      </div>
-
-      <div class="calibration-layout">
-        <div class="calibration-stage">
-          <div>
-            <div class="metric-label">Paso actual</div>
-            <div id="calibrationStepTitle" class="calibration-step-title">Sin calibrar</div>
-            <p id="calibrationInstruction" class="calibration-instruction">
-              Tocá “Iniciar calibración guiada” y seguí los movimientos.
-            </p>
-          </div>
-
-          <div class="calibration-icon">
-            <div class="phone-shape"></div>
-            <div id="calibrationArrow" class="calibration-arrow"></div>
-          </div>
-
-          <div class="calibration-progress">
-            <span id="calibrationProgress"></span>
-          </div>
-
-          <div id="calibrationStatus" class="status">
-            <strong>Calibración:</strong> pendiente.
-          </div>
-        </div>
-
-        <div class="test-canvas-wrap">
-          <canvas id="sensorTestCanvas"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Bóveda explorable</h2>
-      <p class="section-description">
-        La vista funciona como una cámara dentro del domo.
-        En desktop: arrastrá. En móvil: girá el teléfono luego de activar sensores.
-        El centro marca hacia dónde estás mirando.
-      </p>
-
-      <div class="explorer-wrap">
-        <canvas id="skyCanvas"></canvas>
-        <div class="crosshair"></div>
-
-        <div class="explorer-overlay">
-          <div class="overlay-top">
-            <div class="overlay-chip">
-              Dirección
-              <strong id="viewHeading">--</strong>
-            </div>
-
-            <div class="overlay-chip">
-              Elevación
-              <strong id="viewPitch">--</strong>
-            </div>
-
-            <div class="overlay-chip">
-              Modo
-              <strong id="controlMode">Mouse / touch</strong>
-            </div>
-          </div>
-
-          <div class="overlay-bottom">
-            <div class="overlay-chip">
-              Centro de la mira
-              <strong id="centerTarget">Nada cerca</strong>
-            </div>
-
-            <div class="overlay-chip">
-              Campo visual
-              <strong id="fovReadout">75° × 52°</strong>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="sky-legend">
-        <span><span class="legend-dot solar-dot"></span>Astros</span>
-        <span><span class="legend-dot star-dot"></span>Estrellas</span>
-        <span><span class="legend-dot constellation-dot"></span>Constelaciones</span>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Ubicación actual</h2>
-
-      <div class="grid">
-        <div class="metric">
-          <div class="metric-label">Latitud</div>
-          <div id="lat" class="metric-value">--</div>
-        </div>
-
-        <div class="metric">
-          <div class="metric-label">Longitud</div>
-          <div id="lon" class="metric-value">--</div>
-        </div>
-
-        <div class="metric">
-          <div class="metric-label">Precisión</div>
-          <div id="accuracy" class="metric-value">--</div>
-        </div>
-
-        <div class="metric">
-          <div class="metric-label">Hora usada</div>
-          <div id="timestamp" class="metric-value">--</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section-grid">
+    <div class="layout">
       <div class="card">
-        <h2>Astros</h2>
-        <div id="solarList" class="list">
-          <div class="muted">Todavía no se calcularon posiciones.</div>
+        <h2>Bóveda</h2>
+
+        <div class="dome-wrap">
+          <canvas id="domeCanvas"></canvas>
+
+          <div class="hud">
+            <div class="hud-row">
+              <div class="chip">
+                Dirección / Azimut
+                <strong id="azimuthReadout">--</strong>
+              </div>
+
+              <div class="chip">
+                Elevación
+                <strong id="altitudeReadout">--</strong>
+              </div>
+            </div>
+
+            <div class="hud-row">
+              <div class="chip">
+                Modo
+                <strong id="modeReadout">Mouse / Touch</strong>
+              </div>
+
+              <div class="chip">
+                Calibración
+                <strong id="calibrationReadout">No lista</strong>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="card">
-        <h2>Estrellas</h2>
-        <div id="starsList" class="list">
-          <div class="muted">Todavía no se calcularon posiciones.</div>
+        <h2>Guía de calibración</h2>
+
+        <div class="steps">
+          <div class="step-box">
+            <div id="stepTitle" class="step-title">Sin iniciar</div>
+            <div id="stepInstruction" class="step-instruction">
+              Tocá “Activar sensores” y después “Iniciar calibración”.
+            </div>
+          </div>
+
+          <div class="progress">
+            <span id="progressBar"></span>
+          </div>
+
+          <div class="debug">
+            <div class="metric">
+              <span>Raw Heading</span>
+              <strong id="rawHeading">--</strong>
+            </div>
+
+            <div class="metric">
+              <span>Raw Beta</span>
+              <strong id="rawBeta">--</strong>
+            </div>
+
+            <div class="metric">
+              <span>Raw Gamma</span>
+              <strong id="rawGamma">--</strong>
+            </div>
+
+            <div class="metric">
+              <span>Cal Azimut</span>
+              <strong id="calAzimuth">--</strong>
+            </div>
+
+            <div class="metric">
+              <span>Cal Altitud</span>
+              <strong id="calAltitude">--</strong>
+            </div>
+
+            <div class="metric">
+              <span>Confianza</span>
+              <strong id="confidence">--</strong>
+            </div>
+          </div>
+
+          <div id="debugJson" class="mono">{}</div>
         </div>
       </div>
-
-      <div class="card">
-        <h2>Constelaciones</h2>
-        <div id="constellationsList" class="list">
-          <div class="muted">Todavía no se calcularon posiciones.</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>JSON</h2>
-      <div id="debugJson" class="mono">{}</div>
-    </div>
-
-    <div class="footer-note">
-      Azimut: 0° = norte, 90° = este, 180° = sur, 270° = oeste.
-      Altitud: 0° = horizonte, 90° = cenit.
-      La calibración es interna de la web; no modifica sensores del sistema operativo.
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
-  <script src="./app.js"></script>
+  <script>
+    const els = {
+      domeCanvas: document.getElementById("domeCanvas"),
+
+      enableBtn: document.getElementById("enableBtn"),
+      startCalibrationBtn: document.getElementById("startCalibrationBtn"),
+      saveStepBtn: document.getElementById("saveStepBtn"),
+      resetBtn: document.getElementById("resetBtn"),
+
+      status: document.getElementById("status"),
+      stepTitle: document.getElementById("stepTitle"),
+      stepInstruction: document.getElementById("stepInstruction"),
+      progressBar: document.getElementById("progressBar"),
+
+      azimuthReadout: document.getElementById("azimuthReadout"),
+      altitudeReadout: document.getElementById("altitudeReadout"),
+      modeReadout: document.getElementById("modeReadout"),
+      calibrationReadout: document.getElementById("calibrationReadout"),
+
+      rawHeading: document.getElementById("rawHeading"),
+      rawBeta: document.getElementById("rawBeta"),
+      rawGamma: document.getElementById("rawGamma"),
+      calAzimuth: document.getElementById("calAzimuth"),
+      calAltitude: document.getElementById("calAltitude"),
+      confidence: document.getElementById("confidence"),
+      debugJson: document.getElementById("debugJson"),
+    };
+
+    const state = {
+      canvasReady: false,
+
+      sensorsEnabled: false,
+
+      rawHeading: null,
+      rawBeta: null,
+      rawGamma: null,
+
+      smoothHeading: null,
+      smoothBeta: null,
+      smoothGamma: null,
+
+      // Resultado final que mueve la bóveda
+      azimuth: 0,
+      altitude: 0,
+
+      // Fallback desktop
+      dragging: false,
+      dragStartX: 0,
+      dragStartY: 0,
+      dragAzStart: 0,
+      dragAltStart: 0,
+
+      calibrationStepIndex: -1,
+      calibrationSamples: {},
+
+      calibration: {
+        ready: false,
+
+        // Punto base: mirando al horizonte.
+        horizonHeading: 0,
+        horizonVector: { beta: 0, gamma: 0 },
+
+        // Punto máximo: mirando al zenit.
+        zenithVector: { beta: 0, gamma: 0 },
+
+        // Dirección de elevación calculada entre horizonte y zenit.
+        elevationAxis: { beta: 0, gamma: 0 },
+        elevationLengthSq: 1,
+
+        // Signo del giro horizontal.
+        yawSign: 1,
+
+        confidence: 0,
+      },
+    };
+
+    const STEPS = [
+      {
+        key: "horizon",
+        title: "1. Horizonte",
+        instruction:
+          "Apuntá el celular hacia el horizonte, como si quisieras mirar al frente dentro de la bóveda. Guardá este paso.",
+      },
+      {
+        key: "left",
+        title: "2. Girá a la izquierda",
+        instruction:
+          "Sin cambiar demasiado la inclinación, girá hacia la izquierda recorriendo el horizonte. Guardá este paso.",
+      },
+      {
+        key: "right",
+        title: "3. Girá a la derecha",
+        instruction:
+          "Ahora girá hacia la derecha recorriendo el horizonte. Guardá este paso.",
+      },
+      {
+        key: "zenith",
+        title: "4. Zenit",
+        instruction:
+          "Ahora apuntá hacia arriba, al punto más alto de la bóveda. Guardá este paso. Esto será 90° de elevación.",
+      },
+    ];
+
+    function setStatus(message, tone = "") {
+      els.status.innerHTML = `<strong>Estado:</strong> <span class="${tone}">${message}</span>`;
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function clamp360(value) {
+      return ((value % 360) + 360) % 360;
+    }
+
+    function shortestAngleDiff(a, b) {
+      let diff = a - b;
+
+      while (diff > 180) diff -= 360;
+      while (diff < -180) diff += 360;
+
+      return diff;
+    }
+
+    function smoothValue(previous, next, factor = 0.16) {
+      if (previous == null) return next;
+      return previous + (next - previous) * factor;
+    }
+
+    function smoothAngle(previous, next, factor = 0.16) {
+      if (previous == null) return next;
+
+      const diff = shortestAngleDiff(next, previous);
+      return clamp360(previous + diff * factor);
+    }
+
+    function getHeadingFromEvent(event) {
+      // iOS Safari
+      if (typeof event.webkitCompassHeading === "number") {
+        return event.webkitCompassHeading;
+      }
+
+      // Fallback genérico
+      if (typeof event.alpha === "number") {
+        return clamp360(360 - event.alpha);
+      }
+
+      return null;
+    }
+
+    function setupCanvas() {
+      const canvas = els.domeCanvas;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+      canvas.width = Math.floor(rect.width * dpr);
+      canvas.height = Math.floor(rect.height * dpr);
+
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      state.canvasReady = true;
+    }
+
+    async function enableSensors() {
+      try {
+        if (typeof DeviceOrientationEvent === "undefined") {
+          setStatus("este dispositivo no soporta orientación.", "danger");
+          return;
+        }
+
+        if (typeof DeviceOrientationEvent.requestPermission === "function") {
+          const result = await DeviceOrientationEvent.requestPermission();
+
+          if (result !== "granted") {
+            setStatus("permiso de sensores denegado.", "danger");
+            return;
+          }
+        }
+
+        window.addEventListener("deviceorientation", handleOrientation, true);
+
+        state.sensorsEnabled = true;
+        els.modeReadout.textContent = "Sensores";
+        setStatus("sensores activos. Iniciá la calibración.", "good");
+      } catch (error) {
+        console.error(error);
+        setStatus("no se pudieron activar sensores. Usá HTTPS y celular real.", "danger");
+      }
+    }
+
+    function handleOrientation(event) {
+      const heading = getHeadingFromEvent(event);
+      const beta = typeof event.beta === "number" ? event.beta : null;
+      const gamma = typeof event.gamma === "number" ? event.gamma : null;
+
+      if (heading == null || beta == null || gamma == null) return;
+
+      state.smoothHeading = smoothAngle(state.smoothHeading, heading);
+      state.smoothBeta = smoothValue(state.smoothBeta, beta);
+      state.smoothGamma = smoothValue(state.smoothGamma, gamma);
+
+      state.rawHeading = state.smoothHeading;
+      state.rawBeta = state.smoothBeta;
+      state.rawGamma = state.smoothGamma;
+
+      updateDomeFromCalibration();
+    }
+
+    function snapshot() {
+      return {
+        heading: state.rawHeading ?? 0,
+        beta: state.rawBeta ?? 0,
+        gamma: state.rawGamma ?? 0,
+        at: Date.now(),
+      };
+    }
+
+    function startCalibration() {
+      state.calibrationStepIndex = 0;
+      state.calibrationSamples = {};
+
+      updateCalibrationGuide();
+      setStatus("calibración iniciada. Guardá el paso de horizonte.", "warn");
+    }
+
+    function saveCalibrationStep() {
+      if (state.calibrationStepIndex < 0) {
+        setStatus("primero tocá iniciar calibración.", "warn");
+        return;
+      }
+
+      const step = STEPS[state.calibrationStepIndex];
+      state.calibrationSamples[step.key] = snapshot();
+
+      state.calibrationStepIndex += 1;
+
+      if (state.calibrationStepIndex >= STEPS.length) {
+        finishCalibration();
+        return;
+      }
+
+      updateCalibrationGuide();
+      setStatus("paso guardado. Continuá con el siguiente.", "good");
+    }
+
+    function finishCalibration() {
+      const samples = state.calibrationSamples;
+
+      const horizon = samples.horizon;
+      const left = samples.left;
+      const right = samples.right;
+      const zenith = samples.zenith;
+
+      if (!horizon || !left || !right || !zenith) {
+        setStatus("faltan pasos de calibración.", "danger");
+        return;
+      }
+
+      // Eje de elevación:
+      // No asumimos si el teléfono usa beta o gamma.
+      // Calculamos qué combinación de beta/gamma representa ir de horizonte a zenit.
+      const elevationAxis = {
+        beta: zenith.beta - horizon.beta,
+        gamma: zenith.gamma - horizon.gamma,
+      };
+
+      const elevationLengthSq =
+        elevationAxis.beta * elevationAxis.beta +
+        elevationAxis.gamma * elevationAxis.gamma;
+
+      if (elevationLengthSq < 20) {
+        setStatus("la diferencia entre horizonte y zenit fue muy chica. Repetí la calibración.", "danger");
+        return;
+      }
+
+      // Dirección horizontal:
+      // Usamos izquierda/derecha para aprender el signo del giro.
+      const leftDelta = shortestAngleDiff(left.heading, horizon.heading);
+      const rightDelta = shortestAngleDiff(right.heading, horizon.heading);
+
+      let yawSign = 1;
+
+      // Si al girar a la izquierda el heading sube en vez de bajar, invertimos.
+      if (leftDelta > rightDelta) {
+        yawSign = -1;
+      }
+
+      const confidence = clamp(
+        Math.round(
+          Math.min(
+            100,
+            Math.abs(leftDelta - rightDelta) * 1.2 + Math.sqrt(elevationLengthSq) * 1.4
+          )
+        ),
+        0,
+        100
+      );
+
+      state.calibration = {
+        ready: true,
+
+        horizonHeading: horizon.heading,
+        horizonVector: {
+          beta: horizon.beta,
+          gamma: horizon.gamma,
+        },
+
+        zenithVector: {
+          beta: zenith.beta,
+          gamma: zenith.gamma,
+        },
+
+        elevationAxis,
+        elevationLengthSq,
+
+        yawSign,
+        confidence,
+      };
+
+      state.calibrationStepIndex = -1;
+
+      updateCalibrationGuide();
+      updateDomeFromCalibration();
+
+      setStatus("calibración lista. Ahora recorré de horizonte a zenit en todas las direcciones.", "good");
+    }
+
+    function resetCalibration() {
+      state.calibrationStepIndex = -1;
+      state.calibrationSamples = {};
+      state.calibration.ready = false;
+
+      state.azimuth = 0;
+      state.altitude = 0;
+
+      updateCalibrationGuide();
+      setStatus("calibración reiniciada.", "warn");
+    }
+
+    function updateDomeFromCalibration() {
+      if (!state.calibration.ready) return;
+
+      const c = state.calibration;
+
+      // Azimut:
+      // toma el giro horizontal relativo al heading de horizonte.
+      const headingDelta = shortestAngleDiff(state.rawHeading ?? c.horizonHeading, c.horizonHeading);
+      state.azimuth = clamp360(c.yawSign * headingDelta);
+
+      // Altitud:
+      // proyecta el vector actual beta/gamma sobre el eje calibrado horizonte -> zenit.
+      const currentVector = {
+        beta: (state.rawBeta ?? c.horizonVector.beta) - c.horizonVector.beta,
+        gamma: (state.rawGamma ?? c.horizonVector.gamma) - c.horizonVector.gamma,
+      };
+
+      const projection =
+        currentVector.beta * c.elevationAxis.beta +
+        currentVector.gamma * c.elevationAxis.gamma;
+
+      const t = clamp(projection / c.elevationLengthSq, 0, 1);
+
+      state.altitude = t * 90;
+    }
+
+    function updateCalibrationGuide() {
+      const step = STEPS[state.calibrationStepIndex];
+
+      if (!step) {
+        els.stepTitle.textContent = state.calibration.ready
+          ? "Calibración lista"
+          : "Sin iniciar";
+
+        els.stepInstruction.textContent = state.calibration.ready
+          ? "Mové el celular. El punto debería recorrer la bóveda desde el horizonte hasta el zenit en cualquier dirección."
+          : "Tocá “Activar sensores” y después “Iniciar calibración”.";
+
+        els.progressBar.style.width = state.calibration.ready ? "100%" : "0%";
+      } else {
+        els.stepTitle.textContent = step.title;
+        els.stepInstruction.textContent = step.instruction;
+        els.progressBar.style.width = `${(state.calibrationStepIndex / STEPS.length) * 100}%`;
+      }
+
+      els.calibrationReadout.textContent = state.calibration.ready
+        ? "Lista"
+        : "No lista";
+    }
+
+    function drawDome() {
+      if (!state.canvasReady) return;
+
+      const canvas = els.domeCanvas;
+      const ctx = canvas.getContext("2d");
+
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+
+      const size = Math.min(width, height);
+      const cx = width / 2;
+      const cy = height / 2;
+      const radius = size / 2 - 28;
+
+      ctx.clearRect(0, 0, width, height);
+
+      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+      bg.addColorStop(0, "rgba(80, 130, 255, 0.18)");
+      bg.addColorStop(0.6, "rgba(8, 15, 30, 0.95)");
+      bg.addColorStop(1, "rgba(2, 4, 10, 1)");
+
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, width, height);
+
+      // Estrellas falsas de fondo
+      for (let i = 0; i < 120; i++) {
+        const x = (i * 139) % width;
+        const y = (i * 83) % height;
+        const dx = x - cx;
+        const dy = y - cy;
+
+        if (Math.sqrt(dx * dx + dy * dy) > radius) continue;
+
+        ctx.globalAlpha = 0.08 + (i % 5) * 0.04;
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(x, y, (i % 3) + 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.globalAlpha = 1;
+
+      // Horizonte
+      ctx.strokeStyle = "rgba(255,255,255,0.22)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Anillos de altitud
+      [30, 60].forEach((alt) => {
+        const r = radius * (1 - alt / 90);
+
+        ctx.strokeStyle = "rgba(255,255,255,0.09)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(255,255,255,0.35)";
+        ctx.font = "11px system-ui";
+        ctx.textAlign = "left";
+        ctx.fillText(`${alt}°`, cx + 8, cy - r + 12);
+      });
+
+      // Ejes cardinales
+      drawCardinal(ctx, cx, cy, radius, "N", 0);
+      drawCardinal(ctx, cx, cy, radius, "E", 90);
+      drawCardinal(ctx, cx, cy, radius, "S", 180);
+      drawCardinal(ctx, cx, cy, radius, "O", 270);
+
+      // Cenit
+      ctx.fillStyle = "rgba(255,255,255,0.45)";
+      ctx.font = "12px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText("ZENIT", cx, cy - 12);
+
+      // Punto controlado por sensores
+      const point = projectAltAz(state.altitude, state.azimuth, cx, cy, radius);
+
+      ctx.strokeStyle = "rgba(124,199,255,0.35)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(point.x, point.y);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(124,199,255,0.2)";
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 22, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(124,199,255,0.9)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 22, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = "#7cc7ff";
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 13px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText("MIRA", point.x, point.y - 32);
+
+      updateUI();
+    }
+
+    function drawCardinal(ctx, cx, cy, radius, label, azimuth) {
+      const angle = ((azimuth - 90) * Math.PI) / 180;
+      const x = cx + Math.cos(angle) * (radius + 14);
+      const y = cy + Math.sin(angle) * (radius + 14);
+
+      ctx.fillStyle = label === "N" ? "#7cc7ff" : "rgba(255,255,255,0.86)";
+      ctx.font = "bold 13px system-ui";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, x, y);
+    }
+
+    function projectAltAz(altitude, azimuth, cx, cy, radius) {
+      const r = radius * (1 - altitude / 90);
+      const angle = ((azimuth - 90) * Math.PI) / 180;
+
+      return {
+        x: cx + Math.cos(angle) * r,
+        y: cy + Math.sin(angle) * r,
+      };
+    }
+
+    function updateUI() {
+      els.azimuthReadout.textContent = `${state.azimuth.toFixed(1)}°`;
+      els.altitudeReadout.textContent = `${state.altitude.toFixed(1)}°`;
+
+      els.rawHeading.textContent = state.rawHeading != null ? `${state.rawHeading.toFixed(1)}°` : "--";
+      els.rawBeta.textContent = state.rawBeta != null ? `${state.rawBeta.toFixed(1)}°` : "--";
+      els.rawGamma.textContent = state.rawGamma != null ? `${state.rawGamma.toFixed(1)}°` : "--";
+
+      els.calAzimuth.textContent = `${state.azimuth.toFixed(1)}°`;
+      els.calAltitude.textContent = `${state.altitude.toFixed(1)}°`;
+      els.confidence.textContent = state.calibration.ready
+        ? `${state.calibration.confidence}%`
+        : "--";
+
+      els.debugJson.textContent = JSON.stringify(
+        {
+          raw: {
+            heading: state.rawHeading,
+            beta: state.rawBeta,
+            gamma: state.rawGamma,
+          },
+          calibrated: {
+            azimuth: state.azimuth,
+            altitude: state.altitude,
+          },
+          calibration: state.calibration,
+          samples: state.calibrationSamples,
+        },
+        null,
+        2
+      );
+    }
+
+    // Fallback desktop / testing with mouse
+    function pointerStart(x, y) {
+      state.dragging = true;
+      state.dragStartX = x;
+      state.dragStartY = y;
+      state.dragAzStart = state.azimuth;
+      state.dragAltStart = state.altitude;
+      els.modeReadout.textContent = "Mouse / Touch";
+    }
+
+    function pointerMove(x, y) {
+      if (!state.dragging || state.sensorsEnabled) return;
+
+      const dx = x - state.dragStartX;
+      const dy = y - state.dragStartY;
+
+      state.azimuth = clamp360(state.dragAzStart + dx * 0.25);
+      state.altitude = clamp(state.dragAltStart - dy * 0.18, 0, 90);
+    }
+
+    function pointerEnd() {
+      state.dragging = false;
+    }
+
+    function loop() {
+      drawDome();
+      requestAnimationFrame(loop);
+    }
+
+    els.enableBtn.addEventListener("click", enableSensors);
+    els.startCalibrationBtn.addEventListener("click", startCalibration);
+    els.saveStepBtn.addEventListener("click", saveCalibrationStep);
+    els.resetBtn.addEventListener("click", resetCalibration);
+
+    els.domeCanvas.addEventListener("mousedown", (event) => {
+      pointerStart(event.clientX, event.clientY);
+    });
+
+    window.addEventListener("mousemove", (event) => {
+      pointerMove(event.clientX, event.clientY);
+    });
+
+    window.addEventListener("mouseup", pointerEnd);
+
+    els.domeCanvas.addEventListener(
+      "touchstart",
+      (event) => {
+        const touch = event.touches[0];
+        pointerStart(touch.clientX, touch.clientY);
+      },
+      { passive: true }
+    );
+
+    els.domeCanvas.addEventListener(
+      "touchmove",
+      (event) => {
+        const touch = event.touches[0];
+        pointerMove(touch.clientX, touch.clientY);
+      },
+      { passive: true }
+    );
+
+    window.addEventListener("touchend", pointerEnd, { passive: true });
+
+    window.addEventListener("resize", setupCanvas);
+
+    setupCanvas();
+    updateCalibrationGuide();
+    updateUI();
+    loop();
+  </script>
 </body>
 </html>
