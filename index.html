@@ -3,64 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SkyView Completo: Calibración + Astros Reales</title>
+    <title>SkyView: GPS + Brújula Automática</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; }
+        body { margin: 0; overflow: hidden; background: #0b0c10; color: #fff; font-family: 'Segoe UI', Tahoma, sans-serif; text-align: center; }
         #canvas-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
-        
-        /* Interfaz de Calibración */
-        #ui-layer { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(0, 0, 0, 0.9); z-index: 10; padding: 20px; transition: opacity 0.5s; }
-        h1 { color: #4fc3f7; }
-        .instruccion { font-size: 1.2rem; margin: 20px 0; max-width: 300px; }
-        .icono { font-size: 4rem; margin-bottom: 20px; animation: flotar 2s ease-in-out infinite; }
-        button { background: #4fc3f7; color: #000; border: none; padding: 15px 40px; font-size: 1.1rem; border-radius: 30px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(79, 195, 247, 0.4); }
+        #ui-layer { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(11, 12, 16, 0.95); z-index: 10; padding: 20px; transition: opacity 0.5s; }
+        h1 { color: #66fcf1; }
+        .instruccion { font-size: 1.1rem; margin: 20px 0; max-width: 320px; color: #c5c6c7; line-height: 1.5; }
+        button { background: #45a29e; color: #fff; border: none; padding: 15px 30px; font-size: 1.1rem; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(69, 162, 158, 0.4); }
         button:active { transform: scale(0.95); }
-        
-        /* Mira central */
-        .crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; z-index: 5; pointer-events: none; }
-        .crosshair::after { content: ''; position: absolute; top: 9px; left: -5px; width: 30px; height: 2px; background: rgba(255,255,255,0.3); }
-        .crosshair::before { content: ''; position: absolute; top: -5px; left: 9px; width: 2px; height: 30px; background: rgba(255,255,255,0.3); }
-        
-        @keyframes flotar { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 20px; height: 20px; border: 2px solid rgba(102,252,241,0.5); border-radius: 50%; z-index: 5; }
         .oculto { opacity: 0; pointer-events: none; }
+        #info-panel { position: absolute; bottom: 20px; left: 20px; text-align: left; z-index: 5; font-size: 12px; color: #66fcf1; pointer-events: none; text-shadow: 1px 1px 2px black; line-height: 1.6; }
     </style>
 </head>
 <body>
 
     <div class="crosshair" id="mira" style="display: none;"></div>
-
     <div id="canvas-container"></div>
+    <div id="info-panel" class="oculto">
+        <span id="txt-gps">Buscando GPS...</span><br>
+        <span id="txt-brujula">Brújula: Desconectada</span>
+    </div>
 
     <div id="ui-layer">
         <div id="step-content">
-            <h1>Inicializando...</h1>
-            <p class="instruccion">Cargando catálogo estelar y alineando sensores.</p>
+            <h1>Sincronización Total</h1>
+            <p class="instruccion">Permite el acceso a tu Ubicación (GPS) y Sensores de Movimiento para alinear automáticamente la bóveda celeste.</p>
+            <button onclick="iniciarApp()">Conectar con el Cielo</button>
         </div>
     </div>
 
 <script>
-    // --- VARIABLES GLOBALES ---
     let scene, camera, renderer, starGroup;
     const uiLayer = document.getElementById('ui-layer');
-    const stepContent = document.getElementById('step-content');
-    const mira = document.getElementById('mira');
+    const panelGPS = document.getElementById('txt-gps');
+    const panelBrujula = document.getElementById('txt-brujula');
     
-    // Variables de sensores
-    let alphaOffset = 0; 
-    let sensoresActuales = { a: 0, b: 0, g: 0 };
-    let calibracionActiva = false;
-    let pasoActual = 0;
+    let usuarioLat = 0, usuarioLon = 0;
+    let brujulaDetectada = false;
+    let headingOffset = 0; // Guardará la desviación del Norte
+    let currentAlpha = 0, currentBeta = 0, currentGamma = 0;
+    
+    const planetas = ['Sun', 'Moon', 'Venus', 'Mars', 'Jupiter', 'Saturn'];
+    const coloresPlanetas = { 'Sun': 0xffdd00, 'Moon': 0xffffff, 'Venus': 0xffd700, 'Mars': 0xff4400, 'Jupiter': 0xffaa66, 'Saturn': 0xeedd88 };
 
-    const pasosCalibracion = [
-        { txt: "Gira tu celular plano a la IZQUIERDA", icon: "⬅️" },
-        { txt: "Gira tu celular plano a la DERECHA", icon: "➡️" },
-        { txt: "Levanta la pantalla hacia TU CARA", icon: "📱" },
-        { txt: "Apunta hacia el CIELO (Cénit)", icon: "⬆️" },
-        { txt: "Gira sobre su eje como volante", icon: "🔄" }
-    ];
-
-    // --- 1. INICIALIZAR ENTORNO 3D ---
     function init3D() {
         scene = new THREE.Scene();
         camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 2000);
@@ -71,172 +60,157 @@
         starGroup = new THREE.Group();
         scene.add(starGroup);
 
-        // Referencias cardinales
-        crearEtiqueta("Norte (Tu Frente)", 0, 0, -500, "#4fc3f7");
+        crearEtiqueta("Norte", 0, 0, -500, "#66fcf1");
         crearEtiqueta("Sur", 0, 0, 500, "#ff7043");
-        crearEtiqueta("Este", 500, 0, 0, "#fff");
-        crearEtiqueta("Oeste", -500, 0, 0, "#fff");
-        crearEtiqueta("⭐ CÉNIT ⭐", 0, 500, 0, "#ffee58");
-
-        crearUniverso();
-        mostrarBotonInicio();
+        crearEtiqueta("Este", 500, 0, 0, "#ffffff");
+        crearEtiqueta("Oeste", -500, 0, 0, "#ffffff");
+        
         animar();
     }
 
-    // --- 2. DIBUJAR LOS ASTROS ---
-    function raDecToVector(ra, dec, radius = 500) {
-        // Conversión de coordenadas astronómicas a 3D
-        const phi = (90 - dec) * (Math.PI / 180);
-        const theta = (ra * 15) * (Math.PI / 180);
-        
+    function azAltToVector(azimuth, altitude, radius = 500) {
+        const azRad = THREE.MathUtils.degToRad(azimuth);
+        const altRad = THREE.MathUtils.degToRad(altitude);
         return new THREE.Vector3(
-            radius * Math.sin(phi) * Math.cos(theta),
-            radius * Math.cos(phi),
-            radius * Math.sin(phi) * Math.sin(theta)
+            radius * Math.cos(altRad) * Math.sin(azRad),
+            radius * Math.sin(altRad),
+            -radius * Math.cos(altRad) * Math.cos(azRad)
         );
     }
 
-    function crearUniverso() {
-        // Astros principales reales (RA, Dec, Color, Tamaño, Nombre)
-        const astros = [
-            { n: "Sirio", ra: 6.75, dec: -16.7, c: 0x99ccff, s: 4 },
-            { n: "Betelgeuse", ra: 5.9, dec: 7.4, c: 0xff6600, s: 5 },
-            { n: "Polaris (Estrella Polar)", ra: 2.5, dec: 89.2, c: 0xffffcc, s: 4 },
-            { n: "Marte", ra: 14.2, dec: -12.5, c: 0xff3300, s: 8 },
-            { n: "Júpiter", ra: 18.5, dec: -23.1, c: 0xffcc99, s: 10 }
-        ];
+    function generarCieloReal() {
+        const fechaActual = new Date();
+        const observador = new Astronomy.Observer(usuarioLat, usuarioLon, 0);
 
-        astros.forEach(a => {
-            const pos = raDecToVector(a.ra, a.dec);
+        planetas.forEach(cuerpo => {
+            const equ_2000 = Astronomy.Equator(cuerpo, fechaActual, observador, true, true);
+            const horizonte = Astronomy.Horizon(fechaActual, observador, equ_2000.ra, equ_2000.dec, 'normal');
+            const pos = azAltToVector(horizonte.azimuth, horizonte.altitude);
             
-            // Crear el punto de luz
-            const geo = new THREE.SphereGeometry(a.s, 16, 16);
-            const mat = new THREE.MeshBasicMaterial({ color: a.c });
-            const mesh = new THREE.Mesh(geo, mat);
+            const size = (cuerpo === 'Sun' || cuerpo === 'Moon') ? 15 : 6;
+            const mesh = new THREE.Mesh(new THREE.SphereGeometry(size, 32, 32), new THREE.MeshBasicMaterial({ color: coloresPlanetas[cuerpo] }));
             mesh.position.copy(pos);
             starGroup.add(mesh);
-
-            // Crear el nombre del astro flotando junto a él
-            crearEtiqueta(a.n, pos.x, pos.y - 15, pos.z, "#ffffff", 20);
+            crearEtiqueta(cuerpo === 'Sun' ? 'Sol' : cuerpo === 'Moon' ? 'Luna' : cuerpo, pos.x, pos.y - 20, pos.z, coloresPlanetas[cuerpo], 20);
         });
 
-        // Generar fondo de 1000 estrellas tenues simulando la Vía Láctea
-        const starGeometry = new THREE.BufferGeometry();
-        const starMaterial = new THREE.PointsMaterial({ color: 0xaaaaaa, size: 1.5 });
-        const starVertices = [];
-        for (let i = 0; i < 1000; i++) {
-            const rPos = raDecToVector(Math.random() * 24, (Math.random() * 180) - 90, 800);
-            starVertices.push(rPos.x, rPos.y, rPos.z);
+        // Estrellas de fondo
+        const starGeo = new THREE.BufferGeometry();
+        const starVerts = [];
+        for (let i = 0; i < 800; i++) {
+            const rPos = azAltToVector(Math.random() * 360, (Math.random() * 180) - 90, 800);
+            starVerts.push(rPos.x, rPos.y, rPos.z);
         }
-        starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
-        const backgroundStars = new THREE.Points(starGeometry, starMaterial);
-        starGroup.add(backgroundStars);
+        starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starVerts, 3));
+        starGroup.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0x888888, size: 1.5 })));
     }
 
-    function crearEtiqueta(texto, x, y, z, color, textSize = 40) {
+    function crearEtiqueta(texto, x, y, z, color, textSize = 30) {
         const canvas = document.createElement('canvas');
         canvas.width = 256; canvas.height = 128;
-        const context = canvas.getContext('2d');
-        context.font = `Bold ${textSize}px Arial`;
-        context.fillStyle = color;
-        context.textAlign = "center";
-        context.fillText(texto, 128, 64);
-        
-        const texture = new THREE.CanvasTexture(canvas);
-        const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
-        const sprite = new THREE.Sprite(spriteMaterial);
+        const ctx = canvas.getContext('2d');
+        ctx.font = `Bold ${textSize}px sans-serif`;
+        ctx.fillStyle = color;
+        ctx.textAlign = "center";
+        ctx.fillText(texto, 128, 64);
+        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true }));
         sprite.position.set(x, y, z);
-        sprite.scale.set(100, 50, 1);
+        sprite.scale.set(80, 40, 1);
         scene.add(sprite);
     }
 
-    // --- 3. LÓGICA DE CALIBRACIÓN Y UI ---
-    function mostrarBotonInicio() {
-        stepContent.innerHTML = `
-            <h1>Calibrador Estelar</h1>
-            <p class="instruccion">Conecta tus sensores con el universo.</p>
-            <button onclick="iniciarCalibracion()">Iniciar Secuencia</button>
-        `;
+    // --- LA MAGIA DE LA BRÚJULA AUTOMÁTICA ---
+    function procesarSensores(e) {
+        if (e.alpha === null) return;
+
+        currentAlpha = e.alpha;
+        currentBeta = e.beta;
+        currentGamma = e.gamma;
+
+        // Si es iOS, tiene webkitCompassHeading
+        if (e.webkitCompassHeading !== undefined) {
+            headingOffset = e.webkitCompassHeading;
+            brujulaDetectada = true;
+            panelBrujula.innerText = `Brújula (iOS): ${headingOffset.toFixed(0)}° Norte`;
+        } 
+        // Si es Android, usamos la orientación absoluta si está disponible
+        else if (e.absolute || e.alpha !== null) {
+            // En Android, Alpha = 360 - brújula
+            headingOffset = 360 - e.alpha;
+            brujulaDetectada = true;
+            panelBrujula.innerText = `Brújula (Andr): ${headingOffset.toFixed(0)}° Norte`;
+        }
     }
 
-    async function iniciarCalibracion() {
-        // Pedir permiso en iOS
-        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-            const permiso = await DeviceOrientationEvent.requestPermission();
-            if (permiso !== 'granted') return alert("Necesitamos acceso al giroscopio.");
-        }
+    async function iniciarApp() {
+        document.getElementById('step-content').innerHTML = `<h2 style="color:#66fcf1;">Calculando...</h2>`;
         
-        // Encender sensores
-        window.addEventListener('deviceorientation', (e) => {
-            if(e.alpha !== null) {
-                sensoresActuales.a = e.alpha;
-                sensoresActuales.b = e.beta;
-                sensoresActuales.g = e.gamma;
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            usuarioLat = pos.coords.latitude;
+            usuarioLon = pos.coords.longitude;
+            panelGPS.innerText = `GPS: Lat ${usuarioLat.toFixed(1)} / Lon ${usuarioLon.toFixed(1)}`;
+            document.getElementById('info-panel').classList.remove('oculto');
+
+            generarCieloReal();
+
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                const permiso = await DeviceOrientationEvent.requestPermission();
+                if (permiso !== 'granted') return alert("Necesitamos sensores para orientarte.");
             }
-        });
+            
+            // Intentamos obtener el sensor absoluto para Android
+            if ('ondeviceorientationabsolute' in window) {
+                window.addEventListener('deviceorientationabsolute', procesarSensores);
+            } else {
+                // Fallback para iOS y navegadores estándar
+                window.addEventListener('deviceorientation', procesarSensores);
+            }
 
-        avanzarPaso();
+            // Ocultar UI y empezar
+            setTimeout(() => {
+                uiLayer.classList.add('oculto');
+                document.getElementById('mira').style.display = 'block';
+            }, 1000);
+
+        }, (err) => alert("Error GPS: " + err.message));
     }
 
-    function avanzarPaso() {
-        if (pasoActual < pasosCalibracion.length) {
-            const p = pasosCalibracion[pasoActual];
-            stepContent.innerHTML = `
-                <div class="icono">${p.icon}</div>
-                <h2>Paso ${pasoActual + 1}</h2>
-                <p class="instruccion">${p.txt}</p>
-                <button onclick="avanzarPaso()">Siguiente</button>
-            `;
-            pasoActual++;
-        } else {
-            // Terminar Calibración: Tomar la posición actual como el "Norte" relativo
-            alphaOffset = sensoresActuales.a;
-            uiLayer.classList.add('oculto');
-            mira.style.display = 'block';
-            calibracionActiva = true;
-        }
-    }
-
-    // --- 4. EL CEREBRO DE LA CÁMARA (Giroscopio a 3D) ---
+    // --- CÁMARA ACTUALIZADA CON BRÚJULA ---
     function actualizarCamara() {
-        if (!calibracionActiva) return;
+        if (!brujulaDetectada) return;
 
-        // Convertir sensores a Radianes, restando el Offset (la Tara inicial)
-        let alpha = THREE.MathUtils.degToRad(sensoresActuales.a - alphaOffset);
-        let beta = THREE.MathUtils.degToRad(sensoresActuales.b);
-        let gamma = THREE.MathUtils.degToRad(sensoresActuales.g);
-        let orientacionPantalla = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
+        // Combinamos la rotación del usuario (Alpha) con el Offset detectado por la brújula
+        let alphaRad = THREE.MathUtils.degToRad(currentAlpha);
+        
+        // Si detectamos el norte, forzamos que Alpha mire en esa dirección
+        if (headingOffset !== 0) {
+           alphaRad = THREE.MathUtils.degToRad(360 - headingOffset);
+        }
 
-        // Cuaternión para evitar el Gimbal Lock
-        const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
+        let betaRad = THREE.MathUtils.degToRad(currentBeta);
+        let gammaRad = THREE.MathUtils.degToRad(currentGamma);
+        let screenRot = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
+
+        const euler = new THREE.Euler(betaRad, alphaRad, -gammaRad, 'YXZ');
         const qDispositivo = new THREE.Quaternion().setFromEuler(euler);
-
-        // Ajuste de hardware (-90 grados en X)
-        const qAjuste = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
-        qDispositivo.multiply(qAjuste);
-
-        // Ajuste si la pantalla está girada
-        const qPantalla = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -orientacionPantalla);
-        qDispositivo.multiply(qPantalla);
-
+        qDispositivo.multiply(new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)));
+        qDispositivo.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -screenRot));
+        
         camera.quaternion.copy(qDispositivo);
     }
 
-    // --- 5. BUCLE DE RENDERIZADO ---
     function animar() {
         requestAnimationFrame(animar);
         actualizarCamara();
         renderer.render(scene, camera);
     }
 
-    // Reajustar canvas si el usuario voltea el celular
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // Arrancar la app
     init3D();
 </script>
 </body>
