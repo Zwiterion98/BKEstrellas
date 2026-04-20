@@ -117,44 +117,44 @@ const SOLAR_BODIES = [
 const CALIBRATION_STEPS = [
   {
     key: "neutral",
-    title: "1. Posición base",
+    title: "1. Posición base hacia el cielo",
     instruction:
-      "Sostené el celular horizontal al suelo, pantalla hacia arriba, apuntando hacia adelante. Quedate quieto y guardá el paso.",
+      "Sostené el celular horizontal, con la pantalla mirando hacia abajo y la parte trasera apuntando al cielo. Esta será la posición de cenit. Quedate quieto y guardá el paso.",
     arrowClass: "up",
   },
   {
     key: "yawLeft",
     title: "2. Girá a la izquierda",
     instruction:
-      "Con el celular horizontal al suelo, giralo hacia la izquierda como brújula sobre una mesa. Luego guardá el paso.",
+      "Sin inclinarlo, mantené el celular horizontal y girá todo el cuerpo/celular hacia la izquierda. Luego guardá el paso.",
     arrowClass: "left",
   },
   {
     key: "yawRight",
     title: "3. Girá a la derecha",
     instruction:
-      "Volvé cerca del centro y giralo hacia la derecha, siempre horizontal al suelo. Luego guardá el paso.",
+      "Volvé cerca del centro y girá hacia la derecha, siempre con el celular horizontal y apuntando al cielo. Luego guardá el paso.",
     arrowClass: "",
   },
   {
-    key: "pitchUp",
-    title: "4. Levantalo hacia vos",
+    key: "pitchDown",
+    title: "4. Bajá la mirada desde el cielo",
     instruction:
-      "Desde horizontal, levantá la parte superior del celular hacia tu cara, como si miraras la pantalla. Luego guardá el paso.",
+      "Desde la posición horizontal apuntando al cielo, incliná el celular hacia vos como si bajaras la vista desde el cenit hacia el horizonte. Luego guardá el paso.",
     arrowClass: "up",
   },
   {
     key: "rollLeft",
     title: "5. Rotá sobre su eje a la izquierda",
     instruction:
-      "Sostené el celular frente a vos y rotalo en su propio eje hacia la izquierda. Luego guardá el paso.",
+      "Manteniendo la parte trasera apuntando al cielo, rotá el celular sobre su propio eje hacia la izquierda. Luego guardá el paso.",
     arrowClass: "roll-left",
   },
   {
     key: "rollRight",
     title: "6. Rotá sobre su eje a la derecha",
     instruction:
-      "Ahora rotalo en su propio eje hacia la derecha. Guardá el paso para terminar.",
+      "Ahora rotalo sobre su propio eje hacia la derecha. Guardá el paso para terminar.",
     arrowClass: "roll-right",
   },
 ];
@@ -209,7 +209,7 @@ const state = {
   constellations: [],
 
   viewHeading: 0,
-  viewPitch: 18,
+  viewPitch: 90,
   fovX: 75,
   fovY: 52,
 
@@ -748,9 +748,11 @@ function drawSensorTestCanvas() {
   ctx.lineTo(width, cy);
   ctx.stroke();
 
-  const x = clamp(cx + state.calibratedYaw * 3, 32, width - 32);
-  const y = clamp(cy - state.calibratedPitch * 3, 42, height - 42);
-  const roll = (state.calibratedRoll * Math.PI) / 180;
+const x = clamp(cx + state.calibratedYaw * 3, 32, width - 32);
+
+const y = clamp(cy - state.calibratedPitch * 3, 42, height - 42);
+
+const roll = (state.calibratedRoll * Math.PI) / 180;
 
   ctx.save();
   ctx.translate(x, y);
@@ -840,16 +842,28 @@ function handleOrientation(event) {
   state.rawRoll = state.smoothedRoll;
 
   updateCalibratedAxes();
-
-  if (!state.motionEnabled) return;
-
+if (state.motionEnabled) {
   if (state.calibration.ready) {
-    state.viewHeading = clamp360(state.calibration.neutralHeading + state.calibratedYaw + state.headingOffset);
-    state.viewPitch = clamp(18 + state.calibratedPitch + state.pitchOffset, -30, 85);
+    state.viewHeading = clamp360(
+      state.calibration.neutralHeading + state.calibratedYaw + state.headingOffset
+    );
+
+    // Modo cielo:
+    // neutral = cenit = 90°
+    // inclinar el celu hacia vos baja la vista hacia el horizonte
+    state.viewPitch = clamp(
+      90 + state.calibratedPitch + state.pitchOffset,
+      0,
+      90
+    );
   } else {
+    // Fallback sin calibración.
     state.viewHeading = clamp360(state.rawHeading + state.headingOffset);
-    state.viewPitch = clamp(state.rawPitch + state.pitchOffset, -30, 85);
+
+    // Sin calibración, asumimos modo cielo y dejamos una elevación alta.
+    state.viewPitch = clamp(90 - Math.abs(state.rawPitch ?? 0), 0, 90);
   }
+}
 }
 
 function handleMotion(event) {
@@ -976,29 +990,39 @@ function finishCalibration() {
   const s = state.calibrationSamples;
   const neutral = s.neutral;
 
-  if (!neutral || !s.yawLeft || !s.yawRight || !s.pitchUp || !s.rollLeft || !s.rollRight) {
+  if (!neutral || !s.yawLeft || !s.yawRight || !s.pitchDown || !s.rollLeft || !s.rollRight) {
     setCalibrationStatus("faltan pasos. Reiniciá la calibración.", "danger");
     return;
   }
 
   const yawLeftDelta = shortestAngleDiff(s.yawLeft.heading, neutral.heading);
   const yawRightDelta = shortestAngleDiff(s.yawRight.heading, neutral.heading);
-  const pitchDelta = s.pitchUp.pitch - neutral.pitch;
+
+  const pitchDownDelta = s.pitchDown.pitch - neutral.pitch;
+
   const rollLeftDelta = s.rollLeft.roll - neutral.roll;
   const rollRightDelta = s.rollRight.roll - neutral.roll;
 
   const yawAmplitude = Math.max(8, Math.abs(yawLeftDelta - yawRightDelta) / 2);
-  const pitchAmplitude = Math.max(8, Math.abs(pitchDelta));
+  const pitchAmplitude = Math.max(8, Math.abs(pitchDownDelta));
   const rollAmplitude = Math.max(8, Math.abs(rollLeftDelta - rollRightDelta) / 2);
 
   state.calibration = {
     ready: true,
+
+    // Girar a izquierda debe mover la bóveda hacia la izquierda/derecha de forma consistente.
     yawSign: yawLeftDelta < 0 ? 1 : -1,
-    pitchSign: pitchDelta > 0 ? 1 : -1,
+
+    // Como partimos mirando al cenit, inclinar hacia vos debe BAJAR la elevación.
+    pitchSign: pitchDownDelta > 0 ? -1 : 1,
+
+    // Roll solo para test visual / estabilización, no para mover la bóveda principal.
     rollSign: rollLeftDelta < rollRightDelta ? 1 : -1,
+
     yawScale: 35 / yawAmplitude,
-    pitchScale: 35 / pitchAmplitude,
+    pitchScale: 45 / pitchAmplitude,
     rollScale: 35 / rollAmplitude,
+
     neutralHeading: neutral.heading,
     neutralPitch: neutral.pitch,
     neutralRoll: neutral.roll,
@@ -1007,15 +1031,21 @@ function finishCalibration() {
   state.calibrationActive = false;
   state.calibrationStepIndex = -1;
 
+  // Al terminar, la vista base queda apuntando al cenit.
+  state.viewPitch = 90;
+
+  // Mantiene el norte relativo según la posición base.
   state.headingOffset = shortestAngleDiff(state.viewHeading, state.rawHeading ?? neutral.heading);
-  state.pitchOffset = state.viewPitch - (state.rawPitch ?? neutral.pitch);
+
+  // No usamos el pitch bruto como elevación directa: lo convertimos desde la calibración.
+  state.pitchOffset = 0;
 
   els.calibrationProgress.style.width = "100%";
 
   updateCalibrationUI();
   updateCalibratedAxes();
 
-  setCalibrationStatus("lista. Ejes normalizados para esta sesión.", "good");
+  setCalibrationStatus("lista. La bóveda quedó calibrada para mirar al cielo con el celular boca abajo.", "good");
 }
 
 function resetCalibration() {
@@ -1046,14 +1076,16 @@ function resetCalibration() {
 
 function recenterView() {
   state.viewHeading = 0;
-  state.viewPitch = 18;
+  state.viewPitch = 90;
 
-  state.headingOffset = state.rawHeading != null ? shortestAngleDiff(0, state.rawHeading) : 0;
-  state.pitchOffset = state.rawPitch != null ? 18 - state.rawPitch : 0;
+  state.headingOffset = state.rawHeading != null
+    ? shortestAngleDiff(0, state.rawHeading)
+    : 0;
 
-  setStatus("vista recentrada.", "good");
+  state.pitchOffset = 0;
+
+  setStatus("vista recentrada al cenit. Posición base: celular boca abajo apuntando al cielo.", "good");
 }
-
 function pointerStart(x, y) {
   state.dragging = true;
   state.dragStartX = x;
