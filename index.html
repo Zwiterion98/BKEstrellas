@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Sky Dome Explorer</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --panel: rgba(13, 21, 39, 0.88);
+      --border: rgba(255,255,255,0.12);
+      --text: #eef4ff;
+      --muted: #9eb1d0;
+      --accent: #7cc7ff;
+      --good: #70e0a3;
+      --warn: #ffd166;
+      --danger: #ff7b7b;
+      --solar: #ffd166;
+      --star: #9fd3ff;
+      --constellation: #d7b8ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top left, rgba(124,199,255,0.12), transparent 30%),
+        linear-gradient(180deg, #0a1424 0%, #040811 100%);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .app {
+      min-height: 100vh;
+      padding: 20px 16px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+
+    h1, h2, h3 {
+      margin: 0;
+      line-height: 1.1;
+    }
+
+    h1 { font-size: 28px; margin-bottom: 8px; }
+    h2 { font-size: 18px; margin-bottom: 12px; }
+    h3 { font-size: 15px; }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 13px 15px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      background: rgba(124,199,255,0.16);
+      border-color: rgba(124,199,255,0.3);
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.12);
+    }
+
+    .status {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-top: 12px;
+    }
+
+    .status strong { color: var(--text); }
+    .good { color: var(--good); }
+    .warn { color: var(--warn); }
+    .danger { color: var(--danger); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .metric {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .metric-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .metric-value {
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.1;
+      word-break: break-word;
+    }
+
+    .explorer-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      min-height: 360px;
+      border-radius: 22px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: linear-gradient(180deg, rgba(5,10,20,1) 0%, rgba(5,8,16,1) 100%);
+      box-shadow: inset 0 0 40px rgba(0,0,0,0.35);
+    }
+
+    #skyCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    .explorer-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 14px;
+    }
+
+    .overlay-top,
+    .overlay-bottom {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .overlay-chip {
+      pointer-events: auto;
+      background: rgba(8, 14, 27, 0.68);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 10px 12px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .overlay-chip strong {
+      color: var(--text);
+      display: block;
+      font-size: 14px;
+      margin-top: 3px;
+    }
+
+    .crosshair {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 46px;
+      height: 46px;
+      transform: translate(-50%, -50%);
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 999px;
+      opacity: 0.85;
+      pointer-events: none;
+    }
+
+    .crosshair::before,
+    .crosshair::after {
+      content: '';
+      position: absolute;
+      background: rgba(255,255,255,0.22);
+    }
+
+    .crosshair::before {
+      left: 50%;
+      top: 8px;
+      bottom: 8px;
+      width: 1px;
+      transform: translateX(-50%);
+    }
+
+    .crosshair::after {
+      top: 50%;
+      left: 8px;
+      right: 8px;
+      height: 1px;
+      transform: translateY(-50%);
+    }
+
+    .sky-legend {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      display: inline-block;
+      border-radius: 999px;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    .section-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .item {
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    .item-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 800;
+      border-radius: 999px;
+      padding: 6px 9px;
+      border: 1px solid rgba(255,255,255,0.1);
+      white-space: nowrap;
+    }
+
+    .badge.solar { color: var(--solar); }
+    .badge.star { color: var(--star); }
+    .badge.constellation { color: var(--constellation); }
+    .badge.visible { color: var(--good); }
+    .badge.hidden { color: var(--danger); }
+
+    .coords {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .coords div {
+      color: var(--muted);
+    }
+
+    .coords strong {
+      display: block;
+      color: var(--text);
+      font-size: 14px;
+      margin-top: 2px;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      color: #cfe0ff;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .footer-note {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    @media (max-width: 980px) {
+      .grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .section-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .explorer-wrap {
+        aspect-ratio: 4 / 5;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .metric-value {
+        font-size: 20px;
+      }
+
+      .coords {
+        grid-template-columns: 1fr;
+      }
+
+      .overlay-top,
+      .overlay-bottom {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <h1>Sky Dome Explorer</h1>
+      <p>Explorador de bóveda celeste. En desktop podés arrastrar para mirar alrededor. En celular, podés activar sensores y recorrer el cielo moviendo el dispositivo, al estilo SkyView.</p>
+    </div>
+
+    <div class="card">
+      <div class="buttons">
+        <button id="getSkyBtn">Obtener cielo actual</button>
+        <button id="enableMotionBtn">Activar movimiento del dispositivo</button>
+        <button id="recenterBtn" class="secondary">Recentrar vista</button>
+        <button id="refreshBtn" class="secondary">Actualizar posiciones</button>
+      </div>
+      <div id="status" class="status"><strong>Estado:</strong> listo para obtener ubicación y explorar el cielo.</div>
+    </div>
+
+    <div class="card">
+      <h2>Bóveda explorables</h2>
+      <p style="margin-bottom:14px;">La vista funciona como una cámara dentro del domo. En desktop: arrastrá. En móvil: girá el teléfono luego de activar sensores. El centro marca hacia dónde estás mirando.</p>
+      <div class="explorer-wrap">
+        <canvas id="skyCanvas"></canvas>
+        <div class="crosshair"></div>
+        <div class="explorer-overlay">
+          <div class="overlay-top">
+            <div class="overlay-chip">Dirección<strong id="viewHeading">--</strong></div>
+            <div class="overlay-chip">Elevación de vista<strong id="viewPitch">--</strong></div>
+            <div class="overlay-chip">Modo<strong id="controlMode">Mouse / touch</strong></div>
+          </div>
+          <div class="overlay-bottom">
+            <div class="overlay-chip">Centro de la mira<strong id="centerTarget">Nada cerca</strong></div>
+            <div class="overlay-chip">Campo visual<strong id="fovReadout">75° × 52°</strong></div>
+          </div>
+        </div>
+      </div>
+      <div class="sky-legend">
+        <span><span class="legend-dot" style="background: var(--solar);"></span>Astros</span>
+        <span><span class="legend-dot" style="background: var(--star);"></span>Estrellas</span>
+        <span><span class="legend-dot" style="background: var(--constellation);"></span>Constelaciones</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Ubicación actual</h2>
+      <div class="grid">
+        <div class="metric">
+          <div class="metric-label">Latitud</div>
+          <div id="lat" class="metric-value">--</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Longitud</div>
+          <div id="lon" class="metric-value">--</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Precisión</div>
+          <div id="accuracy" class="metric-value">--</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Hora usada</div>
+          <div id="timestamp" class="metric-value">--</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-grid">
+      <div class="card">
+        <h2>Astros</h2>
+        <div id="solarList" class="list">
+          <div class="muted">Todavía no se calcularon posiciones.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Estrellas brillantes</h2>
+        <div id="starsList" class="list">
+          <div class="muted">Todavía no se calcularon posiciones.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Constelaciones</h2>
+        <div id="constellationsList" class="list">
+          <div class="muted">Todavía no se calcularon posiciones.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>JSON</h2>
+      <div id="debugJson" class="mono">{}</div>
+    </div>
+
+    <div class="footer-note">
+      Azimut: 0° = norte, 90° = este, 180° = sur, 270° = oeste. Altitud: 0° = horizonte, 90° = cenit. Valores con altitud negativa están por debajo del horizonte. El visor usa proyección en perspectiva: solo muestra lo que entra dentro del campo visual actual.
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
+  <script>
+    const BRIGHT_STARS = [
+      { name: 'Sirio', ra: 6.7525, dec: -16.7161 },
+      { name: 'Canopus', ra: 6.3992, dec: -52.6957 },
+      { name: 'Arcturus', ra: 14.2610, dec: 19.1824 },
+      { name: 'Vega', ra: 18.6156, dec: 38.7837 },
+      { name: 'Capella', ra: 5.2782, dec: 45.9980 },
+      { name: 'Rigel', ra: 5.2423, dec: -8.2016 },
+      { name: 'Betelgeuse', ra: 5.9195, dec: 7.4071 },
+      { name: 'Aldebarán', ra: 4.5987, dec: 16.5093 },
+      { name: 'Antares', ra: 16.4901, dec: -26.4320 },
+      { name: 'Spica', ra: 13.4199, dec: -11.1613 },
+      { name: 'Fomalhaut', ra: 22.9608, dec: -29.6222 },
+      { name: 'Achernar', ra: 1.6286, dec: -57.2368 },
+      { name: 'SCGA 1924 · Puppis', ra: 8.3098138889, dec: -26.2482222222 },
+      { name: 'SCGA 1928 · Puppis', ra: 8.3197972222, dec: -23.0248611111 },
+      { name: 'SCGA 1930 · Puppis', ra: 8.3217416667, dec: -23.7969444444 },
+      { name: 'SCGA 1950 · Volans', ra: 8.2952472222, dec: -69.1289444444 }
+    ];
+
+    const CONSTELLATIONS = [
+      { name: 'Orión', ra: 5.6, dec: -5.0 },
+      { name: 'Cruz del Sur', ra: 12.5, dec: -60.0 },
+      { name: 'Escorpio', ra: 16.9, dec: -30.0 },
+      { name: 'Tauro', ra: 4.7, dec: 15.0 },
+      { name: 'Leo', ra: 10.7, dec: 15.0 },
+      { name: 'Casiopea', ra: 1.0, dec: 60.0 },
+      { name: 'Sagitario', ra: 19.0, dec: -28.0 },
+      { name: 'Andrómeda', ra: 0.8, dec: 37.0 }
+    ];
+
+    const CONSTELLATION_LINES = [
+      {
+        name: 'Orión',
+        segments: [
+          [{ ra: 5.9195, dec: 7.4071 }, { ra: 5.2423, dec: -8.2016 }],
+          [{ ra: 5.9195, dec: 7.4071 }, { ra: 5.5334, dec: -0.2991 }],
+          [{ ra: 5.5334, dec: -0.2991 }, { ra: 5.4189, dec: -1.9426 }],
+          [{ ra: 5.4189, dec: -1.9426 }, { ra: 5.6036, dec: -1.2019 }],
+          [{ ra: 5.6036, dec: -1.2019 }, { ra: 5.6793, dec: -1.9426 }],
+          [{ ra: 5.6793, dec: -1.9426 }, { ra: 5.2423, dec: -8.2016 }]
+        ]
+      },
+      {
+        name: 'Cruz del Sur',
+        segments: [
+          [{ ra: 12.4433, dec: -63.0991 }, { ra: 12.7953, dec: -59.6888 }],
+          [{ ra: 12.5194, dec: -57.1132 }, { ra: 12.2524, dec: -58.7489 }]
+        ]
+      },
+      {
+        name: 'Escorpio',
+        segments: [
+          [{ ra: 16.4901, dec: -26.4320 }, { ra: 16.0056, dec: -22.6217 }],
+          [{ ra: 16.0056, dec: -22.6217 }, { ra: 16.3531, dec: -25.5928 }],
+          [{ ra: 16.3531, dec: -25.5928 }, { ra: 17.5601, dec: -37.1038 }],
+          [{ ra: 17.5601, dec: -37.1038 }, { ra: 17.7081, dec: -39.0299 }]
+        ]
+      },
+      {
+        name: 'Tauro',
+        segments: [
+          [{ ra: 4.5987, dec: 16.5093 }, { ra: 4.4769, dec: 15.8709 }],
+          [{ ra: 4.4769, dec: 15.8709 }, { ra: 4.3299, dec: 15.6277 }],
+          [{ ra: 4.5987, dec: 16.5093 }, { ra: 4.7041, dec: 22.9569 }],
+          [{ ra: 4.5987, dec: 16.5093 }, { ra: 4.9499, dec: 33.1661 }]
+        ]
+      },
+      {
+        name: 'Leo',
+        segments: [
+          [{ ra: 10.1395, dec: 11.9672 }, { ra: 10.3329, dec: 19.8415 }],
+          [{ ra: 10.3329, dec: 19.8415 }, { ra: 10.2782, dec: 23.4173 }],
+          [{ ra: 10.2782, dec: 23.4173 }, { ra: 11.2351, dec: 20.5237 }]
+        ]
+      },
+      {
+        name: 'Casiopea',
+        segments: [
+          [{ ra: 0.6751, dec: 56.5373 }, { ra: 0.9451, dec: 60.7167 }],
+          [{ ra: 0.9451, dec: 60.7167 }, { ra: 1.4303, dec: 60.2353 }],
+          [{ ra: 1.4303, dec: 60.2353 }, { ra: 2.2937, dec: 59.1498 }],
+          [{ ra: 2.2937, dec: 59.1498 }, { ra: 2.4855, dec: 67.4020 }]
+        ]
+      },
+      {
+        name: 'Andrómeda',
+        segments: [
+          [{ ra: 0.1398, dec: 29.0904 }, { ra: 0.6555, dec: 30.8610 }],
+          [{ ra: 0.6555, dec: 30.8610 }, { ra: 1.1622, dec: 35.6206 }],
+          [{ ra: 1.1622, dec: 35.6206 }, { ra: 2.0649, dec: 42.3297 }]
+        ]
+      },
+      {
+        name: 'Sagitario',
+        segments: [
+          [{ ra: 18.4029, dec: -34.3846 }, { ra: 18.4662, dec: -25.4217 }],
+          [{ ra: 18.4662, dec: -25.4217 }, { ra: 18.9211, dec: -26.2967 }],
+          [{ ra: 18.9211, dec: -26.2967 }, { ra: 19.0435, dec: -29.8801 }],
+          [{ ra: 19.0435, dec: -29.8801 }, { ra: 18.4029, dec: -34.3846 }]
+        ]
+      }
+    ];
+
+    const SOLAR_BODIES = [
+      { name: 'Sol', body: 'Sun' },
+      { name: 'Luna', body: 'Moon' },
+      { name: 'Mercurio', body: 'Mercury' },
+      { name: 'Venus', body: 'Venus' },
+      { name: 'Marte', body: 'Mars' },
+      { name: 'Júpiter', body: 'Jupiter' },
+      { name: 'Saturno', body: 'Saturn' },
+      { name: 'Urano', body: 'Uranus' },
+      { name: 'Neptuno', body: 'Neptune' }
+    ];
+
+    const els = {
+      skyCanvas: document.getElementById('skyCanvas'),
+      lat: document.getElementById('lat'),
+      lon: document.getElementById('lon'),
+      accuracy: document.getElementById('accuracy'),
+      timestamp: document.getElementById('timestamp'),
+      status: document.getElementById('status'),
+      debugJson: document.getElementById('debugJson'),
+      getSkyBtn: document.getElementById('getSkyBtn'),
+      refreshBtn: document.getElementById('refreshBtn'),
+      enableMotionBtn: document.getElementById('enableMotionBtn'),
+      recenterBtn: document.getElementById('recenterBtn'),
+      solarList: document.getElementById('solarList'),
+      starsList: document.getElementById('starsList'),
+      constellationsList: document.getElementById('constellationsList'),
+      viewHeading: document.getElementById('viewHeading'),
+      viewPitch: document.getElementById('viewPitch'),
+      centerTarget: document.getElementById('centerTarget'),
+      controlMode: document.getElementById('controlMode'),
+      fovReadout: document.getElementById('fovReadout'),
+    };
+
+    const state = {
+      canvasReady: false,
+      lat: null,
+      lon: null,
+      accuracy: null,
+      timestampIso: null,
+      solar: [],
+      stars: [],
+      constellations: [],
+      allObjects: [],
+      viewHeading: 0,
+      viewPitch: 18,
+      fovX: 75,
+      fovY: 52,
+      dragging: false,
+      dragStartX: 0,
+      dragStartY: 0,
+      dragHeadingStart: 0,
+      dragPitchStart: 0,
+      motionEnabled: false,
+      headingOffset: 0,
+      pitchOffset: 0,
+      rawHeading: null,
+      rawPitch: null,
+      smoothedHeading: null,
+      smoothedPitch: null,
+      centerObject: null,
+      highlightedObject: null,
+      animationFrame: null,
+    };
+
+    function setStatus(message, tone = '') {
+      els.status.innerHTML = `<strong>Estado:</strong> <span class="${tone}">${message}</span>`;
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function clamp360(value) {
+      return ((value % 360) + 360) % 360;
+    }
+
+    function shortestAngleDiff(a, b) {
+      let diff = a - b;
+      while (diff > 180) diff -= 360;
+      while (diff < -180) diff += 360;
+      return diff;
+    }
+
+    function smoothValue(previous, next, factor = 0.12) {
+      if (previous == null) return next;
+      return previous + (next - previous) * factor;
+    }
+
+    function smoothAngle(previous, next, factor = 0.12) {
+      if (previous == null) return next;
+      const diff = shortestAngleDiff(next, previous);
+      return clamp360(previous + diff * factor);
+    }
+
+    function azimuthToDirection(azimuth) {
+      const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
+      return dirs[Math.round(clamp360(azimuth) / 45) % 8];
+    }
+
+    function visibleLabel(altitude) {
+      return altitude >= 0 ? 'Visible' : 'Bajo horizonte';
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function renderMetricCards() {
+      els.lat.textContent = state.lat != null ? state.lat.toFixed(6) : '--';
+      els.lon.textContent = state.lon != null ? state.lon.toFixed(6) : '--';
+      els.accuracy.textContent = state.accuracy != null ? `${Math.round(state.accuracy)} m` : '--';
+      els.timestamp.textContent = state.timestampIso
+        ? new Date(state.timestampIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        : '--';
+      els.viewHeading.textContent = `${state.viewHeading.toFixed(1)}° · ${azimuthToDirection(state.viewHeading)}`;
+      els.viewPitch.textContent = `${state.viewPitch.toFixed(1)}°`;
+      els.controlMode.textContent = state.motionEnabled ? 'Movimiento del dispositivo' : 'Mouse / touch';
+      els.fovReadout.textContent = `${state.fovX.toFixed(0)}° × ${state.fovY.toFixed(0)}°`;
+      els.centerTarget.textContent = state.centerObject
+        ? `${state.centerObject.name} · ${state.centerObject.altitude.toFixed(1)}° alt`
+        : 'Nada cerca';
+    }
+
+    function renderList(container, items, type) {
+      if (!items.length) {
+        container.innerHTML = '<div class="muted">No hay datos todavía.</div>';
+        return;
+      }
+
+      container.innerHTML = items.map((item) => {
+        const visible = item.altitude >= 0;
+        return `
+          <div class="item">
+            <div class="item-top">
+              <div>
+                <h3>${escapeHtml(item.name)}</h3>
+                <div class="muted">${escapeHtml(item.note || '')}</div>
+              </div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
+                <span class="badge ${type}">${type === 'solar' ? 'ASTRO' : type === 'star' ? 'ESTRELLA' : 'CONSTELACIÓN'}</span>
+                <span class="badge ${visible ? 'visible' : 'hidden'}">${visibleLabel(item.altitude)}</span>
+              </div>
+            </div>
+            <div class="coords">
+              <div>Azimut<strong>${item.azimuth.toFixed(1)}° · ${azimuthToDirection(item.azimuth)}</strong></div>
+              <div>Altitud<strong>${item.altitude.toFixed(1)}°</strong></div>
+              <div>RA<strong>${item.raText || '--'}</strong></div>
+              <div>Dec<strong>${item.decText || '--'}</strong></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toRaText(raHours) {
+      const h = Math.floor(raHours);
+      const mFloat = (raHours - h) * 60;
+      const m = Math.floor(mFloat);
+      return `${h}h ${m}m`;
+    }
+
+    function toDecText(decDeg) {
+      const sign = decDeg >= 0 ? '+' : '-';
+      const abs = Math.abs(decDeg);
+      const d = Math.floor(abs);
+      const m = Math.floor((abs - d) * 60);
+      return `${sign}${d}° ${m}'`;
+    }
+
+    function computeSolarObjects(date, observer) {
+      return SOLAR_BODIES.map((entry) => {
+        const equ = Astronomy.Equator(Astronomy.Body[entry.body], date, observer, true, true);
+        const hor = Astronomy.Horizon(date, observer, equ.ra, equ.dec, 'normal');
+        return {
+          name: entry.name,
+          type: 'solar',
+          altitude: hor.altitude,
+          azimuth: hor.azimuth,
+          raText: toRaText(equ.ra),
+          decText: toDecText(equ.dec),
+          note: hor.altitude >= 0 ? 'Sobre el horizonte ahora' : 'No visible en este momento'
+        };
+      }).sort((a, b) => b.altitude - a.altitude);
+    }
+
+    function computeCatalogObjects(date, observer, catalog, type, noteVisible, noteHidden) {
+      return catalog.map((entry) => {
+        const hor = Astronomy.Horizon(date, observer, entry.ra, entry.dec, 'normal');
+        return {
+          name: entry.name,
+          type,
+          altitude: hor.altitude,
+          azimuth: hor.azimuth,
+          raText: toRaText(entry.ra),
+          decText: toDecText(entry.dec),
+          note: hor.altitude >= 0 ? noteVisible : noteHidden
+        };
+      }).sort((a, b) => b.altitude - a.altitude);
+    }
+
+    function rebuildAllObjects() {
+      state.allObjects = [...state.solar, ...state.stars, ...state.constellations];
+    }
+
+    function setupCanvas() {
+      const canvas = els.skyCanvas;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.floor(rect.width * dpr);
+      canvas.height = Math.floor(rect.height * dpr);
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      state.canvasReady = true;
+    }
+
+    function getHeadingFromEvent(event) {
+      if (typeof event.webkitCompassHeading === 'number') {
+        return event.webkitCompassHeading;
+      }
+      if (typeof event.alpha === 'number') {
+        return clamp360(360 - event.alpha);
+      }
+      return null;
+    }
+
+    function handleOrientation(event) {
+      const heading = getHeadingFromEvent(event);
+      const pitch = typeof event.beta === 'number' ? event.beta : null;
+      if (heading == null || pitch == null) return;
+
+      state.smoothedHeading = smoothAngle(state.smoothedHeading, heading);
+      state.smoothedPitch = smoothValue(state.smoothedPitch, pitch);
+      state.rawHeading = state.smoothedHeading;
+      state.rawPitch = state.smoothedPitch;
+
+      if (state.motionEnabled) {
+        state.viewHeading = clamp360(state.rawHeading + state.headingOffset);
+        state.viewPitch = clamp(state.rawPitch + state.pitchOffset, -30, 85);
+      }
+    }
+
+    async function enableMotionControls() {
+      try {
+        if (typeof DeviceOrientationEvent === 'undefined') {
+          setStatus('este dispositivo no soporta orientación.', 'danger');
+          return;
+        }
+
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+          const response = await DeviceOrientationEvent.requestPermission();
+          if (response !== 'granted') {
+            setStatus('permiso de orientación denegado.', 'danger');
+            return;
+          }
+        }
+
+        window.addEventListener('deviceorientation', handleOrientation, true);
+        state.motionEnabled = true;
+        if (state.rawHeading != null) {
+          state.headingOffset = shortestAngleDiff(state.viewHeading, state.rawHeading);
+          state.pitchOffset = state.viewPitch - state.rawPitch;
+        }
+        if (state.highlightedObject) {
+        state.centerObject = state.highlightedObject;
+      }
+
+      renderMetricCards();
+        setStatus('sensores activos. ahora podés recorrer la bóveda moviendo el celular.', 'good');
+      } catch (error) {
+        console.error(error);
+        setStatus('no se pudieron activar los sensores. probá en móvil y bajo HTTPS.', 'danger');
+      }
+    }
+
+    function recenterView() {
+      if (state.motionEnabled && state.rawHeading != null) {
+        state.headingOffset = shortestAngleDiff(0, state.rawHeading);
+        state.pitchOffset = 18 - state.rawPitch;
+        state.viewHeading = 0;
+        state.viewPitch = 18;
+        setStatus('vista recentrada respecto a la orientación actual del dispositivo.', 'good');
+      } else {
+        state.viewHeading = 0;
+        state.viewPitch = 18;
+        setStatus('vista recentrada.', 'good');
+      }
+    }
+
+    function pointerStart(clientX, clientY) {
+      state.dragging = true;
+      state.dragStartX = clientX;
+      state.dragStartY = clientY;
+      state.dragHeadingStart = state.viewHeading;
+      state.dragPitchStart = state.viewPitch;
+    }
+
+    function pointerMove(clientX, clientY) {
+      if (!state.dragging || state.motionEnabled) return;
+      const dx = clientX - state.dragStartX;
+      const dy = clientY - state.dragStartY;
+      state.viewHeading = clamp360(state.dragHeadingStart - dx * 0.18);
+      state.viewPitch = clamp(state.dragPitchStart + dy * 0.14, -30, 85);
+    }
+
+    function pointerEnd() {
+      state.dragging = false;
+    }
+
+    function worldToCamera(azimuth, altitude) {
+      const yaw = shortestAngleDiff(azimuth, state.viewHeading) * Math.PI / 180;
+      const pitch = (altitude - state.viewPitch) * Math.PI / 180;
+
+      const x = Math.sin(yaw) * Math.cos(altitude * Math.PI / 180);
+      const y = Math.sin(pitch);
+      const z = Math.cos(yaw) * Math.cos(pitch);
+      return { x, y, z };
+    }
+
+    function projectObject(obj, width, height) {
+      const dAz = shortestAngleDiff(obj.azimuth, state.viewHeading);
+      const dAlt = obj.altitude - state.viewPitch;
+      const inFront = Math.abs(dAz) <= 95 && dAlt >= -70 && dAlt <= 70;
+      if (!inFront) return null;
+
+      const nx = dAz / (state.fovX / 2);
+      const ny = dAlt / (state.fovY / 2);
+      if (Math.abs(nx) > 1.25 || Math.abs(ny) > 1.25) return null;
+
+      const x = width / 2 + nx * width / 2;
+      const y = height / 2 - ny * height / 2;
+      const distanceScore = Math.hypot(dAz / state.fovX, dAlt / state.fovY);
+      const centerDistancePx = Math.hypot(x - width / 2, y - height / 2);
+      return { x, y, distanceScore, centerDistancePx };
+    }
+
+    function projectConstellationSegment(segment, observer, date, width, height) {
+      const p1Hor = Astronomy.Horizon(date, observer, segment[0].ra, segment[0].dec, 'normal');
+      const p2Hor = Astronomy.Horizon(date, observer, segment[1].ra, segment[1].dec, 'normal');
+      if (p1Hor.altitude < 0 || p2Hor.altitude < 0) return null;
+      const p1 = projectObject({ azimuth: p1Hor.azimuth, altitude: p1Hor.altitude }, width, height);
+      const p2 = projectObject({ azimuth: p2Hor.azimuth, altitude: p2Hor.altitude }, width, height);
+      if (!p1 || !p2) return null;
+      return { p1, p2 };
+    }
+
+    function drawSkyExplorer() {
+      if (!els.skyCanvas || !state.canvasReady) return;
+      const canvas = els.skyCanvas;
+      const ctx = canvas.getContext('2d');
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+
+      ctx.clearRect(0, 0, width, height);
+
+      const bg = ctx.createLinearGradient(0, 0, 0, height);
+      bg.addColorStop(0, '#081425');
+      bg.addColorStop(0.55, '#040811');
+      bg.addColorStop(1, '#02040a');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, width, height);
+
+      for (let i = 0; i < 140; i++) {
+        const x = (i * 157) % width;
+        const y = (i * 89) % height;
+        ctx.globalAlpha = 0.05 + (i % 4) * 0.04;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x, y, (i % 3) + 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      const horizonY = height * (0.78 - state.viewPitch / 220);
+      const horizonGlow = ctx.createLinearGradient(0, horizonY - 80, 0, horizonY + 120);
+      horizonGlow.addColorStop(0, 'rgba(100, 150, 255, 0)');
+      horizonGlow.addColorStop(0.7, 'rgba(78, 112, 166, 0.12)');
+      horizonGlow.addColorStop(1, 'rgba(22, 33, 52, 0.32)');
+      ctx.fillStyle = horizonGlow;
+      ctx.fillRect(0, horizonY - 80, width, height - horizonY + 80);
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.beginPath();
+      ctx.moveTo(0, horizonY);
+      ctx.lineTo(width, horizonY);
+      ctx.stroke();
+
+      const headingMarkers = [
+        { t: 'N', az: 0 }, { t: 'NE', az: 45 }, { t: 'E', az: 90 }, { t: 'SE', az: 135 },
+        { t: 'S', az: 180 }, { t: 'SO', az: 225 }, { t: 'O', az: 270 }, { t: 'NO', az: 315 },
+      ];
+      ctx.font = '12px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      headingMarkers.forEach((marker) => {
+        const dAz = shortestAngleDiff(marker.az, state.viewHeading);
+        if (Math.abs(dAz) <= state.fovX * 0.7) {
+          const x = width / 2 + (dAz / (state.fovX / 2)) * width / 2;
+          ctx.globalAlpha = 1 - Math.abs(dAz) / (state.fovX * 0.75);
+          ctx.fillStyle = marker.t === 'N' ? '#7cc7ff' : 'rgba(255,255,255,0.8)';
+          ctx.fillText(marker.t, x, 24);
+        }
+      });
+      ctx.globalAlpha = 1;
+
+      const visibleObjects = [];
+      state.centerObject = null;
+      state.highlightedObject = null;
+
+      const groups = [
+        { items: state.solar.filter(i => i.altitude >= 0), color: getComputedStyle(document.documentElement).getPropertyValue('--solar').trim(), radius: 6 },
+        { items: state.stars.filter(i => i.altitude >= 0), color: getComputedStyle(document.documentElement).getPropertyValue('--star').trim(), radius: 4 },
+        { items: state.constellations.filter(i => i.altitude >= 0), color: getComputedStyle(document.documentElement).getPropertyValue('--constellation').trim(), radius: 4.5 },
+      ];
+
+      groups.forEach((group) => {
+        group.items.forEach((item) => {
+          const p = projectObject(item, width, height);
+          if (!p) return;
+          visibleObjects.push({ ...item, ...p, color: group.color, radius: group.radius });
+        });
+      });
+
+            const observer = (state.lat != null && state.lon != null)
+        ? new Astronomy.Observer(state.lat, state.lon, 0)
+        : null;
+      const date = state.timestampIso ? new Date(state.timestampIso) : new Date();
+
+      if (observer) {
+        ctx.strokeStyle = 'rgba(215, 184, 255, 0.32)';
+        ctx.lineWidth = 1.4;
+        CONSTELLATION_LINES.forEach((constellation) => {
+          constellation.segments.forEach((segment) => {
+            const line = projectConstellationSegment(segment, observer, date, width, height);
+            if (!line) return;
+            ctx.beginPath();
+            ctx.moveTo(line.p1.x, line.p1.y);
+            ctx.lineTo(line.p2.x, line.p2.y);
+            ctx.stroke();
+          });
+        });
+      }
+
+      visibleObjects.sort((a, b) => a.distanceScore - b.distanceScore);
+      state.centerObject = visibleObjects[0] || null;
+      state.highlightedObject = visibleObjects.find((item) => item.centerDistancePx < 42) || null;
+
+      visibleObjects.forEach((item) => {
+        const glow = ctx.createRadialGradient(item.x, item.y, 0, item.x, item.y, item.radius * 5);
+        glow.addColorStop(0, item.color + 'cc');
+        glow.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(item.x, item.y, item.radius * 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        const isHighlighted = state.highlightedObject && state.highlightedObject.name === item.name && state.highlightedObject.type === item.type;
+
+        if (isHighlighted) {
+          ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.arc(item.x, item.y, item.radius * 3, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = item.color;
+        ctx.beginPath();
+        ctx.arc(item.x, item.y, isHighlighted ? item.radius * 1.5 : item.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = isHighlighted ? '#ffffff' : 'rgba(255,255,255,0.92)';
+        ctx.font = isHighlighted ? 'bold 16px Inter, sans-serif' : '11px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(item.name, item.x, item.y - (isHighlighted ? item.radius * 1.5 : item.radius) - (isHighlighted ? 16 : 10));
+      });
+
+      renderMetricCards();
+    }
+
+    function renderAll() {
+      renderMetricCards();
+      drawSkyExplorer();
+      renderList(els.solarList, state.solar, 'solar');
+      renderList(els.starsList, state.stars, 'star');
+      renderList(els.constellationsList, state.constellations, 'constellation');
+
+      els.debugJson.textContent = JSON.stringify({
+        latitude: state.lat,
+        longitude: state.lon,
+        accuracyMeters: state.accuracy,
+        timestamp: state.timestampIso,
+        viewHeading: state.viewHeading,
+        viewPitch: state.viewPitch,
+        motionEnabled: state.motionEnabled,
+        centerTarget: state.centerObject?.name || null,
+        solar: state.solar,
+        brightStars: state.stars,
+        constellations: state.constellations,
+      }, null, 2);
+    }
+
+    function calculateSky() {
+      if (state.lat == null || state.lon == null) {
+        setStatus('primero hay que obtener la ubicación.', 'warn');
+        return;
+      }
+
+      if (typeof Astronomy === 'undefined') {
+        setStatus('no cargó la librería astronómica. revisá la conexión a internet.', 'danger');
+        return;
+      }
+
+      try {
+        const date = new Date();
+        const observer = new Astronomy.Observer(state.lat, state.lon, 0);
+        state.timestampIso = date.toISOString();
+        state.solar = computeSolarObjects(date, observer);
+        state.stars = computeCatalogObjects(date, observer, BRIGHT_STARS, 'star', 'Estrella sobre el horizonte', 'Debajo del horizonte ahora');
+        state.constellations = computeCatalogObjects(date, observer, CONSTELLATIONS, 'constellation', 'Zona de la constelación visible', 'Zona de la constelación no visible ahora');
+        rebuildAllObjects();
+        renderAll();
+        setStatus('cielo calculado correctamente para tu ubicación actual.', 'good');
+      } catch (error) {
+        console.error(error);
+        setStatus('hubo un error calculando las coordenadas celestes.', 'danger');
+      }
+    }
+
+    function getLocationAndCalculate() {
+      if (!('geolocation' in navigator)) {
+        setStatus('este navegador no soporta geolocalización.', 'danger');
+        return;
+      }
+
+      setStatus('obteniendo ubicación...', 'warn');
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          state.lat = position.coords.latitude;
+          state.lon = position.coords.longitude;
+          state.accuracy = position.coords.accuracy;
+          renderMetricCards();
+          setStatus('ubicación obtenida. calculando cielo...', 'warn');
+          calculateSky();
+        },
+        (error) => {
+          console.error(error);
+          setStatus('no se pudo obtener la ubicación. revisá el permiso del navegador.', 'danger');
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 15000,
+        }
+      );
+    }
+
+    function startRenderLoop() {
+      function frame() {
+        drawSkyExplorer();
+        state.animationFrame = requestAnimationFrame(frame);
+      }
+      if (!state.animationFrame) frame();
+    }
+
+    els.getSkyBtn.addEventListener('click', getLocationAndCalculate);
+    els.refreshBtn.addEventListener('click', calculateSky);
+    els.enableMotionBtn.addEventListener('click', enableMotionControls);
+    els.recenterBtn.addEventListener('click', recenterView);
+
+    const canvas = els.skyCanvas;
+    canvas.addEventListener('mousedown', (e) => pointerStart(e.clientX, e.clientY));
+    window.addEventListener('mousemove', (e) => pointerMove(e.clientX, e.clientY));
+    window.addEventListener('mouseup', pointerEnd);
+    canvas.addEventListener('touchstart', (e) => {
+      const t = e.touches[0];
+      pointerStart(t.clientX, t.clientY);
+    }, { passive: true });
+    canvas.addEventListener('touchmove', (e) => {
+      const t = e.touches[0];
+      pointerMove(t.clientX, t.clientY);
+    }, { passive: true });
+    window.addEventListener('touchend', pointerEnd, { passive: true });
+
+    window.addEventListener('resize', () => {
+      setupCanvas();
+      drawSkyExplorer();
+    });
+
+    setupCanvas();
+    renderAll();
+    startRenderLoop();
+  </script>
+</body>
+</html>
