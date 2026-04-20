@@ -3,261 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Calibrador Bóveda Celeste</title>
+    <title>SkyView Calibrador Pro</title>
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #0b0c10;
-            color: #66fcf1;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        #ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: rgba(11, 12, 16, 0.9);
-            z-index: 10;
-            text-align: center;
-            padding: 20px;
-            box-sizing: border-box;
-            transition: opacity 0.5s;
-        }
-
-        .step-container { display: none; flex-direction: column; align-items: center; }
-        .step-container.active { display: flex; }
-
-        h1 { margin-bottom: 10px; font-size: 24px; color: #ffffff; }
-        p { font-size: 16px; color: #c5c6c7; max-width: 300px; margin-bottom: 30px; }
-
-        .arrow-icon { font-size: 80px; margin: 20px 0; animation: pulse 1.5s infinite; }
-
-        button {
-            background-color: #45a29e;
-            color: #ffffff;
-            border: none;
-            padding: 15px 30px;
-            font-size: 18px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(69, 162, 158, 0.4);
-        }
-        button:active { transform: scale(0.95); }
-
-        #canvas-container {
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
-        }
-
-        #skyCanvas { display: block; width: 100%; height: 100%; }
-        
-        #debug-info {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            z-index: 5;
-            color: rgba(255,255,255,0.5);
-            font-family: monospace;
-            font-size: 12px;
-            pointer-events: none;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
+        body { margin: 0; background: #020617; color: #f8fafc; font-family: system-ui; overflow: hidden; text-align: center; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        #ui { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(2, 6, 23, 0.9); z-index: 10; padding: 20px; transition: 0.5s; }
+        .instruccion { margin-bottom: 20px; font-size: 1.2rem; }
+        .flecha { font-size: 4rem; margin: 20px; animation: bounce 1s infinite; }
+        button { background: #38bdf8; border: none; padding: 15px 30px; border-radius: 50px; font-weight: bold; font-size: 1rem; cursor: pointer; }
+        #debug { position: absolute; top: 10px; left: 10px; font-family: monospace; font-size: 10px; text-align: left; pointer-events: none; opacity: 0.7; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         .hidden { opacity: 0; pointer-events: none; }
     </style>
 </head>
 <body>
 
-    <div id="ui-layer">
-        
-        <div id="step-start" class="step-container active">
-            <h1>Calibrador de Sensores</h1>
-            <p>Para explorar la bóveda celeste, necesitamos calibrar el giroscopio de tu navegador.</p>
-            <button onclick="iniciarCalibracion()">Iniciar</button>
-        </div>
+<div id="debug">A: 0 | B: 0 | G: 0</div>
 
-        <div id="step-1" class="step-container">
-            <h1>Paso 1: Eje Z (Izquierda)</h1>
-            <p>Mantén el celular plano horizontal al suelo y gíralo hacia tu <b>Izquierda</b>.</p>
-            <div class="arrow-icon">↺</div>
-            <button onclick="nextStep(2)">Listo</button>
-        </div>
-
-        <div id="step-2" class="step-container">
-            <h1>Paso 2: Eje Z (Derecha)</h1>
-            <p>Ahora gíralo plano hacia tu <b>Derecha</b>.</p>
-            <div class="arrow-icon">↻</div>
-            <button onclick="nextStep(3)">Listo</button>
-        </div>
-
-        <div id="step-3" class="step-container">
-            <h1>Paso 3: Eje X (Inclinación)</h1>
-            <p>Levanta el celular apuntando la pantalla hacia tu cara.</p>
-            <div class="arrow-icon">⇪</div>
-            <button onclick="nextStep(4)">Listo</button>
-        </div>
-
-        <div id="step-4" class="step-container">
-            <h1>Paso 4: Eje Y (Rotación)</h1>
-            <p>Gira el celular sobre su propio eje a izquierda y derecha como un volante.</p>
-            <div class="arrow-icon">⇄</div>
-            <button onclick="finalizarCalibracion()">Finalizar y Calibrar</button>
-        </div>
-
+<div id="ui">
+    <div id="step-content">
+        <h1>Calibración de Bóveda</h1>
+        <p class="instruccion">Primero, pon el móvil plano y gíralo a la izquierda.</p>
+        <div class="flecha">⬅️</div>
+        <button onclick="proximoPaso()">Siguiente</button>
     </div>
+</div>
 
-    <div id="canvas-container">
-        <canvas id="skyCanvas"></canvas>
-    </div>
-    
-    <div id="debug-info">Esperando sensores...</div>
+<canvas id="skyCanvas"></canvas>
 
-    <script>
-        // Variables globales para los sensores
-        let rawAlpha = 0, rawBeta = 0, rawGamma = 0;
-        let offsetAlpha = 0, offsetBeta = 0, offsetGamma = 0;
-        let isCalibrated = false;
+<script>
+    const canvas = document.getElementById('skyCanvas');
+    const ctx = canvas.getContext('2d');
+    const debug = document.getElementById('debug');
+    const ui = document.getElementById('ui');
+    const stepContent = document.getElementById('step-content');
 
-        // Configuración del Canvas
-        const canvas = document.getElementById('skyCanvas');
-        const ctx = canvas.getContext('2d');
-        let width, height;
+    let step = 0;
+    let sensors = { a: 0, b: 0, g: 0 };
+    let offset = { a: 0, b: 0, g: 0 };
+    let active = false;
 
-        function resizeCanvas() {
-            width = window.innerWidth;
-            height = window.innerHeight;
-            canvas.width = width;
-            canvas.height = height;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+    const pasos = [
+        { txt: "Gira el móvil a la IZQUIERDA (plano)", icon: "⬅️" },
+        { txt: "Gira el móvil a la DERECHA (plano)", icon: "➡️" },
+        { txt: "Levanta el móvil hacia el CIELO (Cénit)", icon: "⬆️" },
+        { txt: "Gira sobre su eje lateral", icon: "🔄" }
+    ];
 
-        // Control de Pasos de la UI
-        function iniciarCalibracion() {
-            // Solicitar permisos en iOS 13+
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission()
-                    .then(permissionState => {
-                        if (permissionState === 'granted') {
-                            activarSensores();
-                            nextStep(1);
-                        } else {
-                            alert('Se requieren permisos de sensores para usar esta app.');
-                        }
-                    })
-                    .catch(console.error);
-            } else {
-                // Navegadores que no requieren permiso explícito
-                activarSensores();
-                nextStep(1);
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    async function proximoPaso() {
+        if (step === 0) {
+            // Solicitar permisos en iOS
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                const resp = await DeviceOrientationEvent.requestPermission();
+                if (resp !== 'granted') return alert("Permiso denegado");
             }
-        }
-
-        function nextStep(stepNumber) {
-            document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
-            document.getElementById('step-' + stepNumber).classList.add('active');
-        }
-
-        function finalizarCalibracion() {
-            // Tomamos la posición actual como el centro (Punto Cero)
-            offsetAlpha = rawAlpha;
-            offsetBeta = rawBeta;
-            offsetGamma = rawGamma;
-            
-            isCalibrated = true;
-            
-            // Ocultar UI de calibración
-            document.getElementById('ui-layer').classList.add('hidden');
-            
-            // Iniciar el renderizado estelar
-            requestAnimationFrame(drawScene);
-        }
-
-        // Lectura de Sensores
-        function activarSensores() {
-            window.addEventListener('deviceorientation', (event) => {
-                // Algunos dispositivos pueden devolver null si les falta un sensor
-                if (event.alpha !== null) {
-                    rawAlpha = event.alpha; // Rotación en Z (0-360)
-                    rawBeta = event.beta;   // Inclinación en X (-180 a 180)
-                    rawGamma = event.gamma; // Rotación en Y (-90 a 90)
-                    
-                    if (!isCalibrated) {
-                        document.getElementById('debug-info').innerText = `Capturando datos...\nA: ${rawAlpha.toFixed(1)}\nB: ${rawBeta.toFixed(1)}\nG: ${rawGamma.toFixed(1)}`;
-                    }
-                }
+            window.addEventListener('deviceorientation', e => {
+                sensors.a = e.alpha || 0;
+                sensors.b = e.beta || 0;
+                sensors.g = e.gamma || 0;
+                debug.innerText = `A: ${sensors.a.toFixed(1)} B: ${sensors.b.toFixed(1)} G: ${sensors.g.toFixed(1)}`;
             });
         }
 
-        // Bucle de renderizado del Canvas (La Bóveda)
-        function drawScene() {
-            // Limpiar fondo
-            ctx.fillStyle = '#0b0c10';
-            ctx.fillRect(0, 0, width, height);
-
-            // Dibujar una cuadrícula de referencia (para simular el cielo)
-            ctx.strokeStyle = 'rgba(102, 252, 241, 0.2)';
-            ctx.lineWidth = 1;
-            for(let i=0; i<width; i+=100) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, height); ctx.stroke(); }
-            for(let j=0; j<height; j+=100) { ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(width, j); ctx.stroke(); }
-
-            // Calcular valores calibrados (Movimiento Relativo)
-            // Calculamos la diferencia entre la posición actual y el "Punto Cero"
-            let calAlpha = rawAlpha - offsetAlpha;
-            let calBeta = rawBeta - offsetBeta;
-
-            // Manejar los cruces de 360 grados para el Alpha
-            if (calAlpha > 180) calAlpha -= 360;
-            if (calAlpha < -180) calAlpha += 360;
-
-            // Mapear los grados a píxeles en el canvas
-            // Ajusta el multiplicador (ej: * 15) para cambiar la sensibilidad/FOV (Field of View)
-            let objX = (width / 2) - (calAlpha * 15);
-            let objY = (height / 2) - (calBeta * 15);
-
-            // Dibujar el Objeto de Referencia (Una "Estrella" u objetivo)
-            ctx.beginPath();
-            ctx.arc(objX, objY, 20, 0, Math.PI * 2);
-            ctx.fillStyle = '#66fcf1';
-            ctx.fill();
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = '#ffffff';
-            ctx.stroke();
-            
-            // Cruz central de la estrella
-            ctx.beginPath();
-            ctx.moveTo(objX - 30, objY); ctx.lineTo(objX + 30, objY);
-            ctx.moveTo(objX, objY - 30); ctx.lineTo(objX, objY + 30);
-            ctx.stroke();
-
-            // Actualizar panel de debug
-            document.getElementById('debug-info').innerText = 
-                `CALIBRADO\nAlpha Rel: ${calAlpha.toFixed(1)}°\nBeta Rel: ${calBeta.toFixed(1)}°`;
-
-            requestAnimationFrame(drawScene);
+        if (step < pasos.length) {
+            const p = pasos[step];
+            stepContent.innerHTML = `<h1>Paso ${step + 1}</h1><p class="instruccion">${p.txt}</p><div class="flecha">${p.icon}</div><button onclick="proximoPaso()">Siguiente</button>`;
+            step++;
+        } else {
+            // Calibrar: Guardamos la posición actual como referencia
+            offset.a = sensors.a;
+            offset.b = sensors.b; 
+            ui.classList.add('hidden');
+            active = true;
+            render();
         }
-    </script>
+    }
+
+    function render() {
+        if (!active) return;
+
+        ctx.fillStyle = '#020617';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // --- LÓGICA DE MOVIMIENTO ---
+        // Alpha es el giro horizontal (brújula)
+        let deltaA = sensors.a - offset.a;
+        if (deltaA > 180) deltaA -= 360;
+        if (deltaA < -180) deltaA += 360;
+
+        // Beta es la inclinación vertical (mirar arriba/abajo)
+        // Usamos la diferencia con respecto a la inclinación de calibración
+        let deltaB = sensors.b - offset.b;
+
+        // Mapeo de coordenadas al centro de la pantalla
+        // Sensibilidad: 15px por grado
+        const sens = 15;
+        let x = (canvas.width / 2) - (deltaA * sens);
+        let y = (canvas.height / 2) - (deltaB * sens);
+
+        // Dibujar Cénit (Guía visual)
+        ctx.strokeStyle = '#38bdf8';
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.arc(x, y, 50, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Dibujar "Estrella"
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(x, y, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Etiqueta
+        ctx.font = "bold 16px sans-serif";
+        ctx.fillText("OBJETO CELESTE", x + 15, y + 5);
+
+        requestAnimationFrame(render);
+    }
+</script>
 </body>
 </html>
