@@ -31,7 +31,7 @@
 
         /* Brújula Inferior */
         #compass-container { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 500px; height: 40px; overflow: hidden; z-index: 10; mask-image: linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%); -webkit-mask-image: linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%); pointer-events: none; }
-        #compass-strip { position: absolute; top: 0; white-space: nowrap; font-size: 18px; font-weight: bold; letter-spacing: 2px; color: rgba(255,255,255,0.8); text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        #compass-strip { position: absolute; top: 0; left: 50%; white-space: nowrap; font-size: 18px; font-weight: bold; letter-spacing: 2px; color: rgba(255,255,255,0.8); text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
         #compass-strip span { display: inline-block; width: 80px; text-align: center; }
         #compass-pointer { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); color: var(--accent); font-size: 14px; z-index: 11; text-shadow: 0 2px 4px rgba(0,0,0,1); pointer-events: none; }
 
@@ -278,7 +278,7 @@
         if (e.alpha === null) return;
         currentAlpha = e.alpha; currentBeta = e.beta; currentGamma = e.gamma;
         if (e.webkitCompassHeading !== undefined) { headingOffset = e.webkitCompassHeading; brujulaDetectada = true; } 
-        else if (e.absolute || e.alpha !== null) { headingOffset = 360 - e.alpha; brujulaDetectada = true; }
+        else if (e.absolute) { headingOffset = 360 - e.alpha; brujulaDetectada = true; }
     }
 
     async function iniciarApp() {
@@ -315,8 +315,9 @@
     function actualizarCamaraYUI() {
         if (!brujulaDetectada) return;
 
-        let alphaRad = THREE.MathUtils.degToRad(currentAlpha);
-        if (headingOffset !== 0) { alphaRad = THREE.MathUtils.degToRad(360 - headingOffset); }
+        let alphaRad = brujulaDetectada
+            ? THREE.MathUtils.degToRad(360 - headingOffset)
+            : THREE.MathUtils.degToRad(currentAlpha);
         let betaRad = THREE.MathUtils.degToRad(currentBeta);
         let gammaRad = THREE.MathUtils.degToRad(currentGamma);
         let screenRot = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
@@ -330,8 +331,8 @@
         camera.getWorldDirection(dir);
         let azimut = (THREE.MathUtils.radToDeg(Math.atan2(dir.x, -dir.z)) + 360) % 360;
         
-        let offsetBrujula = -(azimut * (640 / 360));
-        compassStrip.style.transform = `translateX(calc(50% - 40px + ${offsetBrujula}px))`;
+        let offsetBrujula = -(azimut * (640 / 360)) - 40;
+        compassStrip.style.transform = `translateX(${offsetBrujula}px)`;
 
         if (dir.y < 0.1) {
             let opacidadSombra = 1.0 - ((dir.y + 0.2) / 0.3);
