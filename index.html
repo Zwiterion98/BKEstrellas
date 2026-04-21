@@ -71,20 +71,47 @@
     const planetas = ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn'];
     
     // Catálogo de estrellas notables con sus coordenadas reales (RA, Dec)
+  // Catálogo de estrellas notables con sus coordenadas reales (RA en horas decimales, Dec en grados decimales)
     const estrellas = [
+        // --- Estrellas del Segundo Catálogo General Argentino (1911) ---
+        // Catálogo de 5791 Estrellas
+        { id: 'scga1924', n: "SCGA 1924 (Puppis)", ra: 8.3098, dec: -26.2482 },
+        { id: 'scga1928', n: "SCGA 1928 (Puppis)", ra: 8.3198, dec: -23.0249 },
+        { id: 'scga1930', n: "SCGA 1930 (Puppis)", ra: 8.3217, dec: -23.7969 },
+        { id: 'scga1950', n: "SCGA 1950 (Volans)", ra: 8.2952, dec: -69.1289 },
+
+        // --- Las estrellas más brillantes de la bóveda celeste ---
         { id: 'sirius', n: "Sirio", ra: 6.75, dec: -16.71 },
         { id: 'canopus', n: "Canopus", ra: 6.39, dec: -52.69 },
-        { id: 'betelgeuse', n: "Betelgeuse", ra: 5.91, dec: 7.4 },
+        { id: 'arcturus', n: "Arturo", ra: 14.26, dec: 19.18 },
+        { id: 'rigelkent', n: "Alfa Centauri", ra: 14.66, dec: -60.83 },
+        { id: 'vega', n: "Vega", ra: 18.61, dec: 38.78 },
+        { id: 'capella', n: "Capella", ra: 5.28, dec: 45.99 },
         { id: 'rigel', n: "Rigel", ra: 5.24, dec: -8.2 },
+        { id: 'procyon', n: "Procyon", ra: 7.65, dec: 5.22 },
+        { id: 'achernar', n: "Achernar", ra: 1.63, dec: -57.24 },
+        { id: 'betelgeuse', n: "Betelgeuse", ra: 5.91, dec: 7.4 },
+        { id: 'hadar', n: "Hadar (Beta Centauri)", ra: 14.06, dec: -60.37 },
+        { id: 'altair', n: "Altair", ra: 19.84, dec: 8.86 },
+        { id: 'aldebaran', n: "Aldebarán", ra: 4.59, dec: 16.50 },
+        { id: 'spica', n: "Spica", ra: 13.41, dec: -11.16 },
+        { id: 'antares', n: "Antares", ra: 16.49, dec: -26.43 },
+        { id: 'pollux', n: "Pólux", ra: 7.75, dec: 28.02 },
+        { id: 'fomalhaut', n: "Fomalhaut", ra: 22.96, dec: -29.62 },
+        { id: 'deneb', n: "Deneb", ra: 20.69, dec: 45.28 },
+        
+        // --- Estrellas que conforman constelaciones clave (Orión y Cruz del Sur) ---
+        { id: 'acrux', n: "Acrux", ra: 12.44, dec: -63.09 },
+        { id: 'mimosa', n: "Mimosa", ra: 12.78, dec: -59.68 },
+        { id: 'gacrux', n: "Gacrux", ra: 12.51, dec: -57.11 },
+        { id: 'imai', n: "Imai", ra: 12.25, dec: -58.74 },
         { id: 'bellatrix', n: "Bellatrix", ra: 5.41, dec: 6.34 },
         { id: 'alnilam', n: "Alnilam", ra: 5.6, dec: -1.2 },
         { id: 'alnitak', n: "Alnitak", ra: 5.67, dec: -1.94 },
         { id: 'mintaka', n: "Mintaka", ra: 5.53, dec: -0.29 },
         { id: 'saiph', n: "Saiph", ra: 5.79, dec: -9.66 },
-        { id: 'acrux', n: "Acrux", ra: 12.44, dec: -63.09 },
-        { id: 'mimosa', n: "Mimosa", ra: 12.78, dec: -59.68 },
-        { id: 'gacrux', n: "Gacrux", ra: 12.51, dec: -57.11 },
-        { id: 'imai', n: "Imai", ra: 12.25, dec: -58.74 },
+        
+        // --- Referencia Polar ---
         { id: 'polaris', n: "Estrella Polar", ra: 2.53, dec: 89.26 }
     ];
 
