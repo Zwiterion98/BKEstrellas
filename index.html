@@ -229,31 +229,54 @@
     }
 
     async function iniciarApp() {
-        document.querySelector('.title-flat').innerText = "SINCRONIZANDO...";
+        document.querySelector('.title-flat').innerText = "AUTORIZANDO...";
+
+        // 1. PRIMERO: Solicitar permisos de iOS (Apple exige que esto sea lo primero tras el clic)
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            try {
+                const permisoSensores = await DeviceOrientationEvent.requestPermission();
+                if (permisoSensores !== 'granted') {
+                    alert("Permiso de sensores denegado. No podremos orientar la cámara.");
+                    document.querySelector('.title-flat').innerText = "ERROR DE SENSORES";
+                    return; // Detenemos la app si no hay permiso
+                }
+            } catch (error) {
+                console.error("Error al pedir sensores:", error);
+                alert("Debes interactuar con la pantalla para iniciar los sensores.");
+                return;
+            }
+        }
+
+        document.querySelector('.title-flat').innerText = "BUSCANDO SEÑAL GPS...";
         
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-            usuarioLat = pos.coords.latitude; usuarioLon = pos.coords.longitude;
+        // 2. SEGUNDO: Obtener GPS (Una vez que iOS ya autorizó los sensores)
+        navigator.geolocation.getCurrentPosition((pos) => {
+            usuarioLat = pos.coords.latitude; 
+            usuarioLon = pos.coords.longitude;
+            
             document.getElementById('sys-info').innerText = `SYS.ON // LAT:${usuarioLat.toFixed(2)} LON:${usuarioLon.toFixed(2)}`;
             document.getElementById('sys-info').classList.remove('oculto');
 
             generarCieloReal();
-
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                const permiso = await DeviceOrientationEvent.requestPermission();
-                if (permiso !== 'granted') return alert("Permiso de sensores denegado.");
-            }
             
-            if ('ondeviceorientationabsolute' in window) { window.addEventListener('deviceorientationabsolute', procesarSensores); } 
-            else { window.addEventListener('deviceorientation', procesarSensores); }
+            // 3. TERCERO: Conectar los eventos ahora que tenemos permiso
+            if ('ondeviceorientationabsolute' in window) { 
+                window.addEventListener('deviceorientationabsolute', procesarSensores); 
+            } else { 
+                window.addEventListener('deviceorientation', procesarSensores); 
+            }
 
+            // Ocultar la pantalla negra de carga
             setTimeout(() => {
                 uiLayer.classList.add('oculto');
                 document.getElementById('mira').style.display = 'block';
             }, 500);
 
-        }, (err) => alert("Error GPS. Actívalo para ver las estrellas."));
+        }, (err) => {
+            alert("Error GPS. Actívalo para ver las estrellas en tu ubicación real.");
+            document.querySelector('.title-flat').innerText = "ERROR DE GPS";
+        });
     }
-
     // --- EL CEREBRO DE LA CÁMARA Y EL RAYCASTING ---
     function actualizarCamara() {
         if (!brujulaDetectada) return;
