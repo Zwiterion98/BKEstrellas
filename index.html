@@ -29,12 +29,7 @@
         .pill { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); padding: 8px 24px; border-radius: 50px; font-size: 22px; font-weight: 600; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         .target-type { display: block; font-size: 11px; text-transform: uppercase; color: #bbbbbb; margin-top: 6px; letter-spacing: 2px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
 
-        /* Brújula Inferior */
-        #compass-container { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 500px; height: 40px; overflow: hidden; z-index: 10; mask-image: linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%); -webkit-mask-image: linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%); pointer-events: none; }
-        #compass-strip { position: absolute; top: 0; left: 50%; white-space: nowrap; font-size: 18px; font-weight: bold; letter-spacing: 2px; color: rgba(255,255,255,0.8); text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
-        #compass-strip span { display: inline-block; width: 80px; text-align: center; }
-        #compass-pointer { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); color: var(--accent); font-size: 14px; z-index: 11; text-shadow: 0 2px 4px rgba(0,0,0,1); pointer-events: none; }
-
+        
         /* Sombra del Horizonte */
         #horizon-shadow { position: absolute; bottom: 0; left: 0; width: 100vw; height: 35vh; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 30%, rgba(0,0,0,0) 100%); z-index: 2; pointer-events: none; opacity: 0; transition: opacity 0.1s linear; }
 
@@ -53,12 +48,6 @@
 
     <div id="horizon-shadow"></div>
 
-    <div id="compass-container" class="oculto">
-        <div id="compass-strip">
-            <span>N</span><span>NE</span><span>E</span><span>SE</span><span>S</span><span>SW</span><span>W</span><span>NW</span><span>N</span><span>NE</span><span>E</span><span>SE</span><span>S</span><span>SW</span><span>W</span><span>NW</span>
-        </div>
-    </div>
-    <div id="compass-pointer" class="oculto">▲</div>
 
     <div id="canvas-container"></div>
     <div id="sys-info" class="oculto">SYS.OFF</div>
@@ -81,7 +70,6 @@
     const hud = document.getElementById('target-hud');
     const hudName = document.getElementById('target-name');
     const hudDesc = document.getElementById('target-desc');
-    const compassStrip = document.getElementById('compass-strip');
     const horizonShadow = document.getElementById('horizon-shadow');
     
     let usuarioLat = 0, usuarioLon = 0;
@@ -304,8 +292,6 @@
             setTimeout(() => {
                 uiLayer.classList.add('oculto');
                 document.getElementById('mira').style.display = 'block';
-                document.getElementById('compass-container').classList.remove('oculto');
-                document.getElementById('compass-pointer').classList.remove('oculto');
             }, 500);
 
         }, (err) => alert("Error de GPS."));
@@ -327,9 +313,7 @@
         qDispositivo.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -screenRot));
         camera.quaternion.copy(qDispositivo);
 
-        // Brújula directo del magnetómetro, sin pasar por la cámara 3D
-        let offsetBrujula = -(headingOffset * (640 / 360)) - 40;
-        compassStrip.style.transform = `translateX(${offsetBrujula}px)`;
+   
 
         let dir = new THREE.Vector3();
         camera.getWorldDirection(dir);
