@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>SkyView Ultimate: N fija + orientaciones</title>
+  <title>SkyView Ultimate: N fija + vista del observador</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
   <style>
@@ -141,7 +141,7 @@
       text-shadow: 0 1px 2px rgba(0,0,0,0.8);
     }
 
-    /* Brújula simplificada */
+    /* Brújula simplificada: solo N */
     #compass-container {
       position: absolute;
       bottom: 40px;
@@ -153,6 +153,8 @@
       overflow: hidden;
       z-index: 10;
       pointer-events: none;
+      mask-image: linear-gradient(to right, transparent 0%, black 20%, black 80%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to right, transparent 0%, black 20%, black 80%, transparent 100%);
     }
 
     #north-marker {
@@ -271,15 +273,11 @@
   <div id="compass-pointer" class="oculto">▲</div>
 
   <div id="orientation-panel" class="oculto">
-    <div class="title">Orientaciones</div>
-    <div class="row"><span class="label">alpha</span><span class="value" id="alpha-val">--</span></div>
-    <div class="row"><span class="label">beta</span><span class="value" id="beta-val">--</span></div>
-    <div class="row"><span class="label">gamma</span><span class="value" id="gamma-val">--</span></div>
-    <div class="row"><span class="label">heading</span><span class="value" id="heading-val">--</span></div>
-    <div class="row"><span class="label">yaw</span><span class="value" id="yaw-val">--</span></div>
-    <div class="row"><span class="label">pitch</span><span class="value" id="pitch-val">--</span></div>
-    <div class="row"><span class="label">roll</span><span class="value" id="roll-val">--</span></div>
-    <div class="row"><span class="label">north ref</span><span class="value" id="northref-val">--</span></div>
+    <div class="title">Vista del observador</div>
+    <div class="row"><span class="label">dirección</span><span class="value" id="look-direction">--</span></div>
+    <div class="row"><span class="label">azimut</span><span class="value" id="look-azimuth">--</span></div>
+    <div class="row"><span class="label">altura</span><span class="value" id="look-altitude">--</span></div>
+    <div class="row"><span class="label">norte ref</span><span class="value" id="northref-val">--</span></div>
   </div>
 
   <div id="canvas-container"></div>
@@ -306,13 +304,9 @@
   const northMarker = document.getElementById('north-marker');
   const horizonShadow = document.getElementById('horizon-shadow');
 
-  const alphaVal = document.getElementById('alpha-val');
-  const betaVal = document.getElementById('beta-val');
-  const gammaVal = document.getElementById('gamma-val');
-  const headingVal = document.getElementById('heading-val');
-  const yawVal = document.getElementById('yaw-val');
-  const pitchVal = document.getElementById('pitch-val');
-  const rollVal = document.getElementById('roll-val');
+  const lookDirectionVal = document.getElementById('look-direction');
+  const lookAzimuthVal = document.getElementById('look-azimuth');
+  const lookAltitudeVal = document.getElementById('look-altitude');
   const northRefVal = document.getElementById('northref-val');
 
   let usuarioLat = 0, usuarioLon = 0;
@@ -322,7 +316,6 @@
 
   // Norte calibrado solo una vez
   let northCalibration = null;
-  let alphaSuavizado = 0;
 
   const planetas = ['Sun', 'Moon', 'Venus', 'Mars', 'Jupiter', 'Saturn'];
 
@@ -431,7 +424,7 @@
 
       starGroup.add(mesh);
       objetosInteractivos.push(mesh);
-      astrosDinamicos.push({ mesh, tipoRef: 'planeta', id: cuerpo });
+      astrosDinamicos.push({ mesh: mesh, tipoRef: 'planeta', id: cuerpo });
     });
 
     estrellas.forEach(estrella => {
@@ -451,7 +444,7 @@
 
       starGroup.add(mesh);
       objetosInteractivos.push(mesh);
-      astrosDinamicos.push({ mesh, tipoRef: 'estrella', ra: estrella.ra, dec: estrella.dec, id: estrella.id });
+      astrosDinamicos.push({ mesh: mesh, tipoRef: 'estrella', ra: estrella.ra, dec: estrella.dec, id: estrella.id });
     });
 
     const lineMaterial = new THREE.LineBasicMaterial({
@@ -527,28 +520,27 @@
     if (e.alpha === null) return;
 
     currentAlpha = e.alpha;
-    currentBeta = e.beta;
-    currentGamma = e.gamma;
+    currentBeta = e.beta ?? 0;
+    currentGamma = e.gamma ?? 0;
 
     let absoluteHeading = null;
 
-    if (e.webkitCompassHeading !== undefined) {
+    if (typeof e.webkitCompassHeading === 'number') {
       absoluteHeading = e.webkitCompassHeading;
       brujulaDetectada = true;
-    } else if (e.absolute) {
-      absoluteHeading = 360 - e.alpha;
+    } else if (e.absolute === true && typeof e.alpha === 'number') {
+      absoluteHeading = (360 - e.alpha + 360) % 360;
       brujulaDetectada = true;
-    }
-
-    if (absoluteHeading !== null && northCalibration === null) {
-      northCalibration = absoluteHeading;
     }
 
     if (absoluteHeading !== null) {
       headingOffset = absoluteHeading;
-    }
 
-    alphaSuavizado += (currentAlpha - alphaSuavizado) * 0.12;
+      // Calibramos el norte solo una vez al iniciar
+      if (northCalibration === null) {
+        northCalibration = absoluteHeading;
+      }
+    }
   }
 
   async function iniciarApp() {
@@ -574,6 +566,7 @@
 
       generarCieloReal();
 
+      // reseteamos norte para tomar la referencia inicial actual
       northCalibration = null;
 
       if ('ondeviceorientationabsolute' in window) {
@@ -591,6 +584,36 @@
       }, 500);
 
     }, () => alert("Error de GPS."));
+  }
+
+  function azimuthToDirection(azimuth) {
+    const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
+    return dirs[Math.round((((azimuth % 360) + 360) % 360) / 45) % 8];
+  }
+
+  function getObserverLookFromCamera() {
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+
+    let azimuth = THREE.MathUtils.radToDeg(Math.atan2(dir.x, -dir.z));
+    azimuth = (azimuth + 360) % 360;
+
+    const altitude = THREE.MathUtils.radToDeg(Math.asin(dir.y));
+
+    return {
+      azimuth,
+      altitude,
+      direction: azimuthToDirection(azimuth)
+    };
+  }
+
+  function actualizarPanelOrientaciones() {
+    const look = getObserverLookFromCamera();
+
+    lookDirectionVal.textContent = look.direction;
+    lookAzimuthVal.textContent = `${look.azimuth.toFixed(1)}°`;
+    lookAltitudeVal.textContent = `${look.altitude.toFixed(1)}°`;
+    northRefVal.textContent = northCalibration != null ? `${northCalibration.toFixed(1)}°` : '--';
   }
 
   function actualizarCamaraYUI() {
@@ -611,11 +634,19 @@
     qDispositivo.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -screenRot));
     camera.quaternion.copy(qDispositivo);
 
-    // Brújula simplificada: solo N
-    if (northCalibration !== null) {
-      const deltaFromNorth = currentAlpha - northCalibration;
+    // Brújula simplificada:
+    // usamos heading absoluto del magnetómetro relativo al norte calibrado
+    if (northCalibration !== null && brujulaDetectada) {
+      let delta = headingOffset - northCalibration;
+
+      while (delta > 180) delta -= 360;
+      while (delta < -180) delta += 360;
+
       const pixelsPerDegree = 500 / 360;
-      const x = -(deltaFromNorth * pixelsPerDegree);
+
+      // signo ajustado para que N quede donde corresponde visualmente
+      const x = delta * pixelsPerDegree;
+
       northMarker.style.transform = `translateX(${x}px)`;
     }
 
@@ -632,22 +663,6 @@
     }
 
     actualizarPanelOrientaciones();
-  }
-
-  function actualizarPanelOrientaciones() {
-    const headingMostrado = brujulaDetectada ? headingOffset : null;
-    const yawMostrado = 360 - (headingMostrado ?? currentAlpha ?? 0);
-    const pitchMostrado = currentBeta ?? 0;
-    const rollMostrado = currentGamma ?? 0;
-
-    alphaVal.textContent = currentAlpha != null ? currentAlpha.toFixed(1) + '°' : '--';
-    betaVal.textContent = currentBeta != null ? currentBeta.toFixed(1) + '°' : '--';
-    gammaVal.textContent = currentGamma != null ? currentGamma.toFixed(1) + '°' : '--';
-    headingVal.textContent = headingMostrado != null ? headingMostrado.toFixed(1) + '°' : '--';
-    yawVal.textContent = yawMostrado != null ? yawMostrado.toFixed(1) + '°' : '--';
-    pitchVal.textContent = pitchMostrado != null ? pitchMostrado.toFixed(1) + '°' : '--';
-    rollVal.textContent = rollMostrado != null ? rollMostrado.toFixed(1) + '°' : '--';
-    northRefVal.textContent = northCalibration != null ? northCalibration.toFixed(1) + '°' : '--';
   }
 
   function verificarIntersecciones() {
