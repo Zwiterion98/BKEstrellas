@@ -565,58 +565,32 @@ let northCalibration = null;
       }
     });
   }
-function filtrarHeadingIPhone(nuevoHeading, pitchDeg) {
-  if (nuevoHeading == null) return headingEstable;
 
-  if (headingEstable == null) {
-    headingEstable = nuevoHeading;
-    return nuevoHeading;
-  }
+  function procesarSensores(e) {
+    if (e.alpha === null) return;
 
-  const diff = shortestAngleDiff(nuevoHeading, headingEstable);
-  const absDiff = Math.abs(diff);
-  const absPitch = Math.abs(pitchDeg || 0);
-  const absSpin = Math.abs((currentAlpha ?? 0) - 0); // solo fallback simple
+    currentAlpha = e.alpha;
+    currentBeta = e.beta ?? 0;
+    currentGamma = e.gamma ?? 0;
 
-  const saltoFalsoPorInclinacion =
-    absPitch > TILT_GUARD_DEG &&
-    absDiff > HEADING_JUMP_DEG &&
-    Math.abs(currentGamma || 0) < LOW_SPIN_THRESHOLD;
+    let absoluteHeading = null;
 
-  if (saltoFalsoPorInclinacion) {
-    return headingEstable;
-  }
+    if (typeof e.webkitCompassHeading === 'number') {
+      absoluteHeading = e.webkitCompassHeading;
+      brujulaDetectada = true;
+    } else if (e.absolute === true && typeof e.alpha === 'number') {
+      absoluteHeading = (360 - e.alpha + 360) % 360;
+      brujulaDetectada = true;
+    }
 
-  headingEstable = headingEstable + diff * (absPitch > TILT_GUARD_DEG ? 0.08 : 0.16);
-  headingEstable = (headingEstable + 360) % 360;
-  return headingEstable;
-}
-function procesarSensores(e) {
-  if (e.alpha === null) return;
+    if (absoluteHeading !== null) {
+      headingOffset = absoluteHeading;
 
-  currentAlpha = e.alpha;
-  currentBeta = e.beta ?? 0;
-  currentGamma = e.gamma ?? 0;
-
-  let absoluteHeading = null;
-
-  if (typeof e.webkitCompassHeading === 'number') {
-    absoluteHeading = e.webkitCompassHeading;
-    brujulaDetectada = true;
-  } else if (e.absolute === true && typeof e.alpha === 'number') {
-    absoluteHeading = (360 - e.alpha + 360) % 360;
-    brujulaDetectada = true;
-  }
-
-  if (absoluteHeading !== null) {
-    const headingFiltrado = filtrarHeadingIPhone(absoluteHeading, currentBeta);
-    headingOffset = headingFiltrado;
-
-    if (northCalibration === null) {
-      northCalibration = headingFiltrado;
+      if (northCalibration === null) {
+        northCalibration = absoluteHeading;
+      }
     }
   }
-}
 
   async function iniciarApp() {
     document.querySelector('.title-flat').innerText = "AUTORIZANDO...";
@@ -636,7 +610,7 @@ function procesarSensores(e) {
       usuarioLat = pos.coords.latitude;
       usuarioLon = pos.coords.longitude;
 
-      document.getElementById('sys-info').innerText = `LAT:${usuarioLat.toFixed(2)} // LON:${usuarioLon.toFixed(2)} // BUILD:${BUILD_LABEL}`;
+      document.getElementById('sys-info').innerText = `LAT:${usuarioLat.toFixed(2)} // LON:${usuarioLon.toFixed(2)}`;
       document.getElementById('sys-info').classList.remove('oculto');
 
       generarCieloReal();
