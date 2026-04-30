@@ -367,6 +367,34 @@ let compassAzimuthVisual = null;      // azimut visual suavizado
     { id: 'polaris', n: "Estrella Polar", ra: 2.53, dec: 89.26 }
   ];
 
+
+  function seededRandom(seed) {
+    const x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+  }
+
+  function generarEstrellasExtra(cantidad = 520) {
+    const extra = [];
+    for (let i = 0; i < cantidad; i++) {
+      const r1 = seededRandom(i * 1.137 + 11.7);
+      const r2 = seededRandom(i * 1.913 + 27.1);
+      const r3 = seededRandom(i * 2.271 + 41.9);
+
+      extra.push({
+        id: `extra_${i + 1}`,
+        n: `Star ${String(i + 1).padStart(3, '0')}`,
+        ra: r1 * 24,
+        dec: Math.asin((r2 * 2) - 1) * 180 / Math.PI,
+        mag: 1.5 + r3 * 4.5,
+        extra: true
+      });
+    }
+    return extra;
+  }
+
+  const estrellasExtra = generarEstrellasExtra(520);
+  const todasLasEstrellas = [...estrellas, ...estrellasExtra];
+
   const constelaciones = [
     ['betelgeuse', 'bellatrix'], ['bellatrix', 'rigel'], ['rigel', 'saiph'], ['saiph', 'betelgeuse'],
     ['mintaka', 'alnilam'], ['alnilam', 'alnitak'],
@@ -437,24 +465,29 @@ let compassAzimuthVisual = null;      // azimut visual suavizado
       astrosDinamicos.push({ mesh: mesh, tipoRef: 'planeta', id: cuerpo });
     });
 
-    estrellas.forEach(estrella => {
+    todasLasEstrellas.forEach(estrella => {
       const horizonte = Astronomy.Horizon(fechaActual, observador, estrella.ra, estrella.dec, 'normal');
       const pos = azAltToVector(horizonte.azimuth, horizonte.altitude, 800);
       posicionesEstrellas[estrella.id] = pos;
 
+      const tam = estrella.extra ? Math.max(1.2, 4.2 - ((estrella.mag ?? 4) * 0.55)) : 5;
       const mesh = new THREE.Mesh(
-        new THREE.SphereGeometry(5, 16, 16),
+        new THREE.SphereGeometry(tam, estrella.extra ? 8 : 16, estrella.extra ? 8 : 16),
         new THREE.MeshBasicMaterial({ color: 0xffffff })
       );
       mesh.position.copy(pos);
       mesh.userData = {
         nombre: estrella.n,
-        tipo: estrella.id.includes('scga') ? 'Catálogo Córdoba' : 'Estrella Principal'
+        tipo: estrella.extra
+          ? 'Estrella de fondo'
+          : (estrella.id.includes('scga') ? 'Catálogo Córdoba' : 'Estrella Principal')
       };
 
       starGroup.add(mesh);
-      objetosInteractivos.push(mesh);
-      astrosDinamicos.push({ mesh: mesh, tipoRef: 'estrella', ra: estrella.ra, dec: estrella.dec, id: estrella.id });
+      if (!estrella.extra) {
+        objetosInteractivos.push(mesh);
+      }
+      astrosDinamicos.push({ mesh: mesh, tipoRef: 'estrella', ra: estrella.ra, dec: estrella.dec, id: estrella.id, extra: !!estrella.extra, mag: estrella.mag ?? null });
     });
 
     const lineMaterial = new THREE.LineBasicMaterial({
