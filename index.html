@@ -696,37 +696,63 @@ function shortestAngleDiff(from, to) {
 }
 
   function actualizarCamaraYUI() {
-    if (!brujulaDetectada) return;
+  if (!brujulaDetectada) return;
 
-    const alphaRad = brujulaDetectada
-      ? THREE.MathUtils.degToRad(360 - headingOffset)
-      : THREE.MathUtils.degToRad(currentAlpha);
+  const alphaRad = brujulaDetectada
+    ? THREE.MathUtils.degToRad(360 - headingOffset)
+    : THREE.MathUtils.degToRad(currentAlpha);
 
-    const betaRad = THREE.MathUtils.degToRad(currentBeta || 0);
-    const gammaRad = THREE.MathUtils.degToRad(currentGamma || 0);
-    const screenRot = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
+  const betaRad = THREE.MathUtils.degToRad(currentBeta || 0);
+  const gammaRad = THREE.MathUtils.degToRad(currentGamma || 0);
+  const screenRot = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
 
-    const qDispositivo = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(betaRad, alphaRad, -gammaRad, 'YXZ')
-    );
-    qDispositivo.multiply(new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)));
-    qDispositivo.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -screenRot));
-    camera.quaternion.copy(qDispositivo);
+  // Quaternion crudo del dispositivo
+  const qDispositivo = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(betaRad, alphaRad, -gammaRad, 'YXZ')
+  );
 
-    const dir = new THREE.Vector3();
-    camera.getWorldDirection(dir);
+  qDispositivo.multiply(
+    new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5))
+  );
 
-    if (dir.y < 0.1) {
-      let opacidadSombra = 1.0 - ((dir.y + 0.2) / 0.3);
-      if (opacidadSombra > 1) opacidadSombra = 1;
-      if (opacidadSombra < 0) opacidadSombra = 0;
-      horizonShadow.style.opacity = opacidadSombra;
-    } else {
-      horizonShadow.style.opacity = 0;
-    }
+  qDispositivo.multiply(
+    new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 0, 1),
+      -screenRot
+    )
+  );
 
-    actualizarPanelOrientaciones();
+  // En vez de copiar el roll completo a la cámara,
+  // sacamos solo la DIRECCIÓN hacia donde apunta.
+  const forward = new THREE.Vector3(0, 0, -1)
+    .applyQuaternion(qDispositivo)
+    .normalize();
+
+  // Convertimos esa dirección a azimut/altura
+  let azimuth = THREE.MathUtils.radToDeg(Math.atan2(forward.x, -forward.z));
+  azimuth = (azimuth + 360) % 360;
+
+  const altitude = THREE.MathUtils.radToDeg(Math.asin(forward.y));
+
+  // Reconstruimos una dirección limpia sin roll
+  const targetDir = azAltToVector(azimuth, altitude, 10);
+
+  camera.position.set(0, 0, 0);
+  camera.up.set(0, 1, 0);
+  camera.lookAt(targetDir);
+
+  // sombra horizonte
+  if (forward.y < 0.1) {
+    let opacidadSombra = 1.0 - ((forward.y + 0.2) / 0.3);
+    if (opacidadSombra > 1) opacidadSombra = 1;
+    if (opacidadSombra < 0) opacidadSombra = 0;
+    horizonShadow.style.opacity = opacidadSombra;
+  } else {
+    horizonShadow.style.opacity = 0;
   }
+
+  actualizarPanelOrientaciones();
+}
 
   function verificarIntersecciones() {
     raycaster.setFromCamera(centerScreen, camera);
