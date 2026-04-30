@@ -2,1144 +2,743 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Sky Dome Explorer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SkyView Ultimate: brújula por dirección</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
   <style>
     :root {
-      --bg: #07111f;
-      --panel: rgba(13, 21, 39, 0.88);
-      --border: rgba(255,255,255,0.12);
-      --text: #eef4ff;
-      --muted: #9eb1d0;
-      --accent: #7cc7ff;
-      --good: #70e0a3;
-      --warn: #ffd166;
-      --danger: #ff7b7b;
-      --solar: #ffd166;
-      --star: #9fd3ff;
-      --constellation: #d7b8ff;
+      --bg-dark: #0a0a0c;
+      --accent: #ffffff;
+      --text-muted: #888888;
+      --panel: rgba(0,0,0,0.48);
     }
 
-    * { box-sizing: border-box; }
-
-    html, body {
+    body {
       margin: 0;
-      padding: 0;
-      width: 100%;
-      min-height: 100%;
-      background:
-        radial-gradient(circle at top left, rgba(124,199,255,0.12), transparent 30%),
-        linear-gradient(180deg, #0a1424 0%, #040811 100%);
-      color: var(--text);
-      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+      background: var(--bg-dark);
+      color: var(--accent);
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
     }
 
-    .app {
-      min-height: 100vh;
-      padding: 20px 16px 40px;
+    #canvas-container {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+    }
+
+    #ui-layer {
+      position: absolute;
+      inset: 0;
       display: flex;
       flex-direction: column;
-      gap: 14px;
-      max-width: 1280px;
-      margin: 0 auto;
+      justify-content: center;
+      align-items: center;
+      background: var(--bg-dark);
+      z-index: 20;
+      transition: opacity 0.4s ease;
     }
 
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 16px;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    .title-flat {
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
     }
 
-    h1, h2, h3 { margin: 0; line-height: 1.1; }
-    h1 { font-size: 28px; margin-bottom: 8px; }
-    h2 { font-size: 18px; margin-bottom: 12px; }
-    h3 { font-size: 15px; }
-
-    p { margin: 0; color: var(--muted); line-height: 1.45; font-size: 14px; }
-
-    .buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+    .subtitle-flat {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 32px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
 
     button {
-      appearance: none;
-      border: 1px solid rgba(124,199,255,0.3);
-      border-radius: 14px;
-      padding: 13px 15px;
+      background: var(--accent);
+      color: var(--bg-dark);
+      border: none;
+      padding: 16px 32px;
       font-size: 14px;
-      font-weight: 700;
-      color: var(--text);
-      background: rgba(124,199,255,0.16);
+      font-weight: 600;
+      border-radius: 4px;
       cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: transform 0.1s;
     }
 
-    button.secondary { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); }
-
-    .status { font-size: 13px; color: var(--muted); line-height: 1.5; margin-top: 12px; }
-    .status strong { color: var(--text); }
-    .good { color: var(--good); }
-    .warn { color: var(--warn); }
-    .danger { color: var(--danger); }
-
-    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-    .metric { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 14px; }
-    .metric-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-    .metric-value { font-size: 24px; font-weight: 800; line-height: 1.1; word-break: break-word; }
-
-    .calibration-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: stretch; }
-    .calibration-stage { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-height: 280px; }
-    .calibration-icon { position: relative; flex: 1; min-height: 160px; border-radius: 18px; background: radial-gradient(circle at center, rgba(124,199,255,0.14), transparent 42%), rgba(0,0,0,0.18); border: 1px dashed rgba(255,255,255,0.14); overflow: hidden; }
-    .phone-shape { position: absolute; left: 50%; top: 50%; width: 90px; height: 150px; transform: translate(-50%, -50%); border-radius: 18px; border: 2px solid rgba(255,255,255,0.72); background: linear-gradient(180deg, rgba(124,199,255,0.18), rgba(255,255,255,0.05)); box-shadow: 0 0 30px rgba(124,199,255,0.15); }
-    .phone-shape::after { content: ''; position: absolute; left: 50%; bottom: 10px; width: 28px; height: 4px; transform: translateX(-50%); border-radius: 999px; background: rgba(255,255,255,0.42); }
-    .calibration-arrow { position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; border-radius: 999px; border: 3px solid rgba(124,199,255,0.58); border-left-color: transparent; border-bottom-color: transparent; transform: translate(-50%, -50%); animation: pulseGuide 1.2s ease-in-out infinite alternate; }
-    .calibration-arrow::after { content: '➜'; position: absolute; right: 0; top: 2px; color: var(--accent); font-size: 28px; transform: rotate(42deg); }
-    .calibration-arrow.left { transform: translate(-50%, -50%) scaleX(-1); }
-    .calibration-arrow.up { border-radius: 20px; border-left-color: rgba(124,199,255,0.58); border-bottom-color: transparent; width: 8px; height: 120px; }
-    .calibration-arrow.up::after { content: '↑'; right: -11px; top: -22px; transform: none; }
-    .calibration-arrow.roll-left { transform: translate(-50%, -50%) rotate(-35deg) scaleX(-1); }
-    .calibration-arrow.roll-right { transform: translate(-50%, -50%) rotate(35deg); }
-    @keyframes pulseGuide { from { opacity: 0.45; } to { opacity: 1; } }
-    .calibration-step-title { font-size: 18px; font-weight: 800; margin: 0; }
-    .calibration-progress { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
-    .calibration-progress span { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--good)); border-radius: inherit; transition: width 0.25s ease; }
-    .test-canvas-wrap { position: relative; min-height: 280px; border-radius: 18px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.18); }
-    #sensorTestCanvas { display: block; width: 100%; height: 100%; min-height: 280px; }
-
-    .explorer-wrap { position: relative; width: 100%; aspect-ratio: 16 / 9; min-height: 360px; border-radius: 22px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); background: linear-gradient(180deg, rgba(5,10,20,1) 0%, rgba(5,8,16,1) 100%); box-shadow: inset 0 0 40px rgba(0,0,0,0.35); }
-    #skyCanvas { display: block; width: 100%; height: 100%; touch-action: none; }
-    .explorer-overlay { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 14px; }
-    .overlay-top, .overlay-bottom { display: flex; gap: 10px; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; }
-    .overlay-chip { pointer-events: auto; background: rgba(8,14,27,0.68); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 10px 12px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-size: 12px; color: var(--muted); }
-    .overlay-chip strong { color: var(--text); display: block; font-size: 14px; margin-top: 3px; }
-    .crosshair { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; transform: translate(-50%, -50%); border: 1px solid rgba(255,255,255,0.16); border-radius: 999px; opacity: 0.85; pointer-events: none; }
-    .crosshair::before, .crosshair::after { content: ''; position: absolute; background: rgba(255,255,255,0.22); }
-    .crosshair::before { left: 50%; top: 8px; bottom: 8px; width: 1px; transform: translateX(-50%); }
-    .crosshair::after { top: 50%; left: 8px; right: 8px; height: 1px; transform: translateY(-50%); }
-    .sky-legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; justify-content: center; font-size: 12px; color: var(--muted); }
-    .legend-dot { width: 10px; height: 10px; display: inline-block; border-radius: 999px; margin-right: 6px; vertical-align: middle; }
-
-    .section-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-    .list { display: flex; flex-direction: column; gap: 10px; }
-    .item { border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); border-radius: 14px; padding: 12px; }
-    .item-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
-    .badge { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 6px 9px; border: 1px solid rgba(255,255,255,0.1); white-space: nowrap; }
-    .badge.solar { color: var(--solar); }
-    .badge.star { color: var(--star); }
-    .badge.constellation { color: var(--constellation); }
-    .badge.visible { color: var(--good); }
-    .badge.hidden { color: var(--danger); }
-    .coords { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; }
-    .coords div { color: var(--muted); }
-    .coords strong { display: block; color: var(--text); font-size: 14px; margin-top: 2px; }
-    .muted { color: var(--muted); font-size: 13px; line-height: 1.45; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; color: #cfe0ff; white-space: pre-wrap; word-break: break-word; }
-    .footer-note { font-size: 12px; color: var(--muted); line-height: 1.5; }
-
-    @media (max-width: 980px) {
-      .grid { grid-template-columns: repeat(2, 1fr); }
-      .section-grid, .calibration-layout { grid-template-columns: 1fr; }
-      .explorer-wrap { aspect-ratio: 4 / 5; }
+    button:active {
+      transform: scale(0.98);
     }
 
-    @media (max-width: 600px) {
-      .grid { grid-template-columns: 1fr; }
-      .metric-value { font-size: 20px; }
-      .coords { grid-template-columns: 1fr; }
-      .overlay-top, .overlay-bottom { flex-direction: column; align-items: stretch; }
+    .crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 24px;
+      height: 24px;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    .crosshair::before,
+    .crosshair::after {
+      content: '';
+      position: absolute;
+      background: rgba(255,255,255,0.4);
+    }
+
+    .crosshair::before {
+      top: 11px;
+      left: -8px;
+      width: 40px;
+      height: 2px;
+    }
+
+    .crosshair::after {
+      top: -8px;
+      left: 11px;
+      width: 2px;
+      height: 40px;
+    }
+
+    #target-hud {
+      position: absolute;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      z-index: 10;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      pointer-events: none;
+    }
+
+    .pill {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 8px 24px;
+      border-radius: 50px;
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .target-type {
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #bbbbbb;
+      margin-top: 6px;
+      letter-spacing: 2px;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    }
+
+    #compass-container {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(92vw, 520px);
+  height: 40px;
+  overflow: hidden;
+  z-index: 30;
+  pointer-events: none;
+  mask-image: linear-gradient(to right, transparent 0%, black 16%, black 84%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 16%, black 84%, transparent 100%);
+}
+
+#compass-strip {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+#compass-strip span {
+  display: inline-block;
+  width: 64px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.92);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.85);
+  letter-spacing: 1px;
+}
+
+#compass-pointer {
+  position: fixed;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--accent);
+  font-size: 14px;
+  z-index: 31;
+  text-shadow: 0 2px 4px rgba(0,0,0,1);
+  pointer-events: none;
+}
+
+    #horizon-shadow {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100vw;
+      height: 35vh;
+      background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 30%, rgba(0,0,0,0) 100%);
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.1s linear;
+    }
+
+    #sys-info {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      font-size: 10px;
+      color: var(--text-muted);
+      z-index: 5;
+      font-family: monospace;
+      letter-spacing: 1px;
+    }
+
+    #orientation-panel {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      z-index: 12;
+      min-width: 220px;
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 12px 14px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      font-family: monospace;
+      font-size: 12px;
+      line-height: 1.55;
+      color: #e8e8e8;
+    }
+
+    #orientation-panel .title {
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #bcbcbc;
+      margin-bottom: 6px;
+    }
+
+    #orientation-panel .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    #orientation-panel .label {
+      color: #9b9b9b;
+    }
+
+    #orientation-panel .value {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .oculto {
+      opacity: 0;
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
-  <div class="app">
-    <div class="card">
-      <h1>Sky Dome Explorer</h1>
-      <p>Explorador de bóveda celeste. En desktop podés arrastrar para mirar alrededor. En celular, podés activar sensores y recorrer el cielo moviendo el dispositivo.</p>
-    </div>
 
-    <div class="card">
-      <div class="buttons">
-        <button id="getSkyBtn">Obtener cielo actual</button>
-        <button id="enableMotionBtn">Activar movimiento del dispositivo</button>
-        <button id="recenterBtn" class="secondary">Recentrar vista</button>
-        <button id="refreshBtn" class="secondary">Actualizar posiciones</button>
-      </div>
-      <div id="status" class="status"><strong>Estado:</strong> listo para obtener ubicación y explorar el cielo.</div>
-    </div>
+  <div class="crosshair" id="mira" style="display: none;"></div>
 
-    <div class="card">
-      <h2>Calibración de sensores</h2>
-      <p style="margin-bottom:14px;">Este flujo aprende offsets, signos y sensibilidad de los ejes del teléfono para que el movimiento sea consistente en esta web. Hacelo en HTTPS, lejos de imanes o metal pesado.</p>
-      <div class="buttons" style="margin-bottom:14px;">
-        <button id="startCalibrationBtn">Iniciar calibración guiada</button>
-        <button id="captureCalibrationBtn" class="secondary">Guardar este paso</button>
-        <button id="resetCalibrationBtn" class="secondary">Reset calibración</button>
-      </div>
-      <div class="calibration-layout">
-        <div class="calibration-stage">
-          <div>
-            <div class="metric-label">Paso actual</div>
-            <div id="calibrationStepTitle" class="calibration-step-title">Sin calibrar</div>
-            <p id="calibrationInstruction" style="margin-top:8px;">Tocá “Iniciar calibración guiada” y seguí los movimientos.</p>
-          </div>
-          <div class="calibration-icon">
-            <div class="phone-shape"></div>
-            <div id="calibrationArrow" class="calibration-arrow"></div>
-          </div>
-          <div class="calibration-progress"><span id="calibrationProgress"></span></div>
-          <div id="calibrationStatus" class="status"><strong>Calibración:</strong> pendiente.</div>
-        </div>
-        <div class="test-canvas-wrap">
-          <canvas id="sensorTestCanvas"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Bóveda explorable</h2>
-      <p style="margin-bottom:14px;">La vista funciona como una cámara dentro del domo. En desktop: arrastrá. En móvil: girá el teléfono luego de activar sensores. El centro marca hacia dónde estás mirando.</p>
-      <div class="explorer-wrap">
-        <canvas id="skyCanvas"></canvas>
-        <div class="crosshair"></div>
-        <div class="explorer-overlay">
-          <div class="overlay-top">
-            <div class="overlay-chip">Dirección<strong id="viewHeading">--</strong></div>
-            <div class="overlay-chip">Elevación<strong id="viewPitch">--</strong></div>
-            <div class="overlay-chip">Modo<strong id="controlMode">Mouse / touch</strong></div>
-          </div>
-          <div class="overlay-bottom">
-            <div class="overlay-chip">Centro de la mira<strong id="centerTarget">Nada cerca</strong></div>
-            <div class="overlay-chip">Campo visual<strong id="fovReadout">75° × 52°</strong></div>
-          </div>
-        </div>
-      </div>
-      <div class="sky-legend">
-        <span><span class="legend-dot" style="background: var(--solar);"></span>Astros</span>
-        <span><span class="legend-dot" style="background: var(--star);"></span>Estrellas</span>
-        <span><span class="legend-dot" style="background: var(--constellation);"></span>Constelaciones</span>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Ubicación actual</h2>
-      <div class="grid">
-        <div class="metric"><div class="metric-label">Latitud</div><div id="lat" class="metric-value">--</div></div>
-        <div class="metric"><div class="metric-label">Longitud</div><div id="lon" class="metric-value">--</div></div>
-        <div class="metric"><div class="metric-label">Precisión</div><div id="accuracy" class="metric-value">--</div></div>
-        <div class="metric"><div class="metric-label">Hora usada</div><div id="timestamp" class="metric-value">--</div></div>
-      </div>
-    </div>
-
-    <div class="section-grid">
-      <div class="card"><h2>Astros</h2><div id="solarList" class="list"><div class="muted">Todavía no se calcularon posiciones.</div></div></div>
-      <div class="card"><h2>Estrellas</h2><div id="starsList" class="list"><div class="muted">Todavía no se calcularon posiciones.</div></div></div>
-      <div class="card"><h2>Constelaciones</h2><div id="constellationsList" class="list"><div class="muted">Todavía no se calcularon posiciones.</div></div></div>
-    </div>
-
-    <div class="card"><h2>JSON</h2><div id="debugJson" class="mono">{}</div></div>
-    <div class="footer-note">Azimut: 0° = norte, 90° = este, 180° = sur, 270° = oeste. Altitud: 0° = horizonte, 90° = cenit. La calibración es interna de la web; no modifica sensores del sistema operativo.</div>
+  <div id="target-hud">
+    <div class="pill" id="target-name">--</div>
+    <span class="target-type" id="target-desc">--</span>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
-  <script>
-    const BRIGHT_STARS = [
-      { name: 'Sirio', ra: 6.7525, dec: -16.7161 },
-      { name: 'Canopus', ra: 6.3992, dec: -52.6957 },
-      { name: 'Arcturus', ra: 14.2610, dec: 19.1824 },
-      { name: 'Vega', ra: 18.6156, dec: 38.7837 },
-      { name: 'Capella', ra: 5.2782, dec: 45.9980 },
-      { name: 'Rigel', ra: 5.2423, dec: -8.2016 },
-      { name: 'Betelgeuse', ra: 5.9195, dec: 7.4071 },
-      { name: 'Aldebarán', ra: 4.5987, dec: 16.5093 },
-      { name: 'Antares', ra: 16.4901, dec: -26.4320 },
-      { name: 'Spica', ra: 13.4199, dec: -11.1613 },
-      { name: 'Fomalhaut', ra: 22.9608, dec: -29.6222 },
-      { name: 'Achernar', ra: 1.6286, dec: -57.2368 },
-      { name: 'SCGA 1924 · Puppis', ra: 8.3098138889, dec: -26.2482222222 },
-      { name: 'SCGA 1928 · Puppis', ra: 8.3197972222, dec: -23.0248611111 },
-      { name: 'SCGA 1930 · Puppis', ra: 8.3217416667, dec: -23.7969444444 },
-      { name: 'SCGA 1950 · Volans', ra: 8.2952472222, dec: -69.1289444444 }
-    ];
+  <div id="horizon-shadow"></div>
 
-    function seededRandom(seed) {
-      const x = Math.sin(seed) * 10000;
-      return x - Math.floor(x);
-    }
+  <div id="compass-container" class="oculto">
+  <div id="compass-strip">
+    <span>N</span><span>NE</span><span>E</span><span>SE</span><span>S</span><span>SO</span><span>O</span><span>NO</span>
+    <span>N</span><span>NE</span><span>E</span><span>SE</span><span>S</span><span>SO</span><span>O</span><span>NO</span>
+    <span>N</span><span>NE</span><span>E</span><span>SE</span><span>S</span><span>SO</span><span>O</span><span>NO</span>
+  </div>
+</div>
+<div id="compass-pointer" class="oculto">▲</div>
 
-    function generateProceduralStars(count = 520) {
-      const stars = [];
-      for (let i = 0; i < count; i++) {
-        const r1 = seededRandom(i * 1.137 + 11.7);
-        const r2 = seededRandom(i * 1.913 + 27.1);
-        const r3 = seededRandom(i * 2.271 + 41.9);
-        const ra = r1 * 24;
-        const dec = Math.asin((r2 * 2) - 1) * 180 / Math.PI;
-        const magnitude = 1.5 + r3 * 4.5;
+  <div id="orientation-panel" class="oculto">
+    <div class="title">Vista del observador</div>
+    <div class="row"><span class="label">dirección</span><span class="value" id="look-direction">--</span></div>
+    <div class="row"><span class="label">azimut</span><span class="value" id="look-azimuth">--</span></div>
+    <div class="row"><span class="label">altura</span><span class="value" id="look-altitude">--</span></div>
+    <div class="row"><span class="label">norte ref</span><span class="value" id="northref-val">--</span></div>
+  </div>
 
-        stars.push({
-          name: `Star ${String(i + 1).padStart(3, '0')}`,
-          ra,
-          dec,
-          magnitude,
-          procedural: true
-        });
-      }
-      return stars;
-    }
+  <div id="canvas-container"></div>
+  <div id="sys-info" class="oculto">SYS.OFF</div>
 
-    const EXTENDED_STARS = [...BRIGHT_STARS, ...generateProceduralStars(520)];
+  <div id="ui-layer">
+    <div class="title-flat">OBSERVATORIO</div>
+    <div class="subtitle-flat">Alineación Espacial</div>
+    <button onclick="iniciarApp()">Iniciar Enlace</button>
+  </div>
 
-    const CONSTELLATIONS = [
-      { name: 'Orión', ra: 5.6, dec: -5.0 }, { name: 'Cruz del Sur', ra: 12.5, dec: -60.0 }, { name: 'Escorpio', ra: 16.9, dec: -30.0 }, { name: 'Tauro', ra: 4.7, dec: 15.0 },
-      { name: 'Leo', ra: 10.7, dec: 15.0 }, { name: 'Casiopea', ra: 1.0, dec: 60.0 }, { name: 'Sagitario', ra: 19.0, dec: -28.0 }, { name: 'Andrómeda', ra: 0.8, dec: 37.0 }
-    ];
+<script>
+  let scene, camera, renderer, starGroup;
+  let raycaster, centerScreen;
+  let hoverRing;
+  let objetosInteractivos = [];
+  let objetoEnfocado = null;
+  let astrosDinamicos = [];
 
-    const CONSTELLATION_LINES = [
-      { name: 'Orión', segments: [[{ra:5.9195,dec:7.4071},{ra:5.2423,dec:-8.2016}],[{ra:5.9195,dec:7.4071},{ra:5.5334,dec:-0.2991}],[{ra:5.5334,dec:-0.2991},{ra:5.4189,dec:-1.9426}],[{ra:5.4189,dec:-1.9426},{ra:5.6036,dec:-1.2019}],[{ra:5.6036,dec:-1.2019},{ra:5.6793,dec:-1.9426}],[{ra:5.6793,dec:-1.9426},{ra:5.2423,dec:-8.2016}]] },
-      { name: 'Cruz del Sur', segments: [[{ra:12.4433,dec:-63.0991},{ra:12.7953,dec:-59.6888}],[{ra:12.5194,dec:-57.1132},{ra:12.2524,dec:-58.7489}]] },
-      { name: 'Escorpio', segments: [[{ra:16.4901,dec:-26.4320},{ra:16.0056,dec:-22.6217}],[{ra:16.0056,dec:-22.6217},{ra:16.3531,dec:-25.5928}],[{ra:16.3531,dec:-25.5928},{ra:17.5601,dec:-37.1038}],[{ra:17.5601,dec:-37.1038},{ra:17.7081,dec:-39.0299}]] },
-      { name: 'Tauro', segments: [[{ra:4.5987,dec:16.5093},{ra:4.4769,dec:15.8709}],[{ra:4.4769,dec:15.8709},{ra:4.3299,dec:15.6277}],[{ra:4.5987,dec:16.5093},{ra:4.7041,dec:22.9569}],[{ra:4.5987,dec:16.5093},{ra:4.9499,dec:33.1661}]] },
-      { name: 'Leo', segments: [[{ra:10.1395,dec:11.9672},{ra:10.3329,dec:19.8415}],[{ra:10.3329,dec:19.8415},{ra:10.2782,dec:23.4173}],[{ra:10.2782,dec:23.4173},{ra:11.2351,dec:20.5237}]] },
-      { name: 'Casiopea', segments: [[{ra:0.6751,dec:56.5373},{ra:0.9451,dec:60.7167}],[{ra:0.9451,dec:60.7167},{ra:1.4303,dec:60.2353}],[{ra:1.4303,dec:60.2353},{ra:2.2937,dec:59.1498}],[{ra:2.2937,dec:59.1498},{ra:2.4855,dec:67.4020}]] },
-      { name: 'Andrómeda', segments: [[{ra:0.1398,dec:29.0904},{ra:0.6555,dec:30.8610}],[{ra:0.6555,dec:30.8610},{ra:1.1622,dec:35.6206}],[{ra:1.1622,dec:35.6206},{ra:2.0649,dec:42.3297}]] },
-      { name: 'Sagitario', segments: [[{ra:18.4029,dec:-34.3846},{ra:18.4662,dec:-25.4217}],[{ra:18.4662,dec:-25.4217},{ra:18.9211,dec:-26.2967}],[{ra:18.9211,dec:-26.2967},{ra:19.0435,dec:-29.8801}],[{ra:19.0435,dec:-29.8801},{ra:18.4029,dec:-34.3846}]] }
-    ];
+  const uiLayer = document.getElementById('ui-layer');
+  const hud = document.getElementById('target-hud');
+  const hudName = document.getElementById('target-name');
+  const hudDesc = document.getElementById('target-desc');
+  const compassStrip = document.getElementById('compass-strip');
+  const horizonShadow = document.getElementById('horizon-shadow');
 
-    const SOLAR_BODIES = [
-      { name: 'Sol', body: 'Sun' }, { name: 'Luna', body: 'Moon' }, { name: 'Mercurio', body: 'Mercury' }, { name: 'Venus', body: 'Venus' }, { name: 'Marte', body: 'Mars' }, { name: 'Júpiter', body: 'Jupiter' }, { name: 'Saturno', body: 'Saturn' }, { name: 'Urano', body: 'Uranus' }, { name: 'Neptuno', body: 'Neptune' }
-    ];
+  const lookDirectionVal = document.getElementById('look-direction');
+  const lookAzimuthVal = document.getElementById('look-azimuth');
+  const lookAltitudeVal = document.getElementById('look-altitude');
+  const northRefVal = document.getElementById('northref-val');
 
-    const els = {
-      skyCanvas: document.getElementById('skyCanvas'),
-      sensorTestCanvas: document.getElementById('sensorTestCanvas'),
-      startCalibrationBtn: document.getElementById('startCalibrationBtn'),
-      captureCalibrationBtn: document.getElementById('captureCalibrationBtn'),
-      resetCalibrationBtn: document.getElementById('resetCalibrationBtn'),
-      calibrationStepTitle: document.getElementById('calibrationStepTitle'),
-      calibrationInstruction: document.getElementById('calibrationInstruction'),
-      calibrationStatus: document.getElementById('calibrationStatus'),
-      calibrationProgress: document.getElementById('calibrationProgress'),
-      calibrationArrow: document.getElementById('calibrationArrow'),
-      lat: document.getElementById('lat'),
-      lon: document.getElementById('lon'),
-      accuracy: document.getElementById('accuracy'),
-      timestamp: document.getElementById('timestamp'),
-      status: document.getElementById('status'),
-      debugJson: document.getElementById('debugJson'),
-      getSkyBtn: document.getElementById('getSkyBtn'),
-      refreshBtn: document.getElementById('refreshBtn'),
-      enableMotionBtn: document.getElementById('enableMotionBtn'),
-      recenterBtn: document.getElementById('recenterBtn'),
-      solarList: document.getElementById('solarList'),
-      starsList: document.getElementById('starsList'),
-      constellationsList: document.getElementById('constellationsList'),
-      viewHeading: document.getElementById('viewHeading'),
-      viewPitch: document.getElementById('viewPitch'),
-      centerTarget: document.getElementById('centerTarget'),
-      controlMode: document.getElementById('controlMode'),
-      fovReadout: document.getElementById('fovReadout')
-    };
+  const COMPASS_STEP = 64;              // ancho de cada letra
+const COMPASS_CYCLE_WIDTH = 8 * 64;   // 8 direcciones = 512px
+let compassAzimuthVisual = null;      // azimut visual suavizado
 
-    const state = {
-      canvasReady: false,
-      lat: null,
-      lon: null,
-      accuracy: null,
-      timestampIso: null,
-      solar: [],
-      stars: [],
-      constellations: [],
-      viewHeading: 0,
-      viewPitch: 18,
-      fovX: 75,
-      fovY: 52,
-      dragging: false,
-      dragStartX: 0,
-      dragStartY: 0,
-      dragHeadingStart: 0,
-      dragPitchStart: 0,
-      motionEnabled: false,
-      headingOffset: 0,
-      pitchOffset: 0,
-      rawHeading: null,
-      rawPitch: null,
-      rawRoll: null,
-      rawAcceleration: { x: 0, y: 0, z: 0 },
-      rawRotationRate: { alpha: 0, beta: 0, gamma: 0 },
-      smoothedHeading: null,
-      smoothedPitch: null,
-      smoothedRoll: null,
-      calibratedYaw: 0,
-      calibratedPitch: 0,
-      calibratedRoll: 0,
-      calibrationActive: false,
-      calibrationStepIndex: -1,
-      calibrationSamples: {},
-      calibration: {
-        ready: false,
-        yawSign: 1,
-        pitchSign: 1,
-        rollSign: 1,
-        yawScale: 1,
-        pitchScale: 1,
-        rollScale: 1,
-        neutralHeading: 0,
-        neutralPitch: 0,
-        neutralRoll: 0
-      },
-      centerObject: null,
-      highlightedObject: null,
-      animationFrame: null
-    };
+  let usuarioLat = 0, usuarioLon = 0;
+  let brujulaDetectada = false;
+  let headingOffset = 0;
+  let currentAlpha = 0, currentBeta = 0, currentGamma = 0;
 
-    const CALIBRATION_STEPS = [
-      { key:'neutral', title:'1. Posición base', instruction:'Sostené el celular horizontal al suelo, pantalla hacia arriba, apuntando hacia adelante. Quedate quieto y guardá el paso.', arrowClass:'up' },
-      { key:'yawLeft', title:'2. Girá a la izquierda', instruction:'Con el celular horizontal al suelo, giralo hacia la izquierda como brújula sobre una mesa. Luego guardá el paso.', arrowClass:'left' },
-      { key:'yawRight', title:'3. Girá a la derecha', instruction:'Volvé cerca del centro y giralo hacia la derecha, siempre horizontal al suelo. Luego guardá el paso.', arrowClass:'' },
-      { key:'pitchUp', title:'4. Levantalo hacia vos', instruction:'Desde horizontal, levantá la parte superior del celular hacia tu cara, como si miraras la pantalla. Luego guardá el paso.', arrowClass:'up' },
-      { key:'rollLeft', title:'5. Rotá sobre su eje a la izquierda', instruction:'Sostené el celular frente a vos y rotalo en su propio eje hacia la izquierda. Luego guardá el paso.', arrowClass:'roll-left' },
-      { key:'rollRight', title:'6. Rotá sobre su eje a la derecha', instruction:'Ahora rotalo en su propio eje hacia la derecha. Guardá el paso para terminar.', arrowClass:'roll-right' }
-    ];
+  // Sigue existiendo como dato de diagnóstico
+  let northCalibration = null;
 
-    function setStatus(message, tone='') {
-      els.status.innerHTML = `<strong>Estado:</strong> <span class="${tone}">${message}</span>`;
-    }
+  const planetas = ['Sun', 'Moon', 'Venus', 'Mars', 'Jupiter', 'Saturn'];
 
-    function setCalibrationStatus(message, tone='') {
-      els.calibrationStatus.innerHTML = `<strong>Calibración:</strong> <span class="${tone}">${message}</span>`;
-    }
+  const estrellas = [
+    { id: 'scga1924', n: "SCGA 1924 (Puppis)", ra: 8.3098, dec: -26.2482 },
+    { id: 'scga1928', n: "SCGA 1928 (Puppis)", ra: 8.3198, dec: -23.0249 },
+    { id: 'scga1930', n: "SCGA 1930 (Puppis)", ra: 8.3217, dec: -23.7969 },
+    { id: 'scga1950', n: "SCGA 1950 (Volans)", ra: 8.2952, dec: -69.1289 },
 
-    function clamp(v, min, max) {
-      return Math.max(min, Math.min(max, v));
-    }
+    { id: 'sirius', n: "Sirio", ra: 6.75, dec: -16.71 },
+    { id: 'canopus', n: "Canopus", ra: 6.39, dec: -52.69 },
+    { id: 'arcturus', n: "Arturo", ra: 14.26, dec: 19.18 },
+    { id: 'rigelkent', n: "Alfa Centauri", ra: 14.66, dec: -60.83 },
+    { id: 'vega', n: "Vega", ra: 18.61, dec: 38.78 },
+    { id: 'capella', n: "Capella", ra: 5.28, dec: 45.99 },
+    { id: 'rigel', n: "Rigel", ra: 5.24, dec: -8.2 },
+    { id: 'procyon', n: "Procyon", ra: 7.65, dec: 5.22 },
+    { id: 'achernar', n: "Achernar", ra: 1.63, dec: -57.24 },
+    { id: 'betelgeuse', n: "Betelgeuse", ra: 5.91, dec: 7.4 },
+    { id: 'hadar', n: "Beta Centauri", ra: 14.06, dec: -60.37 },
+    { id: 'altair', n: "Altair", ra: 19.84, dec: 8.86 },
+    { id: 'aldebaran', n: "Aldebarán", ra: 4.59, dec: 16.50 },
+    { id: 'spica', n: "Spica", ra: 13.41, dec: -11.16 },
+    { id: 'antares', n: "Antares", ra: 16.49, dec: -26.43 },
+    { id: 'pollux', n: "Pólux", ra: 7.75, dec: 28.02 },
+    { id: 'fomalhaut', n: "Fomalhaut", ra: 22.96, dec: -29.62 },
+    { id: 'deneb', n: "Deneb", ra: 20.69, dec: 45.28 },
 
-    function clamp360(v) {
-      return ((v % 360) + 360) % 360;
-    }
+    { id: 'acrux', n: "Acrux", ra: 12.44, dec: -63.09 },
+    { id: 'mimosa', n: "Mimosa", ra: 12.78, dec: -59.68 },
+    { id: 'gacrux', n: "Gacrux", ra: 12.51, dec: -57.11 },
+    { id: 'imai', n: "Imai", ra: 12.25, dec: -58.74 },
+    { id: 'bellatrix', n: "Bellatrix", ra: 5.41, dec: 6.34 },
+    { id: 'alnilam', n: "Alnilam", ra: 5.6, dec: -1.2 },
+    { id: 'alnitak', n: "Alnitak", ra: 5.67, dec: -1.94 },
+    { id: 'mintaka', n: "Mintaka", ra: 5.53, dec: -0.29 },
+    { id: 'saiph', n: "Saiph", ra: 5.79, dec: -9.66 },
 
-    function shortestAngleDiff(a, b) {
-      let d = a - b;
-      while (d > 180) d -= 360;
-      while (d < -180) d += 360;
-      return d;
-    }
+    { id: 'polaris', n: "Estrella Polar", ra: 2.53, dec: 89.26 }
+  ];
 
-    function smoothValue(prev, next, f = 0.12) {
-      return prev == null ? next : prev + (next - prev) * f;
-    }
+  const constelaciones = [
+    ['betelgeuse', 'bellatrix'], ['bellatrix', 'rigel'], ['rigel', 'saiph'], ['saiph', 'betelgeuse'],
+    ['mintaka', 'alnilam'], ['alnilam', 'alnitak'],
+    ['gacrux', 'acrux'], ['mimosa', 'imai']
+  ];
 
-    function smoothAngle(prev, next, f = 0.12) {
-      if (prev == null) return next;
-      return clamp360(prev + shortestAngleDiff(next, prev) * f);
-    }
+  function init3D() {
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 2500);
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    function azimuthToDirection(az) {
-      return ['N','NE','E','SE','S','SO','O','NO'][Math.round(clamp360(az) / 45) % 8];
-    }
+    starGroup = new THREE.Group();
+    scene.add(starGroup);
 
-    function escapeHtml(t) {
-      return String(t)
-        .replace(/&/g,'&amp;')
-        .replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;')
-        .replace(/'/g,'&#039;');
-    }
+    raycaster = new THREE.Raycaster();
+    raycaster.params.Points.threshold = 15;
+    centerScreen = new THREE.Vector2(0, 0);
 
-    function setupCanvas() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const ringGeo = new THREE.RingGeometry(35, 38, 32);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.8
+    });
+    hoverRing = new THREE.Mesh(ringGeo, ringMat);
+    hoverRing.visible = false;
+    scene.add(hoverRing);
 
-      [els.skyCanvas, els.sensorTestCanvas].forEach(canvas => {
-        const rect = canvas.getBoundingClientRect();
-        canvas.width = Math.max(1, Math.floor(rect.width * dpr));
-        canvas.height = Math.max(1, Math.floor(rect.height * dpr));
-        canvas.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
-      });
+    animar();
+  }
 
-      state.canvasReady = true;
-    }
+  function azAltToVector(azimuth, altitude, radius = 500) {
+    const azRad = THREE.MathUtils.degToRad(azimuth);
+    const altRad = THREE.MathUtils.degToRad(altitude);
+    return new THREE.Vector3(
+      radius * Math.cos(altRad) * Math.sin(azRad),
+      radius * Math.sin(altRad),
+      -radius * Math.cos(altRad) * Math.cos(azRad)
+    );
+  }
 
-    function renderMetricCards() {
-      els.lat.textContent = state.lat != null ? state.lat.toFixed(6) : '--';
-      els.lon.textContent = state.lon != null ? state.lon.toFixed(6) : '--';
-      els.accuracy.textContent = state.accuracy != null ? `${Math.round(state.accuracy)} m` : '--';
-      els.timestamp.textContent = state.timestampIso
-        ? new Date(state.timestampIso).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' })
-        : '--';
-      els.viewHeading.textContent = `${state.viewHeading.toFixed(1)}° · ${azimuthToDirection(state.viewHeading)}`;
-      els.viewPitch.textContent = `${state.viewPitch.toFixed(1)}°`;
-      els.controlMode.textContent = state.motionEnabled
-        ? (state.calibration.ready ? 'Sensores calibrados' : 'Sensores sin calibrar')
-        : 'Mouse / touch';
-      els.fovReadout.textContent = `${state.fovX.toFixed(0)}° × ${state.fovY.toFixed(0)}°`;
-      els.centerTarget.textContent = state.centerObject
-        ? `${state.centerObject.name} · ${state.centerObject.altitude.toFixed(1)}° alt`
-        : 'Nada cerca';
-    }
+  function generarCieloReal() {
+    const fechaActual = new Date();
+    const observador = new Astronomy.Observer(usuarioLat, usuarioLon, 0);
+    const posicionesEstrellas = {};
 
-    function renderList(container, items, type) {
-      if (!items.length) {
-        container.innerHTML = '<div class="muted">No hay datos todavía.</div>';
-        return;
-      }
+    planetas.forEach(cuerpo => {
+      const equ_2000 = Astronomy.Equator(cuerpo, fechaActual, observador, true, true);
+      const horizonte = Astronomy.Horizon(fechaActual, observador, equ_2000.ra, equ_2000.dec, 'normal');
+      const pos = azAltToVector(horizonte.azimuth, horizonte.altitude, 500);
 
-      const footer = type === 'star' && state.stars.length > items.length
-        ? `<div class="muted">Mostrando ${items.length} de ${state.stars.length} estrellas calculadas.</div>`
-        : '';
-
-      container.innerHTML = items.map(item => {
-        const visible = item.altitude >= 0;
-
-        return `<div class="item">
-          <div class="item-top">
-            <div>
-              <h3>${escapeHtml(item.name)}</h3>
-              <div class="muted">
-                ${escapeHtml(item.note || '')}
-                ${item.procedural ? ' · fondo estelar' : ''}
-                ${item.magnitude != null ? ` · mag ${item.magnitude.toFixed(1)}` : ''}
-              </div>
-            </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
-              <span class="badge ${type}">${type === 'solar' ? 'ASTRO' : type === 'star' ? 'ESTRELLA' : 'CONSTELACIÓN'}</span>
-              <span class="badge ${visible ? 'visible' : 'hidden'}">${visible ? 'Visible' : 'Bajo horizonte'}</span>
-            </div>
-          </div>
-          <div class="coords">
-            <div>Azimut<strong>${item.azimuth.toFixed(1)}° · ${azimuthToDirection(item.azimuth)}</strong></div>
-            <div>Altitud<strong>${item.altitude.toFixed(1)}°</strong></div>
-            <div>RA<strong>${item.raText || '--'}</strong></div>
-            <div>Dec<strong>${item.decText || '--'}</strong></div>
-          </div>
-        </div>`;
-      }).join('') + footer;
-    }
-
-    function toRaText(ra) {
-      const h = Math.floor(ra);
-      const m = Math.floor((ra - h) * 60);
-      return `${h}h ${m}m`;
-    }
-
-    function toDecText(dec) {
-      const sign = dec >= 0 ? '+' : '-';
-      const abs = Math.abs(dec);
-      const d = Math.floor(abs);
-      const m = Math.floor((abs - d) * 60);
-      return `${sign}${d}° ${m}'`;
-    }
-
-    function computeSolarObjects(date, observer) {
-      return SOLAR_BODIES.map(entry => {
-        const equ = Astronomy.Equator(Astronomy.Body[entry.body], date, observer, true, true);
-        const hor = Astronomy.Horizon(date, observer, equ.ra, equ.dec, 'normal');
-        return {
-          name: entry.name,
-          type: 'solar',
-          altitude: hor.altitude,
-          azimuth: hor.azimuth,
-          raText: toRaText(equ.ra),
-          decText: toDecText(equ.dec),
-          note: hor.altitude >= 0 ? 'Sobre el horizonte ahora' : 'No visible en este momento'
-        };
-      }).sort((a, b) => b.altitude - a.altitude);
-    }
-
-    function computeCatalogObjects(date, observer, catalog, type, visibleNote, hiddenNote) {
-      return catalog.map(entry => {
-        const hor = Astronomy.Horizon(date, observer, entry.ra, entry.dec, 'normal');
-        return {
-          name: entry.name,
-          type,
-          altitude: hor.altitude,
-          azimuth: hor.azimuth,
-          raText: toRaText(entry.ra),
-          decText: toDecText(entry.dec),
-          note: hor.altitude >= 0 ? visibleNote : hiddenNote,
-          magnitude: entry.magnitude ?? null,
-          procedural: !!entry.procedural
-        };
-      }).sort((a, b) => b.altitude - a.altitude);
-    }
-
-    function calculateSky() {
-      if (state.lat == null || state.lon == null) {
-        setStatus('primero hay que obtener la ubicación.', 'warn');
-        return;
-      }
-
-      if (typeof Astronomy === 'undefined') {
-        setStatus('no cargó Astronomy Engine. Revisá internet.', 'danger');
-        return;
-      }
-
-      const date = new Date();
-      const observer = new Astronomy.Observer(state.lat, state.lon, 0);
-
-      state.timestampIso = date.toISOString();
-      state.solar = computeSolarObjects(date, observer);
-      state.stars = computeCatalogObjects(
-        date,
-        observer,
-        EXTENDED_STARS,
-        'star',
-        'Estrella sobre el horizonte',
-        'Debajo del horizonte ahora'
+      const size = (cuerpo === 'Sun' || cuerpo === 'Moon') ? 16 : 8;
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(size, 32, 32),
+        new THREE.MeshBasicMaterial({ color: cuerpo === 'Sun' ? 0xffdd44 : 0xeeeeee })
       );
-      state.constellations = computeCatalogObjects(
-        date,
-        observer,
-        CONSTELLATIONS,
-        'constellation',
-        'Zona visible',
-        'Zona no visible ahora'
-      );
-
-      renderAll();
-      setStatus('cielo calculado correctamente para tu ubicación actual.', 'good');
-    }
-
-    function getLocationAndCalculate() {
-      if (!('geolocation' in navigator)) {
-        setStatus('este navegador no soporta geolocalización.', 'danger');
-        return;
-      }
-
-      setStatus('obteniendo ubicación...', 'warn');
-
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          state.lat = pos.coords.latitude;
-          state.lon = pos.coords.longitude;
-          state.accuracy = pos.coords.accuracy;
-          setStatus('ubicación obtenida. calculando cielo...', 'warn');
-          calculateSky();
-        },
-        err => {
-          console.error(err);
-          setStatus('no se pudo obtener la ubicación. Revisá permisos.', 'danger');
-        },
-        { enableHighAccuracy:true, maximumAge:0, timeout:15000 }
-      );
-    }
-
-    function projectObject(obj, width, height) {
-      const dAz = shortestAngleDiff(obj.azimuth, state.viewHeading);
-      const dAlt = obj.altitude - state.viewPitch;
-      if (Math.abs(dAz) > 95 || dAlt < -70 || dAlt > 70) return null;
-
-      const nx = dAz / (state.fovX / 2);
-      const ny = dAlt / (state.fovY / 2);
-
-      if (Math.abs(nx) > 1.25 || Math.abs(ny) > 1.25) return null;
-
-      const x = width / 2 + nx * width / 2;
-      const y = height / 2 - ny * height / 2;
-
-      return {
-        x,
-        y,
-        distanceScore: Math.hypot(dAz / state.fovX, dAlt / state.fovY),
-        centerDistancePx: Math.hypot(x - width / 2, y - height / 2)
-      };
-    }
-
-    function projectCatalogPoint(point, observer, date, width, height) {
-      const hor = Astronomy.Horizon(date, observer, point.ra, point.dec, 'normal');
-      if (hor.altitude < 0) return null;
-      return projectObject({ azimuth: hor.azimuth, altitude: hor.altitude }, width, height);
-    }
-
-    function drawSkyExplorer() {
-      if (!state.canvasReady) return;
-
-      const canvas = els.skyCanvas;
-      const ctx = canvas.getContext('2d');
-      const width = canvas.clientWidth;
-      const height = canvas.clientHeight;
-
-      ctx.clearRect(0, 0, width, height);
-
-      const bg = ctx.createLinearGradient(0, 0, 0, height);
-      bg.addColorStop(0, '#081425');
-      bg.addColorStop(0.55, '#040811');
-      bg.addColorStop(1, '#02040a');
-      ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, width, height);
-
-      for (let i = 0; i < 140; i++) {
-        const x = (i * 157) % width;
-        const y = (i * 89) % height;
-        ctx.globalAlpha = 0.05 + (i % 4) * 0.04;
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(x, y, (i % 3) + 0.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-
-      const horizonY = height * (0.78 - state.viewPitch / 220);
-      const hg = ctx.createLinearGradient(0, horizonY - 80, 0, horizonY + 120);
-      hg.addColorStop(0, 'rgba(100,150,255,0)');
-      hg.addColorStop(0.7, 'rgba(78,112,166,0.12)');
-      hg.addColorStop(1, 'rgba(22,33,52,0.32)');
-      ctx.fillStyle = hg;
-      ctx.fillRect(0, horizonY - 80, width, height - horizonY + 80);
-
-      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-      ctx.beginPath();
-      ctx.moveTo(0, horizonY);
-      ctx.lineTo(width, horizonY);
-      ctx.stroke();
-
-      [
-        {t:'N',az:0},{t:'NE',az:45},{t:'E',az:90},{t:'SE',az:135},
-        {t:'S',az:180},{t:'SO',az:225},{t:'O',az:270},{t:'NO',az:315}
-      ].forEach(m => {
-        const dAz = shortestAngleDiff(m.az, state.viewHeading);
-        if (Math.abs(dAz) <= state.fovX * 0.7) {
-          const x = width / 2 + (dAz / (state.fovX / 2)) * width / 2;
-          ctx.globalAlpha = 1 - Math.abs(dAz) / (state.fovX * 0.75);
-          ctx.fillStyle = m.t === 'N' ? '#7cc7ff' : 'rgba(255,255,255,0.8)';
-          ctx.font = '12px Inter,sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(m.t, x, 24);
-        }
-      });
-      ctx.globalAlpha = 1;
-
-      if (state.lat != null && state.lon != null && typeof Astronomy !== 'undefined') {
-        const observer = new Astronomy.Observer(state.lat, state.lon, 0);
-        const date = state.timestampIso ? new Date(state.timestampIso) : new Date();
-
-        ctx.strokeStyle = 'rgba(215,184,255,0.32)';
-        ctx.lineWidth = 1.4;
-
-        CONSTELLATION_LINES.forEach(c => {
-          c.segments.forEach(seg => {
-            const p1 = projectCatalogPoint(seg[0], observer, date, width, height);
-            const p2 = projectCatalogPoint(seg[1], observer, date, width, height);
-            if (!p1 || !p2) return;
-            ctx.beginPath();
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.stroke();
-          });
-        });
-      }
-
-      const visibleObjects = [];
-      const groups = [
-        { items: state.solar.filter(i => i.altitude >= 0), color: getComputedStyle(document.documentElement).getPropertyValue('--solar').trim(), radius: 6 },
-        { items: state.stars.filter(i => i.altitude >= 0), color: getComputedStyle(document.documentElement).getPropertyValue('--star').trim(), radius: 3.2 },
-        { items: state.constellations.filter(i => i.altitude >= 0), color: getComputedStyle(document.documentElement).getPropertyValue('--constellation').trim(), radius: 4.5 }
-      ];
-
-      groups.forEach(g => g.items.forEach(item => {
-        const p = projectObject(item, width, height);
-        if (p) visibleObjects.push({ ...item, ...p, color: g.color, radius: g.radius });
-      }));
-
-      visibleObjects.sort((a, b) => a.distanceScore - b.distanceScore);
-      state.centerObject = visibleObjects[0] || null;
-      state.highlightedObject = visibleObjects.find(i => i.centerDistancePx < 42) || null;
-      if (state.highlightedObject) state.centerObject = state.highlightedObject;
-
-      visibleObjects.forEach(item => {
-        const high = state.highlightedObject && state.highlightedObject.name === item.name && state.highlightedObject.type === item.type;
-        const itemRadius = item.procedural
-          ? Math.max(1.2, 4.5 - ((item.magnitude ?? 4) * 0.55))
-          : item.radius;
-
-        const glow = ctx.createRadialGradient(item.x, item.y, 0, item.x, item.y, itemRadius * (high ? 8 : 4));
-        glow.addColorStop(0, item.color + 'cc');
-        glow.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(item.x, item.y, itemRadius * (high ? 8 : 4), 0, Math.PI * 2);
-        ctx.fill();
-
-        if (high) {
-          ctx.strokeStyle = 'rgba(255,255,255,0.65)';
-          ctx.lineWidth = 1.4;
-          ctx.beginPath();
-          ctx.arc(item.x, item.y, itemRadius * 3, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-
-        ctx.fillStyle = item.color;
-        ctx.beginPath();
-        ctx.arc(item.x, item.y, high ? itemRadius * 1.7 : itemRadius, 0, Math.PI * 2);
-        ctx.fill();
-
-        if (!item.procedural || high) {
-          ctx.fillStyle = high ? '#fff' : 'rgba(255,255,255,0.92)';
-          ctx.font = high ? 'bold 16px Inter,sans-serif' : '11px Inter,sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(item.name, item.x, item.y - (high ? 24 : 14));
-        }
-      });
-
-      renderMetricCards();
-    }
-
-    function drawSensorTestCanvas() {
-      if (!state.canvasReady) return;
-
-      const canvas = els.sensorTestCanvas;
-      const ctx = canvas.getContext('2d');
-      const width = canvas.clientWidth;
-      const height = canvas.clientHeight;
-      const cx = width / 2;
-      const cy = height / 2;
-
-      ctx.clearRect(0, 0, width, height);
-
-      const bg = ctx.createLinearGradient(0, 0, 0, height);
-      bg.addColorStop(0, '#081425');
-      bg.addColorStop(1, '#02040a');
-      ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, width, height);
-
-      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-      ctx.beginPath();
-      ctx.moveTo(cx, 0);
-      ctx.lineTo(cx, height);
-      ctx.moveTo(0, cy);
-      ctx.lineTo(width, cy);
-      ctx.stroke();
-
-      const x = clamp(cx + state.calibratedYaw * 3, 32, width - 32);
-      const y = clamp(cy - state.calibratedPitch * 3, 42, height - 42);
-      const roll = (state.calibratedRoll * Math.PI) / 180;
-
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(roll);
-      ctx.fillStyle = 'rgba(124,199,255,0.18)';
-      ctx.strokeStyle = 'rgba(124,199,255,0.85)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.roundRect(-38, -58, 76, 116, 14);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = 'rgba(255,255,255,0.75)';
-      ctx.beginPath();
-      ctx.roundRect(-16, 42, 32, 4, 2);
-      ctx.fill();
-      ctx.restore();
-
-      ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.font = '12px ui-monospace, monospace';
-      ctx.textAlign = 'left';
-      ctx.fillText(`yaw X: ${state.calibratedYaw.toFixed(1)}`, 14, 24);
-      ctx.fillText(`pitch Y: ${state.calibratedPitch.toFixed(1)}`, 14, 42);
-      ctx.fillText(`roll Z: ${state.calibratedRoll.toFixed(1)}`, 14, 60);
-      ctx.fillText(`gyro αβγ: ${state.rawRotationRate.alpha.toFixed(1)}, ${state.rawRotationRate.beta.toFixed(1)}, ${state.rawRotationRate.gamma.toFixed(1)}`, 14, height - 18);
-    }
-
-    function getHeadingFromEvent(event) {
-      if (typeof event.webkitCompassHeading === 'number') return event.webkitCompassHeading;
-      if (typeof event.alpha === 'number') return clamp360(360 - event.alpha);
-      return null;
-    }
-
-    function updateCalibratedAxes() {
-      const c = state.calibration;
-      if (!c.ready) {
-        state.calibratedYaw = shortestAngleDiff(state.rawHeading ?? 0, c.neutralHeading);
-        state.calibratedPitch = (state.rawPitch ?? 0) - c.neutralPitch;
-        state.calibratedRoll = (state.rawRoll ?? 0) - c.neutralRoll;
-        return;
-      }
-
-      state.calibratedYaw = c.yawSign * shortestAngleDiff(state.rawHeading ?? c.neutralHeading, c.neutralHeading) * c.yawScale;
-      state.calibratedPitch = c.pitchSign * ((state.rawPitch ?? c.neutralPitch) - c.neutralPitch) * c.pitchScale;
-      state.calibratedRoll = c.rollSign * ((state.rawRoll ?? c.neutralRoll) - c.neutralRoll) * c.rollScale;
-    }
-
-    function handleOrientation(event) {
-      const heading = getHeadingFromEvent(event);
-      const pitch = typeof event.beta === 'number' ? event.beta : null;
-      const roll = typeof event.gamma === 'number' ? event.gamma : null;
-      if (heading == null || pitch == null || roll == null) return;
-
-      state.smoothedHeading = smoothAngle(state.smoothedHeading, heading);
-      state.smoothedPitch = smoothValue(state.smoothedPitch, pitch);
-      state.smoothedRoll = smoothValue(state.smoothedRoll, roll);
-
-      state.rawHeading = state.smoothedHeading;
-      state.rawPitch = state.smoothedPitch;
-      state.rawRoll = state.smoothedRoll;
-      updateCalibratedAxes();
-
-      if (state.motionEnabled) {
-        if (state.calibration.ready) {
-          state.viewHeading = clamp360(state.calibration.neutralHeading + state.calibratedYaw + state.headingOffset);
-          state.viewPitch = clamp(18 + state.calibratedPitch + state.pitchOffset, -30, 85);
-        } else {
-          state.viewHeading = clamp360(state.rawHeading + state.headingOffset);
-          state.viewPitch = clamp(state.rawPitch + state.pitchOffset, -30, 85);
-        }
-      }
-    }
-
-    function handleMotion(event) {
-      const acc = event.accelerationIncludingGravity || event.acceleration || {};
-      const rot = event.rotationRate || {};
-
-      state.rawAcceleration = { x: acc.x || 0, y: acc.y || 0, z: acc.z || 0 };
-      state.rawRotationRate = { alpha: rot.alpha || 0, beta: rot.beta || 0, gamma: rot.gamma || 0 };
-    }
-
-    async function enableMotionControls() {
-      try {
-        if (typeof DeviceOrientationEvent === 'undefined') {
-          setStatus('este dispositivo no soporta orientación.', 'danger');
-          return;
-        }
-
-        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-          const res = await DeviceOrientationEvent.requestPermission();
-          if (res !== 'granted') {
-            setStatus('permiso de orientación denegado.', 'danger');
-            return;
-          }
-        }
-
-        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-          try { await DeviceMotionEvent.requestPermission(); } catch (e) {}
-        }
-
-        window.addEventListener('deviceorientation', handleOrientation, true);
-        window.addEventListener('devicemotion', handleMotion, true);
-        state.motionEnabled = true;
-        renderMetricCards();
-        setStatus('sensores activos. Podés mover el celular.', 'good');
-      } catch (e) {
-        console.error(e);
-        setStatus('no se pudieron activar sensores. Usá HTTPS y celular real.', 'danger');
-      }
-    }
-
-    function updateCalibrationUI() {
-      const step = CALIBRATION_STEPS[state.calibrationStepIndex];
-      const progress = state.calibrationStepIndex < 0 ? 0 : (state.calibrationStepIndex / CALIBRATION_STEPS.length) * 100;
-      els.calibrationProgress.style.width = `${clamp(progress, 0, 100)}%`;
-
-      if (!step) {
-        els.calibrationStepTitle.textContent = state.calibration.ready ? 'Calibración completa' : 'Sin calibrar';
-        els.calibrationInstruction.textContent = state.calibration.ready
-          ? 'Los movimientos del dispositivo ya se traducen con la calibración guardada.'
-          : 'Tocá “Iniciar calibración guiada” y seguí los movimientos.';
-        els.calibrationArrow.className = 'calibration-arrow';
-        return;
-      }
-
-      els.calibrationStepTitle.textContent = step.title;
-      els.calibrationInstruction.textContent = step.instruction;
-      els.calibrationArrow.className = `calibration-arrow ${step.arrowClass}`;
-    }
-
-    function snapshot() {
-      return {
-        heading: state.rawHeading ?? 0,
-        pitch: state.rawPitch ?? 0,
-        roll: state.rawRoll ?? 0,
-        acceleration: { ...state.rawAcceleration },
-        rotationRate: { ...state.rawRotationRate },
-        at: Date.now()
-      };
-    }
-
-    async function startCalibration() {
-      state.calibrationActive = true;
-      state.calibrationStepIndex = 0;
-      state.calibrationSamples = {};
-      updateCalibrationUI();
-      setCalibrationStatus('seguí el primer paso y tocá “Guardar este paso”.', 'warn');
-      await enableMotionControls();
-    }
-
-    function captureCalibrationStep() {
-      if (!state.calibrationActive || state.calibrationStepIndex < 0) {
-        setCalibrationStatus('primero iniciá la calibración guiada.', 'warn');
-        return;
-      }
-
-      const step = CALIBRATION_STEPS[state.calibrationStepIndex];
-      state.calibrationSamples[step.key] = snapshot();
-      state.calibrationStepIndex += 1;
-
-      if (state.calibrationStepIndex >= CALIBRATION_STEPS.length) {
-        finishCalibration();
-        return;
-      }
-
-      updateCalibrationUI();
-      setCalibrationStatus('paso guardado. Hacé el siguiente movimiento.', 'good');
-    }
-
-    function finishCalibration() {
-      const s = state.calibrationSamples;
-      const n = s.neutral;
-
-      if (!n || !s.yawLeft || !s.yawRight || !s.pitchUp || !s.rollLeft || !s.rollRight) {
-        setCalibrationStatus('faltan pasos. Reiniciá la calibración.', 'danger');
-        return;
-      }
-
-      const yawLeft = shortestAngleDiff(s.yawLeft.heading, n.heading);
-      const yawRight = shortestAngleDiff(s.yawRight.heading, n.heading);
-      const pitchDelta = s.pitchUp.pitch - n.pitch;
-      const rollLeft = s.rollLeft.roll - n.roll;
-      const rollRight = s.rollRight.roll - n.roll;
-
-      state.calibration = {
-        ready: true,
-        yawSign: yawLeft < 0 ? 1 : -1,
-        pitchSign: pitchDelta > 0 ? 1 : -1,
-        rollSign: rollLeft < rollRight ? 1 : -1,
-        yawScale: 35 / Math.max(8, Math.abs(yawLeft - yawRight) / 2),
-        pitchScale: 35 / Math.max(8, Math.abs(pitchDelta)),
-        rollScale: 35 / Math.max(8, Math.abs(rollLeft - rollRight) / 2),
-        neutralHeading: n.heading,
-        neutralPitch: n.pitch,
-        neutralRoll: n.roll
+      mesh.position.copy(pos);
+      mesh.userData = {
+        nombre: cuerpo === 'Sun' ? 'Sol' : cuerpo === 'Moon' ? 'Luna' : cuerpo,
+        tipo: 'Sistema Solar'
       };
 
-      state.calibrationActive = false;
-      state.calibrationStepIndex = -1;
-      state.headingOffset = shortestAngleDiff(state.viewHeading, state.rawHeading ?? n.heading);
-      state.pitchOffset = state.viewPitch - (state.rawPitch ?? n.pitch);
-
-      els.calibrationProgress.style.width = '100%';
-      updateCalibrationUI();
-      setCalibrationStatus('lista. Ejes normalizados para esta sesión.', 'good');
-      updateCalibratedAxes();
-    }
-
-    function resetCalibration() {
-      state.calibrationActive = false;
-      state.calibrationStepIndex = -1;
-      state.calibrationSamples = {};
-      state.calibration = {
-        ready: false,
-        yawSign: 1,
-        pitchSign: 1,
-        rollSign: 1,
-        yawScale: 1,
-        pitchScale: 1,
-        rollScale: 1,
-        neutralHeading: state.rawHeading ?? 0,
-        neutralPitch: state.rawPitch ?? 0,
-        neutralRoll: state.rawRoll ?? 0
-      };
-
-      els.calibrationProgress.style.width = '0%';
-      updateCalibrationUI();
-      setCalibrationStatus('reiniciada.', 'warn');
-      updateCalibratedAxes();
-    }
-
-    function recenterView() {
-      state.viewHeading = 0;
-      state.viewPitch = 18;
-      state.headingOffset = state.rawHeading != null ? shortestAngleDiff(0, state.rawHeading) : 0;
-      state.pitchOffset = state.rawPitch != null ? 18 - state.rawPitch : 0;
-      setStatus('vista recentrada.', 'good');
-    }
-
-    function pointerStart(x, y) {
-      state.dragging = true;
-      state.dragStartX = x;
-      state.dragStartY = y;
-      state.dragHeadingStart = state.viewHeading;
-      state.dragPitchStart = state.viewPitch;
-    }
-
-    function pointerMove(x, y) {
-      if (!state.dragging || state.motionEnabled) return;
-      const dx = x - state.dragStartX;
-      const dy = y - state.dragStartY;
-      state.viewHeading = clamp360(state.dragHeadingStart - dx * 0.18);
-      state.viewPitch = clamp(state.dragPitchStart + dy * 0.14, -30, 85);
-    }
-
-    function pointerEnd() {
-      state.dragging = false;
-    }
-
-    function renderAll() {
-      renderMetricCards();
-      drawSkyExplorer();
-      drawSensorTestCanvas();
-      renderList(els.solarList, state.solar, 'solar');
-      renderList(els.starsList, state.stars.slice(0, 120), 'star');
-      renderList(els.constellationsList, state.constellations, 'constellation');
-
-      els.debugJson.textContent = JSON.stringify({
-        latitude: state.lat,
-        longitude: state.lon,
-        accuracyMeters: state.accuracy,
-        timestamp: state.timestampIso,
-        viewHeading: state.viewHeading,
-        viewPitch: state.viewPitch,
-        motionEnabled: state.motionEnabled,
-        calibration: state.calibration,
-        centerTarget: state.centerObject?.name || null,
-        solar: state.solar,
-        stars: {
-          total: state.stars.length,
-          sample: state.stars.slice(0, 20)
-        },
-        constellations: state.constellations
-      }, null, 2);
-    }
-
-    function startRenderLoop() {
-      function frame() {
-        drawSkyExplorer();
-        drawSensorTestCanvas();
-        requestAnimationFrame(frame);
-      }
-      frame();
-    }
-
-    els.startCalibrationBtn.addEventListener('click', startCalibration);
-    els.captureCalibrationBtn.addEventListener('click', captureCalibrationStep);
-    els.resetCalibrationBtn.addEventListener('click', resetCalibration);
-    els.getSkyBtn.addEventListener('click', getLocationAndCalculate);
-    els.refreshBtn.addEventListener('click', calculateSky);
-    els.enableMotionBtn.addEventListener('click', enableMotionControls);
-    els.recenterBtn.addEventListener('click', recenterView);
-
-    els.skyCanvas.addEventListener('mousedown', e => pointerStart(e.clientX, e.clientY));
-    window.addEventListener('mousemove', e => pointerMove(e.clientX, e.clientY));
-    window.addEventListener('mouseup', pointerEnd);
-
-    els.skyCanvas.addEventListener('touchstart', e => {
-      const t = e.touches[0];
-      pointerStart(t.clientX, t.clientY);
-    }, { passive: true });
-
-    els.skyCanvas.addEventListener('touchmove', e => {
-      const t = e.touches[0];
-      pointerMove(t.clientX, t.clientY);
-    }, { passive: true });
-
-    window.addEventListener('touchend', pointerEnd, { passive: true });
-
-    window.addEventListener('resize', () => {
-      setupCanvas();
-      renderAll();
+      starGroup.add(mesh);
+      objetosInteractivos.push(mesh);
+      astrosDinamicos.push({ mesh: mesh, tipoRef: 'planeta', id: cuerpo });
     });
 
-    setupCanvas();
-    updateCalibrationUI();
-    renderAll();
-    startRenderLoop();
-  </script>
+    estrellas.forEach(estrella => {
+      const horizonte = Astronomy.Horizon(fechaActual, observador, estrella.ra, estrella.dec, 'normal');
+      const pos = azAltToVector(horizonte.azimuth, horizonte.altitude, 800);
+      posicionesEstrellas[estrella.id] = pos;
+
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(5, 16, 16),
+        new THREE.MeshBasicMaterial({ color: 0xffffff })
+      );
+      mesh.position.copy(pos);
+      mesh.userData = {
+        nombre: estrella.n,
+        tipo: estrella.id.includes('scga') ? 'Catálogo Córdoba' : 'Estrella Principal'
+      };
+
+      starGroup.add(mesh);
+      objetosInteractivos.push(mesh);
+      astrosDinamicos.push({ mesh: mesh, tipoRef: 'estrella', ra: estrella.ra, dec: estrella.dec, id: estrella.id });
+    });
+
+    const lineMaterial = new THREE.LineBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.2
+    });
+
+    constelaciones.forEach(par => {
+      if (posicionesEstrellas[par[0]] && posicionesEstrellas[par[1]]) {
+        const puntos = [posicionesEstrellas[par[0]], posicionesEstrellas[par[1]]];
+        const lineGeo = new THREE.BufferGeometry().setFromPoints(puntos);
+        const linea = new THREE.Line(lineGeo, lineMaterial);
+
+        starGroup.add(linea);
+        astrosDinamicos.push({ mesh: linea, tipoRef: 'linea', p1: par[0], p2: par[1] });
+      }
+    });
+
+    const dustGeo = new THREE.BufferGeometry();
+    const dustVerts = [];
+    for (let i = 0; i < 1500; i++) {
+      const rPos = azAltToVector(Math.random() * 360, (Math.random() * 180) - 90, 1000);
+      dustVerts.push(rPos.x, rPos.y, rPos.z);
+    }
+    dustGeo.setAttribute('position', new THREE.Float32BufferAttribute(dustVerts, 3));
+    starGroup.add(new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: 0x555555, size: 2 })));
+
+    setInterval(actualizarTiempoYPosiciones, 60000);
+  }
+
+  function actualizarTiempoYPosiciones() {
+    const nuevaFecha = new Date();
+    const observador = new Astronomy.Observer(usuarioLat, usuarioLon, 0);
+    const posicionesActualizadas = {};
+
+    astrosDinamicos.forEach(astro => {
+      if (astro.tipoRef === 'planeta' || astro.tipoRef === 'estrella') {
+        let horizonte;
+        if (astro.tipoRef === 'planeta') {
+          const equ_2000 = Astronomy.Equator(astro.id, nuevaFecha, observador, true, true);
+          horizonte = Astronomy.Horizon(nuevaFecha, observador, equ_2000.ra, equ_2000.dec, 'normal');
+        } else {
+          horizonte = Astronomy.Horizon(nuevaFecha, observador, astro.ra, astro.dec, 'normal');
+        }
+
+        const nuevaPos = azAltToVector(
+          horizonte.azimuth,
+          horizonte.altitude,
+          astro.tipoRef === 'planeta' ? 500 : 800
+        );
+
+        astro.mesh.position.copy(nuevaPos);
+        if (astro.id) posicionesActualizadas[astro.id] = nuevaPos;
+      }
+    });
+
+    astrosDinamicos.forEach(astro => {
+      if (astro.tipoRef === 'linea' && posicionesActualizadas[astro.p1] && posicionesActualizadas[astro.p2]) {
+        const positions = astro.mesh.geometry.attributes.position.array;
+        positions[0] = posicionesActualizadas[astro.p1].x;
+        positions[1] = posicionesActualizadas[astro.p1].y;
+        positions[2] = posicionesActualizadas[astro.p1].z;
+        positions[3] = posicionesActualizadas[astro.p2].x;
+        positions[4] = posicionesActualizadas[astro.p2].y;
+        positions[5] = posicionesActualizadas[astro.p2].z;
+        astro.mesh.geometry.attributes.position.needsUpdate = true;
+      }
+    });
+  }
+
+  function procesarSensores(e) {
+    if (e.alpha === null) return;
+
+    currentAlpha = e.alpha;
+    currentBeta = e.beta ?? 0;
+    currentGamma = e.gamma ?? 0;
+
+    let absoluteHeading = null;
+
+    if (typeof e.webkitCompassHeading === 'number') {
+      absoluteHeading = e.webkitCompassHeading;
+      brujulaDetectada = true;
+    } else if (e.absolute === true && typeof e.alpha === 'number') {
+      absoluteHeading = (360 - e.alpha + 360) % 360;
+      brujulaDetectada = true;
+    }
+
+    if (absoluteHeading !== null) {
+      headingOffset = absoluteHeading;
+
+      if (northCalibration === null) {
+        northCalibration = absoluteHeading;
+      }
+    }
+  }
+
+  async function iniciarApp() {
+    document.querySelector('.title-flat').innerText = "AUTORIZANDO...";
+
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      try {
+        const permisoSensores = await DeviceOrientationEvent.requestPermission();
+        if (permisoSensores !== 'granted') return alert("Permiso de sensores denegado.");
+      } catch (e) {
+        return alert("Interactúa con la pantalla primero.");
+      }
+    }
+
+    document.querySelector('.title-flat').innerText = "BUSCANDO GPS...";
+
+    navigator.geolocation.getCurrentPosition((pos) => {
+      usuarioLat = pos.coords.latitude;
+      usuarioLon = pos.coords.longitude;
+
+      document.getElementById('sys-info').innerText = `LAT:${usuarioLat.toFixed(2)} // LON:${usuarioLon.toFixed(2)}`;
+      document.getElementById('sys-info').classList.remove('oculto');
+
+      generarCieloReal();
+
+      northCalibration = null;
+
+      if ('ondeviceorientationabsolute' in window) {
+        window.addEventListener('deviceorientationabsolute', procesarSensores);
+      } else {
+        window.addEventListener('deviceorientation', procesarSensores);
+      }
+
+      setTimeout(() => {
+        uiLayer.classList.add('oculto');
+        document.getElementById('mira').style.display = 'block';
+        document.getElementById('compass-container').classList.remove('oculto');
+        document.getElementById('compass-pointer').classList.remove('oculto');
+        document.getElementById('orientation-panel').classList.remove('oculto');
+      }, 500);
+
+    }, () => alert("Error de GPS."));
+  }
+
+  function azimuthToDirection(azimuth) {
+    const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
+    return dirs[Math.round((((azimuth % 360) + 360) % 360) / 45) % 8];
+  }
+function shortestAngleDiff(from, to) {
+  let diff = to - from;
+  while (diff > 180) diff -= 360;
+  while (diff < -180) diff += 360;
+  return diff;
+}
+  function directionToIndex(dir) {
+    return ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'].indexOf(dir);
+  }
+
+  function getObserverLookFromCamera() {
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+
+    let azimuth = THREE.MathUtils.radToDeg(Math.atan2(dir.x, -dir.z));
+    azimuth = (azimuth + 360) % 360;
+
+    const altitude = THREE.MathUtils.radToDeg(Math.asin(dir.y));
+
+    return {
+      azimuth,
+      altitude,
+      direction: azimuthToDirection(azimuth)
+    };
+  }
+
+  function actualizarPanelOrientaciones() {
+  const look = getObserverLookFromCamera();
+
+  lookDirectionVal.textContent = look.direction;
+  lookAzimuthVal.textContent = `${look.azimuth.toFixed(1)}°`;
+  lookAltitudeVal.textContent = `${look.altitude.toFixed(1)}°`;
+  northRefVal.textContent = northCalibration != null ? `${northCalibration.toFixed(1)}°` : '--';
+
+  // =========================
+  // BRÚJULA INFERIOR FLUIDA
+  // =========================
+
+  if (compassAzimuthVisual === null) {
+    compassAzimuthVisual = look.azimuth;
+  }
+
+  // suavizado angular
+  const diff = shortestAngleDiff(compassAzimuthVisual, look.azimuth);
+  compassAzimuthVisual += diff * 0.14;
+  compassAzimuthVisual = (compassAzimuthVisual + 360) % 360;
+
+  // Conversión de azimut a píxeles:
+  // 45° = 64px
+  const pxPerDegree = COMPASS_STEP / 45;
+
+  // Usamos la segunda vuelta (la del medio) para que siempre haya margen
+  // + COMPASS_STEP/2 centra la letra exactamente en la flecha
+  const x = -(
+    COMPASS_CYCLE_WIDTH +               // segunda vuelta
+    (compassAzimuthVisual * pxPerDegree) +
+    (COMPASS_STEP / 2)                  // centra la letra en la flecha
+  );
+
+  if (compassStrip) {
+    compassStrip.style.transform = `translateX(${x}px)`;
+  }
+}
+
+  function actualizarCamaraYUI() {
+    if (!brujulaDetectada) return;
+
+    const alphaRad = brujulaDetectada
+      ? THREE.MathUtils.degToRad(360 - headingOffset)
+      : THREE.MathUtils.degToRad(currentAlpha);
+
+    const betaRad = THREE.MathUtils.degToRad(currentBeta || 0);
+    const gammaRad = THREE.MathUtils.degToRad(currentGamma || 0);
+    const screenRot = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
+
+    const qDispositivo = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(betaRad, alphaRad, -gammaRad, 'YXZ')
+    );
+    qDispositivo.multiply(new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)));
+    qDispositivo.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -screenRot));
+    camera.quaternion.copy(qDispositivo);
+
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+
+    if (dir.y < 0.1) {
+      let opacidadSombra = 1.0 - ((dir.y + 0.2) / 0.3);
+      if (opacidadSombra > 1) opacidadSombra = 1;
+      if (opacidadSombra < 0) opacidadSombra = 0;
+      horizonShadow.style.opacity = opacidadSombra;
+    } else {
+      horizonShadow.style.opacity = 0;
+    }
+
+    actualizarPanelOrientaciones();
+  }
+
+  function verificarIntersecciones() {
+    raycaster.setFromCamera(centerScreen, camera);
+    const colisiones = raycaster.intersectObjects(objetosInteractivos);
+
+    if (colisiones.length > 0) {
+      const objetivo = colisiones[0].object;
+
+      if (objetoEnfocado !== objetivo) {
+        if (objetoEnfocado) objetoEnfocado.scale.set(1, 1, 1);
+        objetoEnfocado = objetivo;
+        objetoEnfocado.scale.set(1.5, 1.5, 1.5);
+      }
+
+      hoverRing.position.copy(objetivo.position);
+      hoverRing.lookAt(camera.position);
+      hoverRing.visible = true;
+
+      hudName.innerText = objetivo.userData.nombre;
+      hudDesc.innerText = objetivo.userData.tipo;
+      hud.style.opacity = 1;
+    } else {
+      if (objetoEnfocado) {
+        objetoEnfocado.scale.set(1, 1, 1);
+        objetoEnfocado = null;
+      }
+      hoverRing.visible = false;
+      hud.style.opacity = 0;
+    }
+  }
+
+  function animar() {
+    requestAnimationFrame(animar);
+    actualizarCamaraYUI();
+    verificarIntersecciones();
+    renderer.render(scene, camera);
+  }
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  init3D();
+</script>
 </body>
 </html>
