@@ -82,18 +82,18 @@
   }
 
   /* fondo degradado inferior */
-  #horizon-shadow {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100vw;
-    height: 38vh;
-    background: linear-gradient(to top, rgba(18,56,77,0.88) 0%, rgba(8,24,36,0.52) 36%, rgba(0,0,0,0) 100%);
-    z-index: 2;
-    pointer-events: none;
-    opacity: 1;
-    transition: opacity 0.1s linear;
-  }
+ #horizon-shadow {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100vw;
+  height: 35vh;
+  background: linear-gradient(to top, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.12) 30%, rgba(0,0,0,0) 100%);
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s linear;
+}
 
   /* tracker superior */
   #mission-tracker {
@@ -209,19 +209,17 @@
     filter: drop-shadow(0 2px 6px rgba(0,0,0,0.45));
   }
 
-  /* mini panel info actual */
   #target-hud {
-    position: absolute;
-    top: 96px;
-    left: 50%;
-    transform: translateX(-50%);
-    text-align: center;
-    z-index: 16;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    pointer-events: none;
-    min-width: 220px;
-  }
+  position: absolute;
+  left: 50%;
+  bottom: 78px;
+  transform: translateX(-50%);
+  text-align: center;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
 
   .pill {
     background: rgba(10,24,36,0.72);
@@ -402,12 +400,13 @@
   </div>
 
 <script>
-  let scene, camera, renderer, starGroup;
-  let raycaster, centerScreen;
-  let hoverRing;
-  let objetosInteractivos = [];
-  let objetoEnfocado = null;
-  let astrosDinamicos = [];
+let scene, camera, renderer, starGroup;
+let raycaster, centerScreen;
+let hoverRing;
+let skyDome = null;
+let objetosInteractivos = [];
+let objetoEnfocado = null;
+let astrosDinamicos = [];
 
   const uiLayer = document.getElementById('ui-layer');
   const hud = document.getElementById('target-hud');
@@ -423,9 +422,12 @@ const scannerUi = document.getElementById('scanner-ui');
   const lookAltitudeVal = document.getElementById('look-altitude');
   const northRefVal = document.getElementById('northref-val');
 
-  const COMPASS_STEP = 64;              // ancho de cada letra
-const COMPASS_CYCLE_WIDTH = 8 * 64;   // 8 direcciones = 512px
-let compassAzimuthVisual = null;      // azimut visual suavizado
+const COMPASS_STEP = 64;               // ancho de cada letra
+const COMPASS_CYCLE_WIDTH = 8 * 64;    // 8 direcciones = 512px
+let compassAzimuthVisual = null;       // azimut visual suavizado
+
+// CAMBIÁ esta ruta por la tuya
+const SKY_TEXTURE_URL = 'bg-dome.jpg';
 
  let usuarioLat = 0, usuarioLon = 0;
 let brujulaDetectada = false;
@@ -515,7 +517,33 @@ let northCalibration = null;
     ['mintaka', 'alnilam'], ['alnilam', 'alnitak'],
     ['gacrux', 'acrux'], ['mimosa', 'imai']
   ];
+function crearSkyDome() {
+  const loader = new THREE.TextureLoader();
 
+  loader.load(
+    SKY_TEXTURE_URL,
+    (texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+
+      const geometry = new THREE.SphereGeometry(2200, 64, 64);
+      geometry.scale(-1, 1, 1);
+
+      const material = new THREE.MeshBasicMaterial({
+        map: texture,
+        side: THREE.BackSide
+      });
+
+      skyDome = new THREE.Mesh(geometry, material);
+      scene.add(skyDome);
+    },
+    undefined,
+    (err) => {
+      console.warn('No se pudo cargar la textura de la bóveda:', err);
+    }
+  );
+}
   function init3D() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 2500);
@@ -524,7 +552,9 @@ let northCalibration = null;
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
     starGroup = new THREE.Group();
-    scene.add(starGroup);
+scene.add(starGroup);
+
+crearSkyDome();
 
     raycaster = new THREE.Raycaster();
     raycaster.params.Points.threshold = 15;
