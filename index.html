@@ -1641,30 +1641,72 @@ function mostrarInfoEstrella() {
     card.classList.add('visible');
   }, 380);
 }
-function prepararVectorInfoCard() {
+
+
+function actualizarConectorInfoCard() {
+  const svg = document.getElementById('info-connector-layer');
+  const path = document.getElementById('info-connector-path');
+  const scanner = document.getElementById('scanner-ui');
   const card = document.getElementById('star-info-card');
-  const path = document.getElementById('star-card-connector-path');
-  if (!card || !path) return;
+
+  if (!svg || !path || !scanner || !card) return;
+
+  const scannerRect = scanner.getBoundingClientRect();
+  const cardRect = card.getBoundingClientRect();
+
+  // Centro superior del aro del scanner
+  const startX = scannerRect.left + scannerRect.width / 2;
+  const startY = scannerRect.top;
+
+  // Entrada a la card por el lado izquierdo, alineada al cuerpo de datos
+  const endX = cardRect.left;
+  const endY = cardRect.top + cardRect.height * 0.66;
+
+  // Primero sube, después va hacia la izquierda, baja/sube y entra a la card
+  const verticalUp = Math.max(72, Math.min(180, startY - cardRect.bottom + 40));
+  const midY = startY - verticalUp;
+  const midX = cardRect.left - 26;
+
+  const d = [
+    `M ${startX} ${startY}`,
+    `V ${midY}`,
+    `H ${midX}`,
+    `V ${endY}`,
+    `H ${endX}`
+  ].join(' ');
+
+  svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`);
+  svg.setAttribute('width', window.innerWidth);
+  svg.setAttribute('height', window.innerHeight);
+  path.setAttribute('d', d);
 
   const len = path.getTotalLength();
-  card.style.setProperty('--connector-length', len);
+  svg.style.setProperty('--connector-length', len);
 }
 
 function mostrarInfoEstrella() {
   const card = document.getElementById('star-info-card');
-  if (!card) return;
+  const connector = document.getElementById('info-connector-layer');
+
+  if (!card || !connector) return;
 
   clearTimeout(infoCardRevealTimeout);
 
-  card.classList.remove('hidden', 'revealing', 'visible');
-  void card.offsetWidth;
+  // La card tiene que dejar de estar hidden ANTES de medirla.
+  // Pero todavía no mostramos la .star-card porque aparece recién con .visible.
+  card.classList.remove('hidden', 'visible');
+  connector.classList.remove('hidden', 'revealing');
 
-  card.classList.remove('hidden');
-  card.classList.add('revealing');
+  actualizarConectorInfoCard();
+
+  // Reinicia la animación del SVG
+  void connector.offsetWidth;
+
+  connector.classList.add('revealing');
 
   infoCardRevealTimeout = setTimeout(() => {
     card.classList.add('visible');
-  }, 340);
+  }, 380);
 }
 
 function ocultarInfoEstrella() {
@@ -1685,6 +1727,8 @@ function ocultarInfoEstrella() {
 
   infoCardShown = false;
 }
+
+
 function actualizarCargaCaptura(insideCircle) {
   const scannerProgress = document.getElementById('scanner-progress');
 
@@ -1979,7 +2023,6 @@ const missionModalContinue = document.getElementById('mission-modal-continue');
 if (missionModalContinue) {
   missionModalContinue.addEventListener('click', avanzarASiguienteMision);
 }
-prepararVectorInfoCard();
   init3D();
 </script>
 </body>
