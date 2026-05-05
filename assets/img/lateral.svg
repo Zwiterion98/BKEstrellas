@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10.61 1092.96">
+  <defs>
+    <style>
+      .cls-1 {
+        opacity: .75;
+      }
+
+      .cls-2 {
+        fill: #fff;
+      }
+    </style>
+  </defs>
+  <g id="_1_pantalla_inicio" data-name="1_pantalla inicio">
+    <g class="cls-1">
+      <rect class="cls-2" x="1.18" y="1045.16" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="999.72" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="954.28" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="908.84" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="863.4" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="817.95" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="772.51" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="727.07" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="681.63" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="636.19" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="590.74" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="545.3" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="499.86" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="454.42" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="408.98" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="363.54" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="318.09" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="272.65" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="227.21" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="181.77" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="136.33" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="90.88" width="9.43" height="2.36"/>
+      <rect class="cls-2" x="1.18" y="45.44" width="9.43" height="2.36"/>
+      <polygon class="cls-2" points="0 0 10.61 0 10.61 2.36 2.36 2.36 2.36 1090.61 10.61 1090.61 10.61 1092.96 0 1092.96 0 0"/>
+    </g>
+  </g>
+</svg>
