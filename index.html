@@ -1021,7 +1021,7 @@ const COMPASS_CYCLE_WIDTH = 8 * 64;    // 8 direcciones = 512px
 let compassAzimuthVisual = null;       // azimut visual suavizado
 
 // CAMBIÁ esta ruta por la tuya
-const SKY_TEXTURE_URL = '/assets/img/bg-dome.jpg';
+const SKY_TEXTURE_URL = './assets/img/bg-dome.jpg';
 
  let usuarioLat = 0, usuarioLon = 0;
 let brujulaDetectada = false;
@@ -1160,34 +1160,39 @@ function crearSkyDome() {
   loader.load(
     SKY_TEXTURE_URL,
     (texture) => {
-      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.encoding = THREE.sRGBEncoding;
       texture.minFilter = THREE.LinearFilter;
       texture.magFilter = THREE.LinearFilter;
 
-      const geometry = new THREE.SphereGeometry(2200, 64, 64);
+      const geometry = new THREE.SphereGeometry(2200, 96, 96);
       geometry.scale(-1, 1, 1);
 
       const material = new THREE.MeshBasicMaterial({
         map: texture,
-        side: THREE.BackSide
+        side: THREE.BackSide,
+        transparent: false,
+        depthWrite: false
       });
 
       skyDome = new THREE.Mesh(geometry, material);
+      skyDome.renderOrder = -10;
       scene.add(skyDome);
     },
     undefined,
     (err) => {
       console.warn('No se pudo cargar la textura de la bóveda:', err);
 
-      const geometry = new THREE.SphereGeometry(2200, 64, 64);
+      const geometry = new THREE.SphereGeometry(2200, 96, 96);
       geometry.scale(-1, 1, 1);
 
       const fallbackMaterial = new THREE.MeshBasicMaterial({
         color: 0x000000,
-        side: THREE.BackSide
+        side: THREE.BackSide,
+        depthWrite: false
       });
 
       skyDome = new THREE.Mesh(geometry, fallbackMaterial);
+      skyDome.renderOrder = -10;
       scene.add(skyDome);
     }
   );
