@@ -118,41 +118,52 @@
   transition: color 0.25s ease, opacity 0.25s ease;
 }
 
+.tracker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255,255,255,0.34);
+  position: relative;
+  transition: color 0.25s ease, opacity 0.25s ease;
+}
+
 .tracker-star {
   font-size: 20px;
   line-height: 1;
   transform: translateY(-1px);
-  color: rgba(255,255,255,0.42);
-  transition: color 0.25s ease, text-shadow 0.25s ease;
+  color: rgba(255,255,255,0.34);
+  transition: color 0.25s ease, text-shadow 0.25s ease, transform 0.25s ease;
 }
 
+/* Estrella que estoy buscando ahora */
 .tracker-item.active {
-  color: rgba(255,255,255,0.96);
+  color: rgba(255,255,255,0.92);
 }
 
 .tracker-item.active .tracker-star {
-  color: #ffffff;
-  text-shadow:
-    0 0 8px rgba(255,255,255,0.9),
-    0 0 18px rgba(88,167,232,0.75);
+  color: rgba(255,255,255,0.92);
+  text-shadow: none;
 }
 
+/* Estrella ya capturada */
 .tracker-item.completed {
   color: rgba(255,255,255,0.96);
 }
 
 .tracker-item.completed .tracker-star {
-  color: #ffffff;
+  color: #58a7e8;
+  transform: translateY(-1px) scale(1.08);
   text-shadow:
-    0 0 7px rgba(255,255,255,0.75),
-    0 0 14px rgba(88,167,232,0.55);
+    0 0 8px rgba(88,167,232,0.95),
+    0 0 18px rgba(88,167,232,0.75),
+    0 0 30px rgba(88,167,232,0.35);
 }
 
-  .tracker-star {
-    font-size: 20px;
-    line-height: 1;
-    transform: translateY(-1px);
-  }
+/* Si una estrella completada también queda activa por algún edge case, gana completed */
+.tracker-item.completed.active .tracker-star {
+  color: #58a7e8;
+}
+
 
   /* scanner central */
 #scanner-ui {
@@ -610,6 +621,129 @@ transform-origin: 50% 36px;
     font-size: 6.8px;
   }
 }
+#mission-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(88,167,232,0.22), transparent 34%),
+    rgba(0,0,0,0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 0.35s ease;
+}
+
+#mission-modal.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mission-modal-content {
+  width: min(100%, 420px);
+  min-height: min(78vh, 680px);
+  background: rgba(13, 31, 44, 0.92);
+  border: 1px solid rgba(255,255,255,0.22);
+  box-shadow:
+    0 22px 60px rgba(0,0,0,0.65),
+    inset 0 0 0 1px rgba(255,255,255,0.05);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 26px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.mission-modal-content::before,
+.mission-modal-content::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-color: rgba(255,255,255,0.8);
+  border-style: solid;
+  pointer-events: none;
+}
+
+.mission-modal-content::before {
+  left: -1px;
+  top: -1px;
+  border-width: 1px 0 0 1px;
+}
+
+.mission-modal-content::after {
+  right: -1px;
+  bottom: -1px;
+  border-width: 0 1px 1px 0;
+}
+
+.mission-modal-kicker {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.58);
+  margin-bottom: 8px;
+}
+
+#mission-modal-title {
+  margin: 0 0 18px;
+  font-size: clamp(34px, 10vw, 52px);
+  line-height: 0.92;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: #f3f3ef;
+  text-transform: uppercase;
+}
+
+.mission-modal-image {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 1px dashed rgba(255,255,255,0.28);
+  background:
+    radial-gradient(circle, rgba(255,255,255,0.14), transparent 34%),
+    rgba(255,255,255,0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.42);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+}
+
+#mission-modal-text {
+  margin: 0;
+  color: rgba(255,255,255,0.76);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+#mission-modal-continue {
+  margin-top: auto;
+  width: 100%;
+  padding: 15px 18px;
+  border-radius: 999px;
+  background: #f3f3ef;
+  color: #07121c;
+  box-shadow:
+    0 8px 18px rgba(0,0,0,0.38),
+    0 0 18px rgba(88,167,232,0.28);
+}
+
+@media (max-height: 720px) {
+  .mission-modal-content {
+    min-height: auto;
+  }
+
+  .mission-modal-image {
+    aspect-ratio: 16 / 9;
+  }
+}
   .oculto {
     opacity: 0;
     pointer-events: none;
@@ -651,6 +785,24 @@ transform-origin: 50% 36px;
 <div><strong>Gaia DR3:</strong> <span id="star-card-gaia">5696450279001453184</span></div>
 </div>
     </div>
+  </div>
+</div>
+<div id="mission-modal" class="hidden">
+  <div class="mission-modal-content">
+    <div class="mission-modal-kicker">Misión completada</div>
+    <h2 id="mission-modal-title">URUGUAY 1924</h2>
+
+    <div class="mission-modal-image">
+      <span>Imagen / contenido de la estrella</span>
+    </div>
+
+    <p id="mission-modal-text">
+      Acá luego vamos a colocar la historia, imágenes, datos ampliados y contenido especial de esta estrella.
+    </p>
+
+    <button id="mission-modal-continue" type="button">
+      Continuar
+    </button>
   </div>
 </div>
   <div id="horizon-shadow"></div>
@@ -715,6 +867,7 @@ let missionStarIcon = null;
 let captureProgress = 0;
 let captureStartTime = null;
 let captureCompleted = false;
+let pendingMissionAdvance = false;
 const CAPTURE_DURATION = 2000;
 
 
@@ -1382,18 +1535,35 @@ function actualizarMissionTracker() {
     item.classList.toggle('active', index === currentMissionIndex);
   });
 }
+function abrirModalMision(mission) {
+  const modal = document.getElementById('mission-modal');
+  const title = document.getElementById('mission-modal-title');
+  const text = document.getElementById('mission-modal-text');
 
-function completarMisionActual() {
-  const mission = getCurrentMission();
-  if (!mission) return;
+  if (!modal || !mission) return;
 
-  actualizarInfoCard(mission);
-  mostrarInfoEstrella();
+  if (title) title.textContent = mission.title;
+
+  if (text) {
+    text.textContent = `Contenido ampliado de ${mission.title}. Acá luego vamos a colocar la historia, imágenes y datos especiales de esta estrella.`;
+  }
+
+  modal.classList.remove('hidden');
+}
+
+function cerrarModalMision() {
+  const modal = document.getElementById('mission-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function avanzarASiguienteMision() {
+  cerrarModalMision();
 
   currentMissionIndex = Math.min(currentMissionIndex + 1, missionStars.length);
   actualizarMissionTracker();
 
-  // Resetea la captura para la próxima estrella
+  pendingMissionAdvance = false;
+
   captureStartTime = null;
   captureProgress = 0;
   captureCompleted = false;
@@ -1403,8 +1573,8 @@ function completarMisionActual() {
 
   scannerUi.classList.remove('capturing');
   scannerUi.classList.remove('capture-complete');
+  scannerUi.classList.remove('locked-preview');
 
-  // Restaura visual de la estrella anterior si quedó como icono
   if (missionStarMesh && missionStarSprite) {
     if (missionStarMesh.material) {
       missionStarMesh.material.opacity = 1;
@@ -1415,8 +1585,29 @@ function completarMisionActual() {
     missionStarMesh.userData.isStarIcon = false;
     missionStarMesh = null;
   }
+
+  const card = document.getElementById('star-info-card');
+  if (card) card.classList.add('hidden');
+}
+function completarMisionActual() {
+  const mission = getCurrentMission();
+  if (!mission || pendingMissionAdvance) return;
+
+  pendingMissionAdvance = true;
+
+  actualizarInfoCard(mission);
+  mostrarInfoEstrella();
+
+  scannerUi.classList.remove('capturing');
+  scannerUi.classList.add('capture-complete');
+
+  abrirModalMision(mission);
 }
 function actualizarGuiaVisual() {
+  if (pendingMissionAdvance) {
+  guideArrow.style.opacity = '0';
+  return;
+}
   const target = getCurrentMissionAstro();
 
   if (!target || !target.mesh) {
@@ -1548,7 +1739,11 @@ hud.style.opacity = objetivo.userData.nombre === 'COLOMBES 1924' ? 1 : 0.7;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
+const missionModalContinue = document.getElementById('mission-modal-continue');
 
+if (missionModalContinue) {
+  missionModalContinue.addEventListener('click', avanzarASiguienteMision);
+}
   init3D();
 </script>
 </body>
