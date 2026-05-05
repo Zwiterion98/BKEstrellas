@@ -151,8 +151,8 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 128px;
-  height: 128px;
+  width: 110px;
+  height: 110px;
   transform: translate(-50%, -50%);
   z-index: 15;
   pointer-events: none;
@@ -164,23 +164,7 @@
     border-radius: 50%;
     border: 1.5px solid rgba(255,255,255,0.82);
   }
-#scanner-star-inside {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%) scale(0.72);
-  font-size: 38px;
-  line-height: 1;
-  color: #ffffff;
-  opacity: 0;
-  transition: opacity 0.18s ease, transform 0.18s ease;
-  text-shadow: 0 0 18px rgba(88,167,232,0.30);
-}
 
-#scanner-ui.locked-preview #scanner-star-inside {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-}
 
 #scanner-ui.locked-preview #scanner-cross {
   opacity: 0.35;
@@ -224,7 +208,7 @@
   border-left: 12px solid transparent;
   border-right: 12px solid transparent;
   border-bottom: 24px solid rgba(255,255,255,0.96);
-  transform-origin: 50% 44px;
+transform-origin: 50% 36px;
   filter: drop-shadow(0 2px 6px rgba(0,0,0,0.45));
 }
   #target-hud {
@@ -389,7 +373,6 @@
 <div id="scanner-ui">
   <div id="guide-arrow"></div>
   <div id="scanner-ring"></div>
-  <div id="scanner-star-inside">★</div>
   <div id="scanner-cross"></div>
 </div>
   <div id="compass-container" class="oculto">
@@ -435,7 +418,6 @@ let astrosDinamicos = [];
   const horizonShadow = document.getElementById('horizon-shadow');
 const guideArrow = document.getElementById('guide-arrow');
 const scannerUi = document.getElementById('scanner-ui');
-const scannerStarInside = document.getElementById('scanner-star-inside');
 
   const lookDirectionVal = document.getElementById('look-direction');
   const lookAzimuthVal = document.getElementById('look-azimuth');
@@ -681,11 +663,21 @@ const mesh = new THREE.Mesh(
 );
       mesh.position.copy(pos);
       mesh.userData = {
-        nombre: estrella.n,
-        tipo: estrella.extra
-          ? 'Estrella de fondo'
-          : (estrella.id.includes('scga') ? 'Catálogo Córdoba' : 'Estrella Principal')
-      };
+  nombre: estrella.n,
+  tipo: estrella.extra
+    ? 'Estrella de fondo'
+    : (missionOrder.includes(estrella.id) ? 'Objetivo Colombes' : 'Estrella principal'),
+  ra: estrella.ra,
+  dec: estrella.dec,
+  code: estrella.code,
+  short: estrella.short,
+  gmag: estrella.gmag ?? null,
+  gaia: estrella.gaia ?? null,
+  constellation: estrella.constellation ?? null,
+  mission: missionOrder.includes(estrella.id),
+  defaultScale: tam,
+  isStarIcon: false
+};
 
       starGroup.add(mesh);
       if (!estrella.extra) {
@@ -904,6 +896,19 @@ function worldToScreen(pos) {
     compassStrip.style.transform = `translateX(${x}px)`;
   }
 }
+function setMissionStarVisual(astro, useStarIcon) {
+  if (!astro || !astro.mesh || astro.extra) return;
+
+  if (astro.mesh.geometry && astro.mesh.geometry.type === 'SphereGeometry') {
+    if (useStarIcon && !astro.mesh.userData.isStarIcon) {
+      astro.mesh.userData.isStarIcon = true;
+      astro.mesh.scale.set(1.65, 1.65, 1.65);
+    } else if (!useStarIcon && astro.mesh.userData.isStarIcon) {
+      astro.mesh.userData.isStarIcon = false;
+      astro.mesh.scale.set(1, 1, 1);
+    }
+  }
+}
 function actualizarGuiaVisual() {
   const target = astrosDinamicos.find(
     astro => astro.id === 'scga1924' && astro.tipoRef === 'estrella'
@@ -921,14 +926,16 @@ function actualizarGuiaVisual() {
   const dx = screen.x - centerX;
   const dy = screen.y - centerY;
 const dist = Math.hypot(dx, dy);
-const insideCircle = dist <= 64;
+const insideCircle = dist <= 54;
+
 scannerUi.classList.toggle('locked-preview', insideCircle);
+setMissionStarVisual(target, insideCircle);
  
  const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
-const radius = 52;
+const radius = 46;
 
-guideArrow.style.opacity = '1';
-guideArrow.style.transform = `translate(-50%, -58%) rotate(${angle}deg) translateY(-${radius}px)`;
+guideArrow.style.opacity = insideCircle ? '0' : '1';
+guideArrow.style.transform = `translate(-50%, -56%) rotate(${angle}deg) translateY(-${radius}px)`;
 }
   function actualizarCamaraYUI() {
   if (!brujulaDetectada) return;
