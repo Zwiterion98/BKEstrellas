@@ -110,35 +110,43 @@
   }
 
   .tracker-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--text-muted);
-    position: relative;
-  }
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255,255,255,0.42);
+  position: relative;
+  transition: color 0.25s ease, opacity 0.25s ease;
+}
 
-  .tracker-item::after {
-    content: '';
-    position: absolute;
-    right: -8px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 1px;
-    height: 38px;
-    background: rgba(255,255,255,0.18);
-  }
+.tracker-star {
+  font-size: 20px;
+  line-height: 1;
+  transform: translateY(-1px);
+  color: rgba(255,255,255,0.42);
+  transition: color 0.25s ease, text-shadow 0.25s ease;
+}
 
-  .tracker-item:last-child::after {
-    display: none;
-  }
+.tracker-item.active {
+  color: rgba(255,255,255,0.96);
+}
 
-  .tracker-item.active {
-    color: var(--text);
-  }
+.tracker-item.active .tracker-star {
+  color: #ffffff;
+  text-shadow:
+    0 0 8px rgba(255,255,255,0.9),
+    0 0 18px rgba(88,167,232,0.75);
+}
 
-  .tracker-item.active .tracker-star {
-    color: var(--accent);
-  }
+.tracker-item.completed {
+  color: rgba(255,255,255,0.96);
+}
+
+.tracker-item.completed .tracker-star {
+  color: #ffffff;
+  text-shadow:
+    0 0 7px rgba(255,255,255,0.75),
+    0 0 14px rgba(88,167,232,0.55);
+}
 
   .tracker-star {
     font-size: 20px;
@@ -381,11 +389,12 @@ transform-origin: 50% 36px;
   position: absolute;
   left: 40px;
   top: 28px;
-  width: min(78vw, 340px);
+  width: min(82vw, 360px);
   z-index: 24;
   pointer-events: none;
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
+  transform-origin: top left;
   transition:
     opacity 0.35s ease,
     transform 0.35s ease;
@@ -393,12 +402,13 @@ transform-origin: 50% 36px;
 
 #star-info-card.hidden {
   opacity: 0;
-  transform: translateY(12px);
+  transform: translateY(12px) scale(0.98);
 }
 
 .star-card {
   position: relative;
   overflow: hidden;
+  width: 100%;
   background: rgba(18, 38, 50, 0.92);
   border: 1px solid rgba(255,255,255,0.28);
   box-shadow:
@@ -410,8 +420,8 @@ transform-origin: 50% 36px;
 .star-card::after {
   content: '';
   position: absolute;
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-color: rgba(255,255,255,0.9);
   border-style: solid;
   pointer-events: none;
@@ -430,33 +440,37 @@ transform-origin: 50% 36px;
 }
 
 .star-card-header {
-  height: 44px;
-  padding: 7px 12px 6px;
+  height: clamp(36px, 11vw, 44px);
+  padding: 6px 12px 5px;
   background: rgba(77, 124, 151, 0.88);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 }
 
 #star-card-title {
-  font-size: 28px;
-  line-height: 1;
+  min-width: 0;
+  font-size: clamp(22px, 7.1vw, 30px);
+  line-height: 0.95;
   font-weight: 900;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.015em;
   color: #f1f3f0;
   text-transform: uppercase;
+  white-space: nowrap;
   text-shadow: 0 2px 0 rgba(0,0,0,0.14);
 }
 
 .star-card-target {
-  font-size: 25px;
+  flex: 0 0 auto;
+  font-size: clamp(18px, 5.6vw, 25px);
   line-height: 1;
   opacity: 0.9;
 }
 
 .star-card-body {
   display: grid;
-  grid-template-columns: 90px 1px 1fr;
+  grid-template-columns: minmax(76px, 28%) 1px minmax(0, 1fr);
   min-height: 88px;
   background:
     linear-gradient(90deg, rgba(255,255,255,0.035), transparent 40%),
@@ -464,30 +478,34 @@ transform-origin: 50% 36px;
 }
 
 .star-card-left {
-  padding: 12px 10px 10px 14px;
+  min-width: 0;
+  padding: 11px 8px 9px 12px;
 }
 
 .star-card-name-row {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 18px;
+  font-size: clamp(14px, 4.3vw, 18px);
   line-height: 1;
   color: rgba(255,255,255,0.94);
+  white-space: nowrap;
 }
 
 .star-card-play {
-  font-size: 12px;
+  flex: 0 0 auto;
+  font-size: 11px;
   transform: translateY(-1px);
 }
 
 .star-card-year {
-  margin-top: 3px;
-  font-size: 42px;
-  line-height: 0.85;
+  margin-top: 4px;
+  font-size: clamp(34px, 11.6vw, 44px);
+  line-height: 0.82;
   font-weight: 900;
-  letter-spacing: -0.06em;
+  letter-spacing: -0.07em;
   color: #f3f3ef;
+  white-space: nowrap;
 }
 
 .star-card-divider {
@@ -502,15 +520,21 @@ transform-origin: 50% 36px;
 }
 
 .star-card-data {
-  padding: 12px 10px;
-  font-size: 9px;
-  line-height: 1.35;
+  min-width: 0;
+  padding: 10px 10px 9px 12px;
+  font-size: clamp(7.4px, 2.35vw, 9.5px);
+  line-height: 1.28;
   color: rgba(255,255,255,0.95);
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .star-card-data strong {
   font-weight: 900;
+}
+
+.star-card-data div {
+  max-width: 100%;
 }
 
 .star-card-line {
@@ -533,27 +557,57 @@ transform-origin: 50% 36px;
   border-top: 1px solid rgba(255,255,255,0.48);
   transform: translateY(-24px);
 }
-
-@media (max-width: 390px) {
+.star-card-gap {
+  height: 6px;
+}
+@media (max-width: 380px) {
   #star-info-card {
-    left: 40px;
-    width: calc(100vw - 80px);
-  }
-
-  #star-card-title {
-    font-size: 25px;
+    left: 38px;
+    top: 28px;
+    width: calc(100vw - 76px);
   }
 
   .star-card-body {
-    grid-template-columns: 88px 1px 1fr;
+    grid-template-columns: minmax(70px, 27%) 1px minmax(0, 1fr);
   }
 
-  .star-card-year {
-    font-size: 39px;
+  .star-card-left {
+    padding-left: 10px;
+    padding-right: 6px;
   }
 
   .star-card-data {
-    font-size: 8.5px;
+    padding-left: 9px;
+    padding-right: 8px;
+    font-size: clamp(7px, 2.25vw, 8.5px);
+    line-height: 1.25;
+  }
+}
+
+@media (max-width: 340px) {
+  #star-info-card {
+    left: 28px;
+    width: calc(100vw - 56px);
+  }
+
+  #star-card-title {
+    font-size: 21px;
+  }
+
+  .star-card-body {
+    grid-template-columns: 74px 1px minmax(0, 1fr);
+  }
+
+  .star-card-year {
+    font-size: 33px;
+  }
+
+  .star-card-name-row {
+    font-size: 14px;
+  }
+
+  .star-card-data {
+    font-size: 6.8px;
   }
 }
   .oculto {
@@ -592,19 +646,27 @@ transform-origin: 50% 36px;
       <div class="star-card-data">
         <div><strong>RA:</strong> <span id="star-card-ra">08h 19m 18.27s</span></div>
         <div><strong>Dec:</strong> <span id="star-card-dec">-23° 47′ 49″</span></div>
-        <div><strong>Gmag</strong> <span id="star-card-gmag">(mag): 7.00</span></div>
-        <br />
-        <div><strong>Gaia DR3:</strong> <span id="star-card-gaia">5696450279001453184</span></div>
-      </div>
+        <div><strong>Gmag:</strong> <span id="star-card-gmag">7.00</span></div>
+<div class="star-card-gap"></div>
+<div><strong>Gaia DR3:</strong> <span id="star-card-gaia">5696450279001453184</span></div>
+</div>
     </div>
   </div>
 </div>
   <div id="horizon-shadow"></div>
 <div id="mission-tracker">
-  <div class="tracker-item active"><span class="tracker-star">★</span><span>1924</span></div>
-  <div class="tracker-item"><span class="tracker-star">☆</span><span>1928</span></div>
-  <div class="tracker-item"><span class="tracker-star">☆</span><span>1930</span></div>
-  <div class="tracker-item"><span class="tracker-star">☆</span><span>1950</span></div>
+  <div class="tracker-item active" data-mission-id="scga1924">
+    <span class="tracker-star">★</span><span>1924</span>
+  </div>
+  <div class="tracker-item" data-mission-id="scga1928">
+    <span class="tracker-star">★</span><span>1928</span>
+  </div>
+  <div class="tracker-item" data-mission-id="scga1930">
+    <span class="tracker-star">★</span><span>1930</span>
+  </div>
+  <div class="tracker-item" data-mission-id="scga1950">
+    <span class="tracker-star">★</span><span>1950</span>
+  </div>
 </div>
 
 <div id="scanner-ui">
@@ -732,7 +794,50 @@ let northCalibration = null;
     { id: 'polaris', n: "Estrella Polar", ra: 2.53, dec: 89.26 }
   ];
 
+const missionStars = [
+  {
+    id: 'scga1924',
+    title: 'URUGUAY 1924',
+    code: 'SCGA',
+    year: '1924',
+    raText: '08h 18m 35.28s',
+    decText: '-26° 14′ 53″',
+    gmagText: '7.00',
+    gaiaText: '5696450279001453184'
+  },
+  {
+    id: 'scga1928',
+    title: 'URUGUAY 1928',
+    code: 'SCGA',
+    year: '1928',
+    raText: '08h 19m 11.28s',
+    decText: '-23° 01′ 29″',
+    gmagText: '7.00',
+    gaiaText: '5696450279001453184'
+  },
+  {
+    id: 'scga1930',
+    title: 'URUGUAY 1930',
+    code: 'SCGA',
+    year: '1930',
+    raText: '08h 19m 18.27s',
+    decText: '-23° 47′ 49″',
+    gmagText: '7.00',
+    gaiaText: '5696450279001453184'
+  },
+  {
+    id: 'scga1950',
+    title: 'URUGUAY 1950',
+    code: 'SCGA',
+    year: '1950',
+    raText: '08h 17m 42.72s',
+    decText: '-69° 07′ 44″',
+    gmagText: '7.00',
+    gaiaText: '5696450279001453184'
+  }
+];
 
+let currentMissionIndex = 0;
   function seededRandom(seed) {
     const x = Math.sin(seed) * 10000;
     return x - Math.floor(x);
@@ -1053,7 +1158,9 @@ const mesh = new THREE.Mesh(
       document.getElementById('sys-info').classList.remove('oculto');
 
       generarCieloReal();
-
+currentMissionIndex = 0;
+actualizarMissionTracker();
+actualizarInfoCard(getCurrentMission());
       northCalibration = null;
 
       if ('ondeviceorientationabsolute' in window) {
@@ -1207,12 +1314,17 @@ function actualizarCargaCaptura(insideCircle) {
 
     scannerProgress.style.setProperty('--progress', captureProgress * 100);
 
-    if (captureProgress >= 1) {
+   if (captureProgress >= 0.25) {
+  actualizarInfoCard(getCurrentMission());
+  mostrarInfoEstrella();
+}
+
+if (captureProgress >= 1) {
   captureCompleted = true;
   scannerUi.classList.remove('capturing');
   scannerUi.classList.add('capture-complete');
 
-  mostrarInfoEstrella();
+  completarMisionActual();
 }
  } else if (!insideCircle) {
   captureStartTime = null;
@@ -1223,17 +1335,93 @@ function actualizarCargaCaptura(insideCircle) {
   scannerUi.classList.remove('capture-complete');
   scannerProgress.style.setProperty('--progress', 0);
 
+  if (!captureCompleted) {
   const card = document.getElementById('star-info-card');
   if (card) card.classList.add('hidden');
 }
 }
-function actualizarGuiaVisual() {
-  const target = astrosDinamicos.find(
-    astro => astro.id === 'scga1924' && astro.tipoRef === 'estrella'
+}
+function getCurrentMission() {
+  return missionStars[currentMissionIndex] ?? null;
+}
+
+function getCurrentMissionAstro() {
+  const mission = getCurrentMission();
+  if (!mission) return null;
+
+  return astrosDinamicos.find(
+    astro => astro.id === mission.id && astro.tipoRef === 'estrella'
   );
+}
+
+function actualizarInfoCard(mission) {
+  if (!mission) return;
+
+  const title = document.getElementById('star-card-title');
+  const code = document.getElementById('star-card-code');
+  const year = document.getElementById('star-card-year');
+  const ra = document.getElementById('star-card-ra');
+  const dec = document.getElementById('star-card-dec');
+  const gmag = document.getElementById('star-card-gmag');
+  const gaia = document.getElementById('star-card-gaia');
+
+  if (title) title.textContent = mission.title;
+  if (code) code.textContent = mission.code;
+  if (year) year.textContent = mission.year;
+  if (ra) ra.textContent = mission.raText;
+  if (dec) dec.textContent = mission.decText;
+  if (gmag) gmag.textContent = mission.gmagText;
+  if (gaia) gaia.textContent = mission.gaiaText;
+}
+
+function actualizarMissionTracker() {
+  const items = document.querySelectorAll('#mission-tracker .tracker-item');
+
+  items.forEach((item, index) => {
+    item.classList.toggle('completed', index < currentMissionIndex);
+    item.classList.toggle('active', index === currentMissionIndex);
+  });
+}
+
+function completarMisionActual() {
+  const mission = getCurrentMission();
+  if (!mission) return;
+
+  actualizarInfoCard(mission);
+  mostrarInfoEstrella();
+
+  currentMissionIndex = Math.min(currentMissionIndex + 1, missionStars.length);
+  actualizarMissionTracker();
+
+  // Resetea la captura para la próxima estrella
+  captureStartTime = null;
+  captureProgress = 0;
+  captureCompleted = false;
+
+  const scannerProgress = document.getElementById('scanner-progress');
+  if (scannerProgress) scannerProgress.style.setProperty('--progress', 0);
+
+  scannerUi.classList.remove('capturing');
+  scannerUi.classList.remove('capture-complete');
+
+  // Restaura visual de la estrella anterior si quedó como icono
+  if (missionStarMesh && missionStarSprite) {
+    if (missionStarMesh.material) {
+      missionStarMesh.material.opacity = 1;
+      missionStarMesh.material.needsUpdate = true;
+    }
+
+    missionStarSprite.visible = false;
+    missionStarMesh.userData.isStarIcon = false;
+    missionStarMesh = null;
+  }
+}
+function actualizarGuiaVisual() {
+  const target = getCurrentMissionAstro();
 
   if (!target || !target.mesh) {
     guideArrow.style.opacity = '0';
+    scannerUi.classList.remove('locked-preview');
     return;
   }
 
@@ -1243,22 +1431,22 @@ function actualizarGuiaVisual() {
 
   const dx = screen.x - centerX;
   const dy = screen.y - centerY;
-const dist = Math.hypot(dx, dy);
-const insideCircle = dist <= 54;
+  const dist = Math.hypot(dx, dy);
+  const insideCircle = dist <= 54;
 
-scannerUi.classList.toggle('locked-preview', insideCircle);
-setMissionStarVisual(target, insideCircle);
-actualizarCargaCaptura(insideCircle);
+  scannerUi.classList.toggle('locked-preview', insideCircle);
+  setMissionStarVisual(target, insideCircle);
+  actualizarCargaCaptura(insideCircle);
 
-if (missionStarSprite && missionStarSprite.visible && missionStarMesh) {
-  missionStarSprite.position.copy(missionStarMesh.position);
-}
- 
- const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
-const radius = 46;
+  if (missionStarSprite && missionStarSprite.visible && missionStarMesh) {
+    missionStarSprite.position.copy(missionStarMesh.position);
+  }
 
-guideArrow.style.opacity = insideCircle ? '0' : '1';
-guideArrow.style.transform = `translate(-50%, -56%) rotate(${angle}deg) translateY(-${radius}px)`;
+  const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+  const radius = 46;
+
+  guideArrow.style.opacity = insideCircle ? '0' : '1';
+  guideArrow.style.transform = `translate(-50%, -56%) rotate(${angle}deg) translateY(-${radius}px)`;
 }
   function actualizarCamaraYUI() {
   if (!brujulaDetectada) return;
