@@ -409,6 +409,7 @@ let skyDome = null;
 let objetosInteractivos = [];
 let objetoEnfocado = null;
 let astrosDinamicos = [];
+let missionStarIcon = null;
 
   const uiLayer = document.getElementById('ui-layer');
   const hud = document.getElementById('target-hud');
@@ -581,11 +582,16 @@ crearSkyDome();
       transparent: true,
       opacity: 0.8
     });
-    hoverRing = new THREE.Mesh(ringGeo, ringMat);
-    hoverRing.visible = false;
-    scene.add(hoverRing);
+   hoverRing = new THREE.Mesh(ringGeo, ringMat);
+  hoverRing.visible = false;
+  scene.add(hoverRing);
 
-    animar();
+  // Ícono visual de estrella para cuando el objetivo entra en el círculo central
+  missionStarIcon = createStarSprite('★', '#ffffff', 72);
+  missionStarIcon.visible = false;
+  scene.add(missionStarIcon);
+
+  animar();
   }
 
   function azAltToVector(azimuth, altitude, radius = 500) {
@@ -896,16 +902,29 @@ function worldToScreen(pos) {
   }
 }
 function setMissionStarVisual(astro, useStarIcon) {
-  if (!astro || !astro.mesh || astro.extra) return;
+  if (!astro || !astro.mesh || astro.extra || !missionStarIcon) return;
 
-  if (astro.mesh.geometry && astro.mesh.geometry.type === 'SphereGeometry') {
-    if (useStarIcon && !astro.mesh.userData.isStarIcon) {
-      astro.mesh.userData.isStarIcon = true;
-      astro.mesh.scale.set(1.65, 1.65, 1.65);
-    } else if (!useStarIcon && astro.mesh.userData.isStarIcon) {
-      astro.mesh.userData.isStarIcon = false;
-      astro.mesh.scale.set(1, 1, 1);
-    }
+  if (!astro.mesh.material.transparent) {
+    astro.mesh.material.transparent = true;
+  }
+
+  if (useStarIcon) {
+    // Hace invisible la esfera original sin sacarla del raycast
+    astro.mesh.material.opacity = 0;
+
+    // Muestra el ícono de estrella en la misma posición
+    missionStarIcon.position.copy(astro.mesh.position);
+    missionStarIcon.visible = true;
+
+    astro.mesh.userData.isStarIcon = true;
+  } else {
+    // Restaura la esfera original
+    astro.mesh.material.opacity = 1;
+
+    // Oculta el ícono
+    missionStarIcon.visible = false;
+
+    astro.mesh.userData.isStarIcon = false;
   }
 }
 function actualizarGuiaVisual() {
@@ -998,8 +1017,7 @@ actualizarGuiaVisual();
 
   function verificarIntersecciones() {
     raycaster.setFromCamera(centerScreen, camera);
-    const colisiones = raycaster.intersectObjects(objetosInteractivos);
-
+    const colisiones = raycaster.intersectObjects(objetosInteractivos.filter(obj => obj.visible));
     if (colisiones.length > 0) {
       const objetivo = colisiones[0].object;
 
