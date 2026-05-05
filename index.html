@@ -147,16 +147,16 @@
   }
 
   /* scanner central */
-  #scanner-ui {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 170px;
-    height: 170px;
-    transform: translate(-50%, -50%);
-    z-index: 15;
-    pointer-events: none;
-  }
+#scanner-ui {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 128px;
+  height: 128px;
+  transform: translate(-50%, -50%);
+  z-index: 15;
+  pointer-events: none;
+}
 
   #scanner-ring {
     position: absolute;
@@ -165,26 +165,25 @@
     border: 1.5px solid rgba(255,255,255,0.82);
   }
 
-  #scanner-cross {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 40px;
-    height: 40px;
-    transform: translate(-50%, -50%);
-    opacity: 0.85;
-  }
+ #scanner-cross {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 28px;
+  height: 28px;
+  transform: translate(-50%, -50%);
+  opacity: 0.85;
+}
 
-  #scanner-cross::before,
-  #scanner-cross::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    background: rgba(255,255,255,0.72);
-    transform: translate(-50%, -50%);
-    border-radius: 999px;
-  }
+#scanner-cross::before {
+  width: 1.5px;
+  height: 24px;
+}
+
+#scanner-cross::after {
+  width: 24px;
+  height: 1.5px;
+}
 
   #scanner-cross::before {
     width: 1.5px;
@@ -305,22 +304,22 @@
 
   /* panel orientación actual */
   #orientation-panel {
-    position: absolute;
-    top: 20px;
-    right: 22px;
-    z-index: 18;
-    min-width: 210px;
-    background: rgba(10,24,36,0.55);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 12px;
-    padding: 12px 14px;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    font-family: monospace;
-    font-size: 12px;
-    line-height: 1.55;
-    color: #e8e8e8;
-  }
+  position: absolute;
+  right: 18px;
+  bottom: 82px;
+  z-index: 12;
+  min-width: 220px;
+  background: var(--panel);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 12px 14px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #e8e8e8;
+}
 
   #orientation-panel .title {
     font-family: Inter, sans-serif;
@@ -595,7 +594,33 @@ crearSkyDome();
       -radius * Math.cos(altRad) * Math.cos(azRad)
     );
   }
+function createStarSprite(symbol = '★', color = '#ffffff', size = 96) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
 
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '900 150px Arial';
+  ctx.fillStyle = color;
+  ctx.shadowColor = 'rgba(88,167,232,0.35)';
+  ctx.shadowBlur = 18;
+  ctx.fillText(symbol, canvas.width / 2, canvas.height / 2 + 4);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthWrite: false
+  });
+
+  const sprite = new THREE.Sprite(material);
+  sprite.scale.set(size, size, 1);
+  return sprite;
+}
   function generarCieloReal() {
     const fechaActual = new Date();
     const observador = new Astronomy.Observer(usuarioLat, usuarioLon, 0);
@@ -627,11 +652,18 @@ crearSkyDome();
       const pos = azAltToVector(horizonte.azimuth, horizonte.altitude, 800);
       posicionesEstrellas[estrella.id] = pos;
 
-      const tam = estrella.extra ? Math.max(1.2, 4.2 - ((estrella.mag ?? 4) * 0.55)) : 5;
-      const mesh = new THREE.Mesh(
-        new THREE.SphereGeometry(tam, estrella.extra ? 8 : 16, estrella.extra ? 8 : 16),
-        new THREE.MeshBasicMaterial({ color: 0xffffff })
-      );
+     const tam = estrella.extra ? Math.max(1.2, 4.2 - ((estrella.mag ?? 4) * 0.55)) : 5;
+
+let mesh;
+
+if (!estrella.extra && ['scga1924', 'scga1928', 'scga1930', 'scga1950'].includes(estrella.id)) {
+  mesh = createStarSprite('★', '#ffffff', 42);
+} else {
+  mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(tam, estrella.extra ? 8 : 16, estrella.extra ? 8 : 16),
+    new THREE.MeshBasicMaterial({ color: 0xffffff })
+  );
+}
       mesh.position.copy(pos);
       mesh.userData = {
         nombre: estrella.n,
@@ -874,16 +906,12 @@ function actualizarGuiaVisual() {
   const dx = screen.x - centerX;
   const dy = screen.y - centerY;
 
-  if (screen.z > 1) {
-    guideArrow.style.opacity = '0';
-    return;
-  }
+ 
+ const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+const radius = 66;
 
-  const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
-  const radius = 86;
-
-  guideArrow.style.opacity = '1';
-  guideArrow.style.transform = `translate(-50%, -50%) rotate(${angle}deg) translateY(-${radius}px)`;
+guideArrow.style.opacity = '1';
+guideArrow.style.transform = `translate(-50%, -50%) rotate(${angle}deg) translateY(-${radius}px)`;
 }
   function actualizarCamaraYUI() {
   if (!brujulaDetectada) return;
