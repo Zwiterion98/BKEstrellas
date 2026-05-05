@@ -2,2033 +2,1080 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>SkyView Ultimate: brújula por dirección</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Estrellas Reales</title>
+
   <style>
-  :root {
-    --bg-dark: #05080d;
-    --bg-blue: #12384d;
-    --accent: #58a7e8;
-    --text: #f3f3ef;
-    --text-muted: rgba(255,255,255,0.36);
-    --panel: rgba(10, 24, 36, 0.58);
-    --line: rgba(255,255,255,0.78);
+    /* =========================================================
+      FUENTES
+      Colocá estos archivos en /assets/fonts/
+      - FlameSans-Regular.otf
+      - 1.Flame-Bold 2 3 2.otf
+      - Flame-Bold-Variable 2.ttf
+      - HostGrotesk-VariableFont_wght.ttf
+    ========================================================= */
 
-    --card-bg: rgba(13, 31, 44, 0.97);
-    --card-header: #5f8eae;
-    --card-border: rgba(126, 157, 179, 0.34);
-  }
-
-  * {
-    box-sizing: border-box;
-  }
-
-  html,
-  body {
-    width: 100%;
-    height: 100%;
-  }
-
-  body {
-    margin: 0;
-    overflow: hidden;
-    background: linear-gradient(
-      180deg,
-      #000 0%,
-      #000 56%,
-      #04131d 70%,
-      #12384d 100%
-    );
-    color: var(--text);
-    font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
-
-  button {
-    background: #fff;
-    color: #000;
-    border: none;
-    padding: 16px 32px;
-    font-size: 14px;
-    font-weight: 700;
-    border-radius: 999px;
-    cursor: pointer;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    transition: transform 0.1s ease;
-  }
-
-  button:active {
-    transform: scale(0.98);
-  }
-
-  /* =========================
-     BASE LAYERS
-  ========================= */
-
-  #canvas-container {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-  }
-
-  #horizon-shadow {
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    width: 100vw;
-    height: 35vh;
-    z-index: 2;
-    pointer-events: none;
-    opacity: 0;
-    background: linear-gradient(
-      to top,
-      rgba(0,0,0,0.35) 0%,
-      rgba(0,0,0,0.12) 30%,
-      rgba(0,0,0,0) 100%
-    );
-    transition: opacity 0.1s linear;
-  }
-
-  .oculto {
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  /* =========================
-     START / LOADING UI
-  ========================= */
-
-  #ui-layer {
-    position: absolute;
-    inset: 0;
-    z-index: 30;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    background: #000;
-    transition: opacity 0.35s ease;
-  }
-
-  .title-flat {
-    margin-bottom: 8px;
-    font-size: 24px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .subtitle-flat {
-    margin-bottom: 32px;
-    font-size: 14px;
-    color: rgba(255,255,255,0.5);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-  }
-
-  /* =========================
-     MISSION TRACKER
-  ========================= */
-
-  #mission-tracker {
-    position: absolute;
-    top: 26px;
-    left: 30px;
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    font-size: 18px;
-    letter-spacing: 0.03em;
-    pointer-events: none;
-  }
-
-  .tracker-item {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    color: rgba(255,255,255,0.34);
-    transition: color 0.25s ease, opacity 0.25s ease;
-  }
-
-  .tracker-item::after {
-    content: '';
-    position: absolute;
-    right: -8px;
-    top: 50%;
-    width: 1px;
-    height: 38px;
-    background: rgba(255,255,255,0.18);
-    transform: translateY(-50%);
-  }
-
-  .tracker-item:last-child::after {
-    display: none;
-  }
-
-  .tracker-star {
-    font-size: 20px;
-    line-height: 1;
-    color: rgba(255,255,255,0.34);
-    transform: translateY(-1px);
-    transition:
-      color 0.25s ease,
-      text-shadow 0.25s ease,
-      transform 0.25s ease;
-  }
-
-  .tracker-item.active {
-    color: rgba(255,255,255,0.92);
-  }
-
-  .tracker-item.active .tracker-star {
-    color: rgba(255,255,255,0.92);
-    text-shadow: none;
-  }
-
-  .tracker-item.completed {
-    color: rgba(255,255,255,0.96);
-  }
-
-  .tracker-item.completed .tracker-star {
-    color: var(--accent);
-    transform: translateY(-1px) scale(1.08);
-    text-shadow:
-      0 0 8px rgba(88,167,232,0.95),
-      0 0 18px rgba(88,167,232,0.75),
-      0 0 30px rgba(88,167,232,0.35);
-  }
-
-  .tracker-item.completed.active .tracker-star {
-    color: var(--accent);
-  }
-
-  /* =========================
-     CENTRAL SCANNER
-  ========================= */
-
-  #scanner-ui {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 110px;
-    height: 110px;
-    z-index: 15;
-    pointer-events: none;
-    transform: translate(-50%, -50%);
-  }
-
-  #scanner-ring {
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    border: 1.5px solid rgba(255,255,255,0.82);
-  }
-
-  #scanner-progress {
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    opacity: 0;
-    background:
-      conic-gradient(
-        rgba(255,255,255,0.96) calc(var(--progress, 0) * 1%),
-        rgba(255,255,255,0.14) 0
-      );
-    mask: radial-gradient(
-      transparent 0 47px,
-      black 48px 55px,
-      transparent 56px 100%
-    );
-    -webkit-mask: radial-gradient(
-      transparent 0 47px,
-      black 48px 55px,
-      transparent 56px 100%
-    );
-    filter: drop-shadow(0 0 8px rgba(88,167,232,0.55));
-    transition: opacity 0.15s ease;
-  }
-
-  #scanner-ui.capturing #scanner-progress {
-    opacity: 1;
-  }
-
-  #scanner-ui.capture-complete #scanner-progress {
-    opacity: 0;
-  }
-
-  #scanner-cross {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 28px;
-    height: 28px;
-    opacity: 0.85;
-    transform: translate(-50%, -50%);
-  }
-
-  #scanner-cross::before,
-  #scanner-cross::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    background: rgba(255,255,255,0.86);
-    transform: translate(-50%, -50%);
-  }
-
-  #scanner-cross::before {
-    width: 1.5px;
-    height: 36px;
-  }
-
-  #scanner-cross::after {
-    width: 36px;
-    height: 1.5px;
-  }
-
-  #scanner-ui.locked-preview #scanner-cross {
-    opacity: 0.35;
-  }
-
-  #guide-arrow {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 0;
-    height: 0;
-    border-left: 12px solid transparent;
-    border-right: 12px solid transparent;
-    border-bottom: 24px solid rgba(255,255,255,0.96);
-    transform-origin: 50% 36px;
-    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.45));
-  }
-
-  /* =========================
-     SMALL TARGET PILL
-  ========================= */
-
-  #target-hud {
-    position: absolute;
-    left: 50%;
-    top: calc(50% + 76px);
-    z-index: 18;
-    text-align: center;
-    opacity: 0;
-    pointer-events: none;
-    transform: translateX(-50%);
-    transition: opacity 0.2s ease;
-  }
-
-  .pill {
-    max-width: 78vw;
-    padding: 7px 16px;
-    overflow: hidden;
-    background: rgba(10,24,36,0.72);
-    border: 1px solid rgba(255,255,255,0.16);
-    border-radius: 999px;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    font-size: 14px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-  }
-
-  .target-type {
-    display: block;
-    margin-top: 5px;
-    font-size: 9px;
-    color: rgba(255,255,255,0.58);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-  }
-
-  /* =========================
-     INFO CONNECTOR
-  ========================= */
-
-  #info-connector-layer {
-    --connector-length: 1000;
-    position: fixed;
-    inset: 0;
-    width: 100vw;
-    height: 100dvh;
-    z-index: 23;
-    overflow: visible;
-    opacity: 1;
-    pointer-events: none;
-  }
-
-  #info-connector-layer.hidden {
-    opacity: 0;
-    visibility: hidden;
-  }
-
-  #info-connector-path {
-    fill: none;
-    stroke: rgba(255,255,255,0.82);
-    stroke-width: 1.35;
-    stroke-linecap: square;
-    stroke-linejoin: miter;
-    stroke-dasharray: var(--connector-length);
-    stroke-dashoffset: var(--connector-length);
-    vector-effect: non-scaling-stroke;
-  }
-
-  #info-connector-layer.revealing #info-connector-path {
-    animation: drawInfoConnector 0.38s ease-out forwards;
-  }
-
-  @keyframes drawInfoConnector {
-    from {
-      stroke-dashoffset: var(--connector-length);
+    @font-face {
+      font-family: "FlameSans";
+      src: url("assets/fonts/FlameSans-Regular.otf") format("opentype");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
     }
 
-    to {
-      stroke-dashoffset: 0;
-    }
-  }
-
-  /* =========================
-     MISSION INFO CARD
-  ========================= */
-
-  #star-info-card {
-    position: absolute;
-    top: clamp(52px, 8vh, 88px);
-    left: clamp(34px, 7vw, 78px);
-    width: min(76vw, 600px);
-    z-index: 24;
-    opacity: 1;
-    pointer-events: none;
-  }
-
-  #star-info-card.hidden {
-    opacity: 0;
-    visibility: hidden;
-  }
-
-  .star-card {
-    position: relative;
-    width: 100%;
-    overflow: hidden;
-    background: var(--card-bg);
-    border: 1px solid var(--card-border);
-    opacity: 0;
-    transform: translateY(10px);
-    box-shadow:
-      0 10px 30px rgba(0,0,0,0.28),
-      inset 0 0 0 1px rgba(255,255,255,0.03);
-  }
-
-  #star-info-card.visible .star-card {
-    opacity: 1;
-    transform: translateY(0);
-    transition:
-      opacity 0.24s ease,
-      transform 0.24s ease;
-  }
-
-  .star-card::before,
-  .star-card::after {
-    content: '';
-    position: absolute;
-    width: 11px;
-    height: 11px;
-    border-color: rgba(255,255,255,0.88);
-    border-style: solid;
-    pointer-events: none;
-  }
-
-  .star-card::before {
-    left: -1px;
-    top: 84px;
-    border-width: 0 0 0 1px;
-  }
-
-  .star-card::after {
-    right: -1px;
-    bottom: -1px;
-    border-width: 0 1px 1px 0;
-  }
-
-  .star-card-header {
-    height: clamp(34px, 10vw, 68px);
-    padding: 0 12px 0 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    background: var(--card-header);
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-  }
-
-  #star-card-title {
-    min-width: 0;
-    color: #f2f1eb;
-    font-family: "Arial Black", Impact, Inter, sans-serif;
-    font-size: clamp(20px, 6.8vw, 56px);
-    font-weight: 900;
-    line-height: 0.95;
-    letter-spacing: -0.045em;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-
-  .star-card-target {
-    flex: 0 0 auto;
-    color: rgba(255,255,255,0.88);
-    font-size: clamp(14px, 4.4vw, 26px);
-    line-height: 1;
-  }
-
-  .star-card-body {
-    display: grid;
-    grid-template-columns: clamp(86px, 24vw, 150px) 1px minmax(0, 1fr);
-    min-height: clamp(74px, 19vw, 160px);
-    background: var(--card-bg);
-  }
-
-  .star-card-left {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 10px 8px 8px 12px;
-  }
-
-  .star-card-name-row {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    color: #f3f3ef;
-    font-size: clamp(12px, 3.6vw, 21px);
-    line-height: 1;
-    white-space: nowrap;
-  }
-
-  .star-card-play {
-    font-size: clamp(9px, 2vw, 13px);
-    transform: translateY(-1px);
-  }
-
-  .star-card-year {
-    margin-top: 6px;
-    color: #f3f3ef;
-    font-family: "Arial Black", Impact, Inter, sans-serif;
-    font-size: clamp(34px, 10.8vw, 78px);
-    font-weight: 900;
-    line-height: 0.84;
-    letter-spacing: -0.08em;
-    white-space: nowrap;
-  }
-
-  .star-card-divider {
-    width: 1px;
-    background: rgba(255,255,255,0.12);
-  }
-
-  .star-card-data {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 2px;
-    padding: 12px 12px 10px 14px;
-    color: rgba(255,255,255,0.95);
-    font-size: clamp(7px, 2.05vw, 14px);
-    font-weight: 600;
-    line-height: 1.28;
-  }
-
-  .star-card-data strong {
-    color: #f3f3ef;
-    font-weight: 900;
-  }
-
-  .star-card-data div {
-    max-width: 100%;
-    overflow-wrap: anywhere;
-  }
-
-  .star-card-gap {
-    height: 8px;
-  }
-
-  .star-card-footer {
-    height: clamp(14px, 4.2vw, 26px);
-    background: rgba(14, 33, 46, 0.98);
-    border-top: 1px solid rgba(255,255,255,0.08);
-  }
-
-  /* =========================
-     COMPASS
-  ========================= */
-
-  #compass-container {
-    position: fixed;
-    bottom: 22px;
-    left: 50%;
-    width: min(92vw, 520px);
-    height: 40px;
-    z-index: 30;
-    overflow: hidden;
-    pointer-events: none;
-    transform: translateX(-50%);
-    mask-image: linear-gradient(to right, transparent 0%, black 16%, black 84%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 16%, black 84%, transparent 100%);
-  }
-
-  #compass-strip {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    white-space: nowrap;
-    will-change: transform;
-  }
-
-  #compass-strip span {
-    display: inline-block;
-    width: 64px;
-    color: rgba(255,255,255,0.88);
-    font-size: 18px;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    text-align: center;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
-  }
-
-  #compass-pointer {
-    position: fixed;
-    bottom: 8px;
-    left: 50%;
-    z-index: 31;
-    color: #fff;
-    font-size: 14px;
-    pointer-events: none;
-    transform: translateX(-50%);
-    text-shadow: 0 2px 4px rgba(0,0,0,1);
-  }
-
-  /* =========================
-     DEBUG / ORIENTATION INFO
-  ========================= */
-
-  #sys-info {
-    position: absolute;
-    left: 30px;
-    bottom: 82px;
-    z-index: 18;
-    color: rgba(255,255,255,0.42);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 10px;
-    letter-spacing: 0.12em;
-  }
-
-  #orientation-panel {
-    position: absolute;
-    right: 18px;
-    bottom: 82px;
-    z-index: 12;
-    min-width: 220px;
-    padding: 12px 14px;
-    background: var(--panel);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 12px;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    color: #e8e8e8;
-    font-family: monospace;
-    font-size: 12px;
-    line-height: 1.55;
-  }
-
-  #orientation-panel .title {
-    margin-bottom: 6px;
-    color: rgba(255,255,255,0.58);
-    font-family: Inter, sans-serif;
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
-
-  #orientation-panel .row {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  #orientation-panel .label {
-    color: rgba(255,255,255,0.45);
-  }
-
-  #orientation-panel .value {
-    color: #fff;
-    font-weight: 600;
-  }
-
-  /* =========================
-     FULLSCREEN MISSION MODAL
-  ========================= */
-
-  #mission-modal {
-    position: fixed;
-    inset: 0;
-    z-index: 80;
-    display: flex;
-    opacity: 1;
-    pointer-events: auto;
-    background:
-      radial-gradient(circle at 50% 20%, rgba(88,167,232,0.26), transparent 36%),
-      linear-gradient(180deg, rgba(6,14,24,0.98), rgba(0,0,0,0.98));
-    transition: opacity 0.35s ease;
-  }
-
-  #mission-modal.hidden {
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .mission-modal-content {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    width: 100vw;
-    height: 100dvh;
-    min-height: 100dvh;
-    max-width: none;
-    padding:
-      max(28px, env(safe-area-inset-top))
-      22px
-      max(24px, env(safe-area-inset-bottom));
-    overflow-y: auto;
-    background: transparent;
-    border: none;
-    box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-
-  .mission-modal-content::before,
-  .mission-modal-content::after {
-    display: none;
-  }
-
-  .mission-modal-kicker {
-    margin-top: 12px;
-    margin-bottom: 8px;
-    color: rgba(255,255,255,0.58);
-    font-size: 11px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-  }
-
-  #mission-modal-title {
-    margin: 0 0 22px;
-    color: #f3f3ef;
-    font-size: clamp(38px, 12vw, 62px);
-    font-weight: 900;
-    line-height: 0.9;
-    letter-spacing: -0.05em;
-    text-transform: uppercase;
-  }
-
-  .mission-modal-image {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    max-width: 520px;
-    margin: 0 auto 22px;
-    aspect-ratio: 1 / 1;
-    background:
-      radial-gradient(circle, rgba(255,255,255,0.14), transparent 34%),
-      rgba(255,255,255,0.04);
-    border: 1px dashed rgba(255,255,255,0.28);
-    color: rgba(255,255,255,0.42);
-    font-size: 12px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  #mission-modal-text {
-    width: 100%;
-    max-width: 520px;
-    margin: 0 auto;
-    color: rgba(255,255,255,0.76);
-    font-size: 15px;
-    line-height: 1.45;
-  }
-
-  #mission-modal-continue {
-    align-self: center;
-    width: 100%;
-    max-width: 520px;
-    margin-top: auto;
-    padding: 15px 18px;
-    border-radius: 999px;
-    background: #f3f3ef;
-    color: #07121c;
-    box-shadow:
-      0 8px 18px rgba(0,0,0,0.38),
-      0 0 18px rgba(88,167,232,0.28);
-  }
-
-  /* =========================
-     RESPONSIVE
-  ========================= */
-
-  @media (max-width: 420px) {
-    #mission-tracker {
-      top: 20px;
-      left: 14px;
-      gap: 10px;
-      font-size: 13px;
+    @font-face {
+      font-family: "FlameBold";
+      src: url("assets/fonts/1.Flame-Bold 2 3 2.otf") format("opentype");
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
     }
 
-    .tracker-item {
-      gap: 5px;
+    @font-face {
+      font-family: "FlameBoldVariable";
+      src: url("assets/fonts/Flame-Bold-Variable 2.ttf") format("truetype");
+      font-weight: 400 900;
+      font-style: normal;
+      font-display: swap;
     }
 
-    .tracker-item::after {
-      right: -6px;
-      height: 24px;
+    @font-face {
+      font-family: "HostGrotesk";
+      src: url("assets/fonts/HostGrotesk-VariableFont_wght.ttf") format("truetype");
+      font-weight: 300 900;
+      font-style: normal;
+      font-display: swap;
     }
 
-    .tracker-star {
-      font-size: 14px;
+    :root {
+      --blue: #63b8e9;
+      --blue-soft: rgba(99, 184, 233, 0.45);
+      --white: #ffffff;
+      --panel: rgba(13, 42, 58, 0.42);
+      --panel-strong: rgba(11, 37, 51, 0.88);
+      --input-line: rgba(255, 255, 255, 0.72);
+      --shadow: 0 24px 55px rgba(0, 0, 0, 0.35);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
 
-    #star-info-card {
-      top: 52px;
-      left: 36px;
-      width: calc(100vw - 72px);
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    .star-card-body {
-      grid-template-columns: 72px 1px minmax(0, 1fr);
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      min-height: 100%;
+      background: #000;
+      color: var(--white);
+      font-family: "HostGrotesk", "FlameSans", Arial, sans-serif;
+      overflow: hidden;
+      overscroll-behavior: none;
+      -webkit-text-size-adjust: 100%;
     }
 
-    .star-card-left {
-      padding-left: 10px;
-      padding-right: 6px;
+    body {
+      min-height: 100svh;
+      touch-action: manipulation;
     }
 
-    .star-card-data {
-      padding: 9px 10px 8px;
-      font-size: 7.4px;
-      line-height: 1.24;
+    button,
+    input,
+    label {
+      font: inherit;
     }
 
-    .star-card-gap {
-      height: 6px;
-    }
-  }
-
-  @media (max-height: 720px) {
-    .mission-modal-content {
-      min-height: auto;
+    button,
+    input[type="button"],
+    input[type="submit"] {
+      appearance: none;
+      -webkit-appearance: none;
+      border-radius: 0;
     }
 
-    .mission-modal-image {
-      aspect-ratio: 16 / 9;
+    .app {
+      position: relative;
+      width: 100vw;
+      height: 100svh;
+      min-height: 100svh;
+      overflow: hidden;
+      background: #000;
+      isolation: isolate;
     }
-  }
-</style>
+
+    /* =========================================================
+      FONDOS
+      Reemplazá estas URLs por tus imágenes finales.
+      Recomendación mobile: 1080x1920 o 1440x2560.
+    ========================================================= */
+
+    .cosmic-bg {
+      position: absolute;
+      inset: 0;
+      z-index: -3;
+      background:
+        linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.2)),
+        url("assets/img/bg-stars.jpg") center center / cover no-repeat;
+      transform: scale(1.04);
+    }
+
+    .cosmic-bg::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 35%, rgba(99,184,233,0.16), transparent 38%),
+        linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.34));
+      pointer-events: none;
+    }
+
+    /* =========================================================
+      LATERALES (líneas tipo zoom)
+      asset: assets/img/lateral.svg
+    ========================================================= */
+
+    .laterals {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .lateral {
+      position: absolute;
+      top: clamp(118px, 20vh, 190px);
+      bottom: clamp(52px, 9vh, 86px);
+      width: clamp(22px, 5vw, 42px);
+      background: url("assets/img/lateral.svg") center / 100% 100% no-repeat;
+      opacity: 0.82;
+    }
+
+    .lateral.left {
+      left: 8px;
+      transform: scaleX(1);
+    }
+
+    .lateral.right {
+      right: 8px;
+      transform: scaleX(-1);
+    }
+
+    @media (max-width: 560px) {
+      .lateral {
+        top: clamp(132px, 22vh, 190px);
+        bottom: clamp(46px, 7vh, 74px);
+        width: 34px;
+        opacity: 0.72;
+      }
+
+      .lateral.left {
+        left: 6px;
+      }
+
+      .lateral.right {
+        right: 6px;
+      }
+    }
+
+    .loading-bg {
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      background: linear-gradient(to bottom, #000 0%, #000 42%, #001016 58%, #123f52 100%);
+    }
+
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: calc(14px + var(--safe-top)) 22px calc(14px + var(--safe-bottom));
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateY(14px) scale(0.985);
+      transition: opacity 420ms ease, transform 420ms ease, visibility 0ms linear 420ms;
+      overflow: hidden;
+    }
+
+    .screen.is-active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+      transition: opacity 480ms ease, transform 480ms ease, visibility 0ms;
+    }
+
+    .screen.is-leaving {
+      opacity: 0;
+      transform: translateY(-10px) scale(0.99);
+    }
+
+    .content {
+      width: min(100%, 520px);
+      margin: 0 auto;
+    }
+
+.panel {
+  position: relative;
+  width: 100%;
+  background: rgba(13, 42, 58, 0.36);
+  border: 1.5px solid rgba(99, 184, 233, 0.72);
+  border-radius: clamp(34px, 9vw, 92px);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+
+  backdrop-filter: blur(1px) saturate(0.08);
+  -webkit-backdrop-filter: blur(1px) saturate(0.08);
+}
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+ 
+  opacity: 0.06;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+    .panel > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn {
+  width: min(100%, 230px);
+  min-height: 36px;
+  border: 0;
+  border-radius: 11px;
+  background: linear-gradient(180deg, #72c4f1 0%, #5daedf 100%);
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-weight: 700;
+  font-size: clamp(11px, 2.8vw, 14px);
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 160ms ease, filter 160ms ease, opacity 160ms ease;
+
+  box-shadow:
+    0 10px 8px rgba(0, 0, 0, 0.8),
+    0 4px 10px rgba(99, 184, 233, 0.22);
+
+  filter:
+    drop-shadow(0 8px 12px rgba(0, 0, 0, 0.28))
+    drop-shadow(0 0 10px rgba(99, 184, 233, 0.14));
+}
+
+.btn:active {
+  transform: scale(0.975);
+  filter:
+    drop-shadow(0 5px 8px rgba(0, 0, 0, 0.22))
+    drop-shadow(0 0 6px rgba(99, 184, 233, 0.10));
+}
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .logos {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(12px, 2.6vw, 20px);
+  margin-top: clamp(26px, 6vh, 46px);
+  margin-bottom: clamp(18px, 3vh, 28px);
+}
+
+    .logo {
+  height: clamp(38px, 7vh, 62px);
+  max-width: 96px;
+  width: auto;
+  object-fit: contain;
+}
+
+    /* Logo placeholders: sacá estas clases cuando uses PNG/SVG reales */
+    .logo-placeholder {
+      min-width: 100px;
+      height: 90px;
+      display: grid;
+      place-items: center;
+      font-family: "FlameBold", "HostGrotesk", sans-serif;
+      font-size: 22px;
+      line-height: 0.9;
+      text-align: center;
+      color: white;
+      border: 1px solid rgba(255,255,255,0.25);
+    }
+
+    .hero-title {
+  margin: 0 0 clamp(26px, 4.8vh, 42px);
+  text-align: center;
+  line-height: 0.88;
+  text-transform: uppercase;
+}
+
+    .hero-title .top {
+  display: block;
+  font-family: "FlameBold", "FlameBoldVariable", sans-serif;
+  font-size: clamp(40px, 11vw, 74px);
+  color: white;
+  letter-spacing: 0.02em;
+  text-shadow: 0 3px 12px rgba(0,0,0,0.4);
+}
+
+.hero-title .bottom {
+  display: block;
+  margin-top: 2px;
+  font-family: "FlameBold", "FlameBoldVariable", sans-serif;
+  font-size: clamp(58px, 20vw, 116px);
+  color: transparent;
+  -webkit-text-stroke: clamp(2px, 0.8vw, 3.5px) var(--blue);
+  text-stroke: clamp(2px, 0.8vw, 3.5px) var(--blue);
+  text-shadow: 0 3px 12px rgba(0,0,0,0.4);
+}
+
+    .register-content {
+  width: 100%;
+  height: 100%;
+  align-self: stretch;
+  padding-top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-3.5vh) scale(var(--screen-scale, 1));
+  transform-origin: center;
+}
+
+    .register-panel {
+  width: min(64vw, 350px);
+  min-width: 255px;
+  padding: clamp(24px, 3.8vh, 34px) clamp(22px, 5vw, 36px);
+  border-radius: clamp(24px, 5.8vw, 42px);
+}
+
+    .intro-copy {
+  margin: 0 0 clamp(24px, 3.3vh, 32px);
+  font-size: clamp(11px, 2.8vw, 15px);
+  line-height: 1.18;
+  font-weight: 200;
+}
+
+    .field {
+      display: block;
+      margin-bottom: clamp(13px, 2.3vh, 19px);
+    }
+
+    .field input {
+  width: 100%;
+  border: 0;
+  border-bottom: 1.5px solid var(--input-line);
+  border-radius: 0;
+  background: transparent;
+  color: white;
+  padding: 7px 0 6px;
+  font-size: clamp(11px, 2.7vw, 14px);
+  font-weight: 700;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+    .field input::placeholder {
+      color: white;
+      opacity: 0.95;
+    }
+
+    .terms {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 clamp(18px, 2.8vh, 24px);
+  color: rgba(255,255,255,0.9);
+  font-size: clamp(7px, 1.9vw, 10px);
+  line-height: 1.2;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+    .terms input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .fake-check {
+      width: 9px;
+      height: 9px;
+      flex: 0 0 9px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,0.35);
+      background: rgba(0,0,0,0.24);
+    }
+
+    .fake-check::after {
+      content: "✓";
+      color: white;
+      font-size: 9px;
+      line-height: 1;
+      opacity: 0;
+      transform: scale(0.7);
+      transition: opacity 140ms ease, transform 140ms ease;
+    }
+
+    .terms input:checked + .fake-check::after {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .register-btn-wrap {
+      display: flex;
+      justify-content: center;
+    }
+
+    .story-screen {
+      padding-left: 32px;
+      padding-right: 32px;
+    }
+
+    .story-panel {
+      width: min(82vw, 560px);
+      padding: clamp(24px, 4vh, 42px) clamp(22px, 5.4vw, 48px);
+      text-align: center;
+      transform: scale(var(--screen-scale, 1));
+      transform-origin: center;
+    }
+
+    .stars-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: clamp(20px, 3.5vh, 34px);
+      color: white;
+      font-size: clamp(20px, 4.5vw, 34px);
+      line-height: 1;
+    }
+
+    .stars-row::before,
+    .stars-row::after {
+      content: "";
+      width: 25%;
+      height: 1px;
+      background: rgba(255,255,255,0.72);
+    }
+
+    .story-text {
+      font-size: clamp(12px, 2.8vw, 18px);
+      line-height: 1.18;
+      letter-spacing: -0.015em;
+    }
+
+    .story-text p {
+      margin: 0 0 clamp(16px, 2.7vh, 28px);
+    }
+
+    .story-text strong {
+      font-weight: 800;
+    }
+
+    .story-divider {
+      width: 100%;
+      height: 1px;
+      background: rgba(255,255,255,0.66);
+      margin: clamp(24px, 4vh, 42px) 0 clamp(22px, 3.5vh, 34px);
+    }
+
+    .steps-content {
+      width: min(82vw, 620px);
+      text-align: center;
+      transform: scale(var(--screen-scale, 1));
+      transform-origin: center;
+    }
+
+    .steps-title {
+      margin: 0 0 clamp(20px, 3.4vh, 32px);
+      font-family: "HostGrotesk", Arial, sans-serif;
+      font-weight: 800;
+      font-size: clamp(24px, 5.3vw, 38px);
+      line-height: 1;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .step-card {
+      padding: clamp(15px, 2.6vh, 24px) clamp(18px, 3.5vw, 32px);
+      margin-bottom: clamp(12px, 2.2vh, 18px);
+      border-radius: clamp(20px, 4.2vw, 32px);
+      text-align: center;
+    }
+
+    .step-card h2 {
+      margin: 0;
+      font-size: clamp(18px, 4vw, 28px);
+      line-height: 1;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .step-line {
+      height: 2px;
+      width: 100%;
+      margin: clamp(16px, 2.5vh, 24px) 0;
+      background: var(--blue);
+      opacity: 0.9;
+    }
+
+    .step-card p {
+      margin: 0;
+      font-size: clamp(12px, 3vw, 18px);
+      line-height: 1.3;
+    }
+
+    .start-btn-wrap {
+      margin-top: clamp(16px, 3vh, 28px);
+      display: flex;
+      justify-content: center;
+    }
+
+    .loading-screen {
+      background: #000;
+    }
+
+    .loading-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      padding-bottom: 16vh;
+    }
+
+    .loader-stars {
+      display: flex;
+      gap: 18px;
+      font-size: clamp(40px, 9vw, 64px);
+      line-height: 1;
+      color: transparent;
+      -webkit-text-stroke: 1.6px white;
+      text-stroke: 1.6px white;
+    }
+
+    .loader-star {
+      display: inline-block;
+      transform-origin: center;
+      transition: color 140ms ease, transform 140ms ease, opacity 140ms ease;
+      animation: starPulse 1100ms infinite;
+    }
+
+    .loader-star.is-filled {
+      color: white;
+      -webkit-text-stroke: 0 white;
+      text-stroke: 0 white;
+      transform: scale(1.08);
+    }
+
+    @keyframes starPulse {
+      0%, 100% { opacity: 0.82; }
+      50% { opacity: 1; }
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 560px) {
+      .screen {
+        padding-left: 18px;
+        padding-right: 18px;
+      }
+
+      
+
+      .logos {
+        gap: 22px;
+        margin-bottom: 42px;
+      }
+
+      .hero-title {
+        margin-bottom: clamp(60px, 5vh, 130px);
+      }
+
+      .register-panel {
+        padding: 34px 28px 40px;
+      }
+
+      .intro-copy {
+        margin-bottom: 46px;
+      }
+
+      .field {
+        margin-bottom: 32px;
+      }
+
+      .terms {
+        margin-bottom: 40px;
+      }
+
+      .btn {
+        min-height: 40px;
+        border-radius: 12px;
+      }
+
+      .story-panel {
+        padding: 42px 24px;
+        border-radius: 42px;
+      }
+
+      .stars-row {
+        gap: 8px;
+        margin-bottom: 42px;
+      }
+
+      .stars-row::before,
+      .stars-row::after {
+        width: 22%;
+      }
+
+      .story-text p {
+        margin-bottom: 24px;
+      }
+
+      .story-divider {
+        margin: 38px 0 30px;
+      }
+
+      .steps-title {
+        margin-bottom: 38px;
+      }
+
+      .step-card {
+        margin-bottom: 24px;
+      }
+
+      .step-line {
+        margin: 24px 0;
+      }
+
+      .start-btn-wrap {
+        margin-top: 22px;
+      }
+    }
+
+    @media (max-height: 760px) {
+      :root {
+        --screen-scale: 0.88;
+      }
+
+      .screen {
+        overflow: hidden;
+        place-items: center;
+      }
+    }
+
+    @media (max-height: 680px) {
+      :root {
+        --screen-scale: 0.78;
+      }
+    }
+
+    @media (max-height: 600px) {
+      :root {
+        --screen-scale: 0.68;
+      }
+    }
+    /* =========================================================
+  PANTALLA ACCESO A SENSORES
+========================================================= */
+
+.sensor-gate-screen {
+  background: #000;
+}
+
+.sensor-gate-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(circle at 50% 34%, rgba(99,184,233,0.18), transparent 38%),
+    linear-gradient(to bottom, #000 0%, #000 44%, #001016 64%, #123f52 100%);
+}
+
+.sensor-gate-content {
+  width: min(100%, 420px);
+  min-height: 68svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(22px, 4vh, 34px);
+  text-align: center;
+  transform: scale(var(--screen-scale, 1));
+  transform-origin: center;
+}
+
+.sensor-gate-stars {
+  margin-bottom: clamp(4px, 1vh, 10px);
+  font-size: clamp(32px, 7vw, 54px);
+}
+
+.sensor-gate-title {
+  margin: 0;
+}
+
+.sensor-gate-copy {
+  width: min(82vw, 320px);
+  margin: 0;
+  color: rgba(255,255,255,0.82);
+  font-size: clamp(12px, 3vw, 16px);
+  line-height: 1.28;
+  font-weight: 500;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.55);
+}
+  </style>
 </head>
 <body>
-
-
-  <div id="target-hud">
-    <div class="pill" id="target-name">--</div>
-    <span class="target-type" id="target-desc">--</span>
-  </div>
-  
-  <svg id="info-connector-layer" class="hidden" aria-hidden="true">
-  <path id="info-connector-path"></path>
-</svg>
-
-<div id="star-info-card" class="hidden">
-  <div class="star-card">
-    <div class="star-card-header">
-      <span id="star-card-title">COLOMBES 1924</span>
-      <span class="star-card-target">◎</span>
-    </div>
-
-    <div class="star-card-body">
-      <div class="star-card-left">
-        <div class="star-card-name-row">
-          <span class="star-card-play">▶</span>
-          <span id="star-card-code">SCGA</span>
+  <main class="app" id="app">
+    <!-- =========================================================
+      PANTALLA DE CARGA
+      Fondo de carga: reemplazar en CSS .loading-bg
+    ========================================================== -->
+    <section class="screen loading-screen is-active" data-screen="loading" aria-label="Cargando experiencia">
+      <div class="loading-bg"></div>
+      <div class="loading-content">
+        <div class="loader-stars" aria-hidden="true">
+          <span class="loader-star">★</span>
+          <span class="loader-star">★</span>
+          <span class="loader-star">★</span>
+          <span class="loader-star">☆</span>
         </div>
-        <div id="star-card-year" class="star-card-year">1924</div>
+        <span class="sr-only">Cargando</span>
       </div>
+    </section>
 
-      <div class="star-card-divider"></div>
+    <!-- Fondo general. Cambiar assets/img/bg-stars.jpg por el fondo final -->
+    <div class="cosmic-bg" aria-hidden="true"></div>
 
-      <div class="star-card-data">
-        <div><strong>RA:</strong> <span id="star-card-ra">08h 18m 35.33s</span></div>
-        <div><strong>Dec:</strong> <span id="star-card-dec">-26° 14′ 53.6″</span></div>
-        <div><strong>Gmag (mag):</strong> <span id="star-card-gmag">9.14</span></div>
-        <div class="star-card-gap"></div>
-        <div><strong>Gaia DR3:</strong> <span id="star-card-gaia">5694395051252245376</span></div>
+
+    <!-- =========================================================
+      PANTALLA 1 / REGISTRO
+      Logos: reemplazar placeholders por imágenes reales.
+    ========================================================== -->
+    <section class="screen register-screen" data-screen="register" aria-label="Registro">
+      <!-- LÍNEAS LATERALES: solo pantalla de registro -->
+      <div class="laterals" aria-hidden="true">
+        <div class="lateral left"></div>
+        <div class="lateral right"></div>
       </div>
-    </div>
-
-    <div class="star-card-footer"></div>
-  </div>
-</div>
-<div id="star-info-card" class="hidden">
-  
-
-  <div class="star-card">
-    <div class="star-card-header">
-      <span id="star-card-title">COLOMBES 1924</span>
-      <span class="star-card-target">◎</span>
-    </div>
-
-    <div class="star-card-body">
-      <div class="star-card-left">
-        <div class="star-card-name-row">
-          <span class="star-card-play">▶</span>
-          <span id="star-card-code">SCGA</span>
+      <div class="content register-content">
+        <div class="logos" aria-label="Burger King y AUF">
+          <img class="logo" src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+          <img class="logo" src="assets/img/logo-auf-white.svg" alt="AUF" />
         </div>
-        <div id="star-card-year" class="star-card-year">1924</div>
-      </div>
 
-      <div class="star-card-divider"></div>
+        <h1 class="hero-title" aria-label="Estrellas Reales">
+          <span class="top">Estrellas</span>
+          <span class="bottom">Reales</span>
+        </h1>
 
-      <div class="star-card-data">
-        <div><strong>RA:</strong> <span id="star-card-ra">08h 18m 35.33s</span></div>
-        <div><strong>Dec:</strong> <span id="star-card-dec">-26° 14′ 53.6″</span></div>
-        <div><strong>Gmag (mag):</strong> <span id="star-card-gmag">9.14</span></div>
-        <div class="star-card-gap"></div>
-        <div><strong>Gaia DR3:</strong> <span id="star-card-gaia">5694395051252245376</span></div>
+        <form class="panel register-panel" id="registerForm" novalidate>
+          <p class="intro-copy">Registrate y descubrí las cuatro estrellas de la Selección Uruguaya de Fútbol que ahora están en el cielo.</p>
+
+          <label class="field">
+            <span class="sr-only">Nombre</span>
+            <input id="nameInput" name="name" type="text" placeholder="Nombre" autocomplete="name" required />
+          </label>
+
+          <label class="field">
+            <span class="sr-only">Mail</span>
+            <input id="emailInput" name="email" type="email" placeholder="Mail" autocomplete="email" inputmode="email" required />
+          </label>
+
+          <label class="terms">
+            <input id="termsInput" name="terms" type="checkbox" required />
+            <span class="fake-check" aria-hidden="true"></span>
+            <span>He leído y acepto los términos y condiciones</span>
+          </label>
+
+          <div class="register-btn-wrap">
+            <button class="btn" type="submit">Enviar</button>
+          </div>
+        </form>
       </div>
+    </section>
+
+    <!-- =========================================================
+      PANTALLA 2 / HISTORIA
+    ========================================================== -->
+    <section class="screen story-screen" data-screen="story" aria-label="Historia">
+      <article class="panel story-panel">
+        <div class="stars-row" aria-hidden="true">★★★★</div>
+
+        <div class="story-text">
+          <p><strong>Uruguay tiene cuatro mundiales:<br />1924, 1928, 1930 y 1950.</strong></p>
+          <p>Cuatro estrellas que no solo marcaron nuestra historia, sino la del fútbol mundial.</p>
+          <p><strong>Son títulos reconocidos por FIFA.</strong></p>
+          <p>Y no solo representan una forma de jugar. Constituyen la identidad de todo un país.</p>
+          <p><strong>La historia no puede reescribirse.</strong></p>
+          <p>Sin embargo, hay quienes en los últimos años han querido ponerla en duda.</p>
+          <p><strong>Un homenaje que llega al cielo.</strong></p>
+          <p>De la mano de Burger King, para ponerle fin a este debate, de una vez y para siempre.</p>
+        </div>
+
+        <div class="story-divider"></div>
+        <button class="btn" type="button" data-next="steps">Continuar</button>
+      </article>
+    </section>
+
+    <!-- =========================================================
+      PANTALLA 3 / INSTRUCCIONES
+    ========================================================== -->
+    <section class="screen" data-screen="steps" aria-label="Tres simples pasos">
+      <div class="steps-content">
+        <h1 class="steps-title">Tres simples pasos</h1>
+
+        <article class="panel step-card">
+          <h2>Paso 1</h2>
+          <div class="step-line"></div>
+          <p>Abrí el visor de la bóveda celeste para ver las estrellas.</p>
+        </article>
+
+        <article class="panel step-card">
+          <h2>Paso 2</h2>
+          <div class="step-line"></div>
+          <p>Seguí la flecha para encontrar las estrellas.</p>
+        </article>
+
+        <article class="panel step-card">
+          <h2>Paso 3</h2>
+          <div class="step-line"></div>
+          <p>Tocá una estrella para interactuar con su contenido.</p>
+        </article>
+
+        <div class="start-btn-wrap">
+         <button class="btn" type="button" id="openSkyBtn" data-next="sensor-gate">Comenzar</button>
+         </div>
+      </div>
+    </section>
+
+   <!-- =========================================================
+  PANTALLA 4 / ACCESO A SENSORES
+========================================================== -->
+<section class="screen sensor-gate-screen" data-screen="sensor-gate" aria-label="Acceso a sensores">
+  <div class="sensor-gate-content">
+    <div class="loader-stars sensor-gate-stars" aria-hidden="true">
+      <span class="loader-star is-filled">★</span>
+      <span class="loader-star is-filled">★</span>
+      <span class="loader-star is-filled">★</span>
+      <span class="loader-star">☆</span>
     </div>
 
-    <div class="star-card-footer"></div>
-  </div>
-</div>
-<div id="mission-modal" class="hidden">
-  <div class="mission-modal-content">
-    <div class="mission-modal-kicker">Misión completada</div>
-    <h2 id="mission-modal-title">URUGUAY 1924</h2>
+    <h1 class="hero-title sensor-gate-title" aria-label="Estrellas Reales">
+      <span class="top">Estrellas</span>
+      <span class="bottom">Reales</span>
+    </h1>
 
-    <div class="mission-modal-image">
-      <span>Imagen / contenido de la estrella</span>
-    </div>
-
-    <p id="mission-modal-text">
-      Acá luego vamos a colocar la historia, imágenes, datos ampliados y contenido especial de esta estrella.
+    <p class="sensor-gate-copy">
+      Para abrir el visor celeste, necesitamos activar los sensores de movimiento y ubicación de tu celular.
     </p>
 
-    <button id="mission-modal-continue" type="button">
-      Continuar
-    </button>
+   
   </div>
-</div>
-  <div id="horizon-shadow"></div>
-<div id="mission-tracker">
-  <div class="tracker-item active" data-mission-id="scga1924">
-    <span class="tracker-star">★</span><span>1924</span>
-  </div>
-  <div class="tracker-item" data-mission-id="scga1928">
-    <span class="tracker-star">★</span><span>1928</span>
-  </div>
-  <div class="tracker-item" data-mission-id="scga1930">
-    <span class="tracker-star">★</span><span>1930</span>
-  </div>
-  <div class="tracker-item" data-mission-id="scga1950">
-    <span class="tracker-star">★</span><span>1950</span>
-  </div>
-</div>
+</section>
+  </main>
 
-<div id="scanner-ui">
-  <div id="guide-arrow"></div>
-  <div id="scanner-ring"></div>
-  <div id="scanner-progress"></div>
-  <div id="scanner-cross"></div>
-</div>
-  <div id="compass-container" class="oculto">
-  <div id="compass-strip">
-    <span>N</span><span>NE</span><span>E</span><span>SE</span><span>S</span><span>SO</span><span>O</span><span>NO</span>
-    <span>N</span><span>NE</span><span>E</span><span>SE</span><span>S</span><span>SO</span><span>O</span><span>NO</span>
-    <span>N</span><span>NE</span><span>E</span><span>SE</span><span>S</span><span>SO</span><span>O</span><span>NO</span>
-  </div>
-</div>
-<div id="compass-pointer" class="oculto">▲</div>
+  <script>
+    /* =========================================================
+      CONFIGURACIÓN DE ASSETS A PRECARGAR
+      Agregá acá todos los fondos, logos, texturas, imágenes, JSON, etc.
+      La pantalla de carga queda activa hasta que esto termine.
+    ========================================================= */
 
-  <div id="orientation-panel" class="oculto">
-    <div class="title">Vista del observador</div>
-    <div class="row"><span class="label">dirección</span><span class="value" id="look-direction">--</span></div>
-    <div class="row"><span class="label">azimut</span><span class="value" id="look-azimuth">--</span></div>
-    <div class="row"><span class="label">altura</span><span class="value" id="look-altitude">--</span></div>
-    <div class="row"><span class="label">norte ref</span><span class="value" id="northref-val">--</span></div>
-  </div>
+    const ASSETS_TO_PRELOAD = [
+      "assets/img/bg-stars.jpg",
+      "assets/img/logo-burger-king-white.svg",
+      "assets/img/logo-auf-white.svg",
+      // "assets/img/otro-fondo.png",
+    ];
 
-  <div id="canvas-container"></div>
-  <div id="sys-info" class="oculto">SYS.OFF</div>
+    const SCREENS = {
+      loading: document.querySelector('[data-screen="loading"]'),
+      register: document.querySelector('[data-screen="register"]'),
+      story: document.querySelector('[data-screen="story"]'),
+      steps: document.querySelector('[data-screen="steps"]'),
+      experience: document.querySelector('[data-screen="experience"]'),
+    };
 
-  <div id="ui-layer">
-    <div class="title-flat">OBSERVATORIO</div>
-    <div class="subtitle-flat">Alineación Espacial</div>
-    <button onclick="iniciarApp()">Iniciar Enlace</button>
-  </div>
+    const state = {
+      currentScreen: "loading",
+      loaderInterval: null,
+      loaderStep: 0,
+      user: {
+        name: "",
+        email: "",
+      },
+    };
 
-<script>
-let scene, camera, renderer, starGroup;
-let raycaster, centerScreen;
-let hoverRing;
-let skyDome = null;
-let missionStarSprite = null;
-let missionStarMesh = null;
-let objetosInteractivos = [];
-let objetoEnfocado = null;
-let astrosDinamicos = [];
-let missionStarIcon = null;
-let captureProgress = 0;
-let captureStartTime = null;
-let captureCompleted = false;
-let infoCardShown = false;
-let infoCardRevealTimeout = null;
-let pendingMissionAdvance = false;
-const CAPTURE_DURATION = 2000;
+    function showScreen(screenName) {
+      const current = SCREENS[state.currentScreen];
+      const next = SCREENS[screenName];
+      if (!next || current === next) return;
 
+      if (current) {
+        current.classList.add("is-leaving");
+        current.classList.remove("is-active");
+      }
 
-  const uiLayer = document.getElementById('ui-layer');
-  const hud = document.getElementById('target-hud');
-  const hudName = document.getElementById('target-name');
-  const hudDesc = document.getElementById('target-desc');
-  const compassStrip = document.getElementById('compass-strip');
-  const horizonShadow = document.getElementById('horizon-shadow');
-const guideArrow = document.getElementById('guide-arrow');
-const scannerUi = document.getElementById('scanner-ui');
+      window.setTimeout(() => {
+        if (current) current.classList.remove("is-leaving");
+        next.classList.add("is-active");
+        state.currentScreen = screenName;
+      }, 260);
+    }
 
-  const lookDirectionVal = document.getElementById('look-direction');
-  const lookAzimuthVal = document.getElementById('look-azimuth');
-  const lookAltitudeVal = document.getElementById('look-altitude');
-  const northRefVal = document.getElementById('northref-val');
+    function startStarLoader() {
+      const stars = Array.from(document.querySelectorAll(".loader-star"));
 
-const COMPASS_STEP = 64;               // ancho de cada letra
-const COMPASS_CYCLE_WIDTH = 8 * 64;    // 8 direcciones = 512px
-let compassAzimuthVisual = null;       // azimut visual suavizado
+      state.loaderInterval = window.setInterval(() => {
+        state.loaderStep = (state.loaderStep % 4) + 1;
 
-// CAMBIÁ esta ruta por la tuya
-const SKY_TEXTURE_URL = './assets/img/bg-dome.jpg';
+        stars.forEach((star, index) => {
+          star.classList.toggle("is-filled", index < state.loaderStep);
+          star.textContent = index < state.loaderStep ? "★" : "☆";
+        });
+      }, 280);
+    }
 
- let usuarioLat = 0, usuarioLon = 0;
-let brujulaDetectada = false;
-let headingOffset = 0;
-let currentAlpha = 0, currentBeta = 0, currentGamma = 0;
+    function stopStarLoader() {
+      if (state.loaderInterval) {
+        window.clearInterval(state.loaderInterval);
+        state.loaderInterval = null;
+      }
+    }
 
-// filtro anti-salto para iPhone
-let headingEstable = null;
-const TILT_GUARD_DEG = 38;
-const HEADING_JUMP_DEG = 110;
-const LOW_SPIN_THRESHOLD = 90;
-const BUILD_LABEL = '2026-04-30 22:00 UTC';
-
-// Sigue existiendo como dato de diagnóstico
-let northCalibration = null;
-
-  const planetas = ['Sun', 'Moon', 'Venus', 'Mars', 'Jupiter', 'Saturn'];
-
-  const estrellas = [
-    { id: 'scga1924', n: "SCGA 1924 (Puppis)", ra: 8.3098, dec: -26.2482 },
-    { id: 'scga1928', n: "SCGA 1928 (Puppis)", ra: 8.3198, dec: -23.0249 },
-    { id: 'scga1930', n: "SCGA 1930 (Puppis)", ra: 8.3217, dec: -23.7969 },
-    { id: 'scga1950', n: "SCGA 1950 (Volans)", ra: 8.2952, dec: -69.1289 },
-
-    { id: 'sirius', n: "Sirio", ra: 6.75, dec: -16.71 },
-    { id: 'canopus', n: "Canopus", ra: 6.39, dec: -52.69 },
-    { id: 'arcturus', n: "Arturo", ra: 14.26, dec: 19.18 },
-    { id: 'rigelkent', n: "Alfa Centauri", ra: 14.66, dec: -60.83 },
-    { id: 'vega', n: "Vega", ra: 18.61, dec: 38.78 },
-    { id: 'capella', n: "Capella", ra: 5.28, dec: 45.99 },
-    { id: 'rigel', n: "Rigel", ra: 5.24, dec: -8.2 },
-    { id: 'procyon', n: "Procyon", ra: 7.65, dec: 5.22 },
-    { id: 'achernar', n: "Achernar", ra: 1.63, dec: -57.24 },
-    { id: 'betelgeuse', n: "Betelgeuse", ra: 5.91, dec: 7.4 },
-    { id: 'hadar', n: "Beta Centauri", ra: 14.06, dec: -60.37 },
-    { id: 'altair', n: "Altair", ra: 19.84, dec: 8.86 },
-    { id: 'aldebaran', n: "Aldebarán", ra: 4.59, dec: 16.50 },
-    { id: 'spica', n: "Spica", ra: 13.41, dec: -11.16 },
-    { id: 'antares', n: "Antares", ra: 16.49, dec: -26.43 },
-    { id: 'pollux', n: "Pólux", ra: 7.75, dec: 28.02 },
-    { id: 'fomalhaut', n: "Fomalhaut", ra: 22.96, dec: -29.62 },
-    { id: 'deneb', n: "Deneb", ra: 20.69, dec: 45.28 },
-
-    { id: 'acrux', n: "Acrux", ra: 12.44, dec: -63.09 },
-    { id: 'mimosa', n: "Mimosa", ra: 12.78, dec: -59.68 },
-    { id: 'gacrux', n: "Gacrux", ra: 12.51, dec: -57.11 },
-    { id: 'imai', n: "Imai", ra: 12.25, dec: -58.74 },
-    { id: 'bellatrix', n: "Bellatrix", ra: 5.41, dec: 6.34 },
-    { id: 'alnilam', n: "Alnilam", ra: 5.6, dec: -1.2 },
-    { id: 'alnitak', n: "Alnitak", ra: 5.67, dec: -1.94 },
-    { id: 'mintaka', n: "Mintaka", ra: 5.53, dec: -0.29 },
-    { id: 'saiph', n: "Saiph", ra: 5.79, dec: -9.66 },
-
-    { id: 'polaris', n: "Estrella Polar", ra: 2.53, dec: 89.26 }
-  ];
-
-const missionStars = [
-  {
-    id: 'scga1924',
-    title: 'URUGUAY 1924',
-    code: 'SCGA',
-    year: '1924',
-    raText: '08h 18m 35.28s',
-    decText: '-26° 14′ 53″',
-    gmagText: '7.00',
-    gaiaText: '5696450279001453184'
-  },
-  {
-    id: 'scga1928',
-    title: 'URUGUAY 1928',
-    code: 'SCGA',
-    year: '1928',
-    raText: '08h 19m 11.28s',
-    decText: '-23° 01′ 29″',
-    gmagText: '7.00',
-    gaiaText: '5696450279001453184'
-  },
-  {
-    id: 'scga1930',
-    title: 'URUGUAY 1930',
-    code: 'SCGA',
-    year: '1930',
-    raText: '08h 19m 18.27s',
-    decText: '-23° 47′ 49″',
-    gmagText: '7.00',
-    gaiaText: '5696450279001453184'
-  },
-  {
-    id: 'scga1950',
-    title: 'URUGUAY 1950',
-    code: 'SCGA',
-    year: '1950',
-    raText: '08h 17m 42.72s',
-    decText: '-69° 07′ 44″',
-    gmagText: '7.00',
-    gaiaText: '5696450279001453184'
-  }
-];
-
-let currentMissionIndex = 0;
-  function seededRandom(seed) {
-    const x = Math.sin(seed) * 10000;
-    return x - Math.floor(x);
-  }
-
-  function generarEstrellasExtra(cantidad = 520) {
-    const extra = [];
-    for (let i = 0; i < cantidad; i++) {
-      const r1 = seededRandom(i * 1.137 + 11.7);
-      const r2 = seededRandom(i * 1.913 + 27.1);
-      const r3 = seededRandom(i * 2.271 + 41.9);
-
-      extra.push({
-        id: `extra_${i + 1}`,
-        n: `Star ${String(i + 1).padStart(3, '0')}`,
-        ra: r1 * 24,
-        dec: Math.asin((r2 * 2) - 1) * 180 / Math.PI,
-        mag: 1.5 + r3 * 4.5,
-        extra: true
+    function preloadImage(src) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve({ src, ok: true });
+        img.onerror = () => resolve({ src, ok: false });
+        img.src = src;
       });
     }
-    return extra;
-  }
 
-  const estrellasExtra = generarEstrellasExtra(520);
-  const todasLasEstrellas = [...estrellas, ...estrellasExtra];
+    async function preloadAssets() {
+      const imagePromises = ASSETS_TO_PRELOAD.map(preloadImage);
 
-  const constelaciones = [
-    ['betelgeuse', 'bellatrix'], ['bellatrix', 'rigel'], ['rigel', 'saiph'], ['saiph', 'betelgeuse'],
-    ['mintaka', 'alnilam'], ['alnilam', 'alnitak'],
-    ['gacrux', 'acrux'], ['mimosa', 'imai']
-  ];
-function crearSkyDome() {
-  const loader = new THREE.TextureLoader();
+      const fontPromise = document.fonts && document.fonts.ready
+        ? document.fonts.ready.catch(() => null)
+        : Promise.resolve(null);
 
-  loader.load(
-    SKY_TEXTURE_URL,
-    (texture) => {
-      texture.encoding = THREE.sRGBEncoding;
-      texture.minFilter = THREE.LinearFilter;
-      texture.magFilter = THREE.LinearFilter;
+      const minLoadingTime = new Promise((resolve) => window.setTimeout(resolve, 1200));
 
-      const geometry = new THREE.SphereGeometry(2200, 96, 96);
-      geometry.scale(-1, 1, 1);
-
-      const material = new THREE.MeshBasicMaterial({
-        map: texture,
-        side: THREE.BackSide,
-        transparent: false,
-        depthWrite: false
-      });
-
-      skyDome = new THREE.Mesh(geometry, material);
-      skyDome.renderOrder = -10;
-      scene.add(skyDome);
-    },
-    undefined,
-    (err) => {
-      console.warn('No se pudo cargar la textura de la bóveda:', err);
-
-      const geometry = new THREE.SphereGeometry(2200, 96, 96);
-      geometry.scale(-1, 1, 1);
-
-      const fallbackMaterial = new THREE.MeshBasicMaterial({
-        color: 0x000000,
-        side: THREE.BackSide,
-        depthWrite: false
-      });
-
-      skyDome = new THREE.Mesh(geometry, fallbackMaterial);
-      skyDome.renderOrder = -10;
-      scene.add(skyDome);
+      await Promise.all([
+        Promise.all(imagePromises),
+        fontPromise,
+        minLoadingTime,
+      ]);
     }
-  );
-}
-  function init3D() {
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 2500);
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-renderer.setClearColor(0x000000, 1);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-    starGroup = new THREE.Group();
-scene.add(starGroup);
-
-crearSkyDome();
-
-    raycaster = new THREE.Raycaster();
-    raycaster.params.Points.threshold = 15;
-    centerScreen = new THREE.Vector2(0, 0);
-
-    const ringGeo = new THREE.RingGeometry(35, 38, 32);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.8
+    function setupNavigation() {
+      document.querySelectorAll("[data-next]").forEach((button) => {
+      button.addEventListener("click", () => {
+    showScreen(button.dataset.next);
+      });
     });
-  hoverRing = new THREE.Mesh(ringGeo, ringMat);
-hoverRing.visible = false;
-scene.add(hoverRing);
+    const openSkyBtn = document.getElementById("openSkyBtn");
 
-// Sprite 3D que reemplaza visualmente a la estrella cuando entra en el círculo
-missionStarSprite = createStarSprite('★', '#ffffff', 64);
-missionStarSprite.visible = false;
-scene.add(missionStarSprite);
-
-animar();
-  }
-
-  function azAltToVector(azimuth, altitude, radius = 500) {
-    const azRad = THREE.MathUtils.degToRad(azimuth);
-    const altRad = THREE.MathUtils.degToRad(altitude);
-    return new THREE.Vector3(
-      radius * Math.cos(altRad) * Math.sin(azRad),
-      radius * Math.sin(altRad),
-      -radius * Math.cos(altRad) * Math.cos(azRad)
-    );
-  }
-function createStarSprite(symbol = '★', color = '#ffffff', size = 96) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 256;
-
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.font = '900 150px Arial';
-  ctx.fillStyle = color;
-  ctx.shadowColor = 'rgba(88,167,232,0.35)';
-  ctx.shadowBlur = 18;
-  ctx.fillText(symbol, canvas.width / 2, canvas.height / 2 + 4);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  const material = new THREE.SpriteMaterial({
-    map: texture,
-    transparent: true,
-    depthWrite: false
+if (openSkyBtn) {
+  openSkyBtn.addEventListener("click", () => {
+    window.location.href = "./boveda.html?start=1";
   });
-
-  const sprite = new THREE.Sprite(material);
-  sprite.scale.set(size, size, 1);
-  return sprite;
 }
-  function generarCieloReal() {
-    const fechaActual = new Date();
-    const observador = new Astronomy.Observer(usuarioLat, usuarioLon, 0);
-    const posicionesEstrellas = {};
 
-    planetas.forEach(cuerpo => {
-      const equ_2000 = Astronomy.Equator(cuerpo, fechaActual, observador, true, true);
-      const horizonte = Astronomy.Horizon(fechaActual, observador, equ_2000.ra, equ_2000.dec, 'normal');
-      const pos = azAltToVector(horizonte.azimuth, horizonte.altitude, 500);
+      const form = document.getElementById("registerForm");
+      const nameInput = document.getElementById("nameInput");
+      const emailInput = document.getElementById("emailInput");
+      const termsInput = document.getElementById("termsInput");
 
-      const size = (cuerpo === 'Sun' || cuerpo === 'Moon') ? 16 : 8;
-      const mesh = new THREE.Mesh(
-        new THREE.SphereGeometry(size, 32, 32),
-        new THREE.MeshBasicMaterial({ color: cuerpo === 'Sun' ? 0xffdd44 : 0xeeeeee })
-      );
-      mesh.position.copy(pos);
-      mesh.userData = {
-        nombre: cuerpo === 'Sun' ? 'Sol' : cuerpo === 'Moon' ? 'Luna' : cuerpo,
-        tipo: 'Sistema Solar'
-      };
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
 
-      starGroup.add(mesh);
-      objetosInteractivos.push(mesh);
-      astrosDinamicos.push({ mesh: mesh, tipoRef: 'planeta', id: cuerpo });
-    });
+        const name = nameInput.value.trim();
+        const email = emailInput.value.trim();
+        const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-    todasLasEstrellas.forEach(estrella => {
-      const horizonte = Astronomy.Horizon(fechaActual, observador, estrella.ra, estrella.dec, 'normal');
-      const pos = azAltToVector(horizonte.azimuth, horizonte.altitude, 800);
-      posicionesEstrellas[estrella.id] = pos;
-
-     const tam = estrella.extra ? Math.max(1.2, 4.2 - ((estrella.mag ?? 4) * 0.55)) : 5;
-
-const mesh = new THREE.Mesh(
-  new THREE.SphereGeometry(tam, estrella.extra ? 8 : 16, estrella.extra ? 8 : 16),
-  new THREE.MeshBasicMaterial({ color: 0xffffff })
-);
-      mesh.position.copy(pos);
-      mesh.userData = {
-  nombre: estrella.n,
-  tipo: estrella.extra
-    ? 'Estrella de fondo'
-    :  (['scga1924', 'scga1928', 'scga1930', 'scga1950'].includes(estrella.id) ? 'Objetivo Colombes' : 'Estrella principal'),  ra: estrella.ra,
-  dec: estrella.dec,
-  code: estrella.code,
-  short: estrella.short,
-  gmag: estrella.gmag ?? null,
-  gaia: estrella.gaia ?? null,
-  constellation: estrella.constellation ?? null,
-  mission: ['scga1924', 'scga1928', 'scga1930', 'scga1950'].includes(estrella.id),
-  defaultScale: tam,
-  isStarIcon: false
-};
-
-      starGroup.add(mesh);
-      if (!estrella.extra) {
-        objetosInteractivos.push(mesh);
-      }
-      astrosDinamicos.push({ mesh: mesh, tipoRef: 'estrella', ra: estrella.ra, dec: estrella.dec, id: estrella.id, extra: !!estrella.extra, mag: estrella.mag ?? null });
-    });
-
-    const lineMaterial = new THREE.LineBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.2
-    });
-
-    constelaciones.forEach(par => {
-      if (posicionesEstrellas[par[0]] && posicionesEstrellas[par[1]]) {
-        const puntos = [posicionesEstrellas[par[0]], posicionesEstrellas[par[1]]];
-        const lineGeo = new THREE.BufferGeometry().setFromPoints(puntos);
-        const linea = new THREE.Line(lineGeo, lineMaterial);
-
-        starGroup.add(linea);
-        astrosDinamicos.push({ mesh: linea, tipoRef: 'linea', p1: par[0], p2: par[1] });
-      }
-    });
-
-    const dustGeo = new THREE.BufferGeometry();
-    const dustVerts = [];
-    for (let i = 0; i < 1500; i++) {
-      const rPos = azAltToVector(Math.random() * 360, (Math.random() * 180) - 90, 1000);
-      dustVerts.push(rPos.x, rPos.y, rPos.z);
-    }
-    dustGeo.setAttribute('position', new THREE.Float32BufferAttribute(dustVerts, 3));
-    starGroup.add(new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: 0x555555, size: 2 })));
-
-    setInterval(actualizarTiempoYPosiciones, 60000);
-  }
-function actualizarConectorInfoCard() {
-  const svg = document.getElementById('info-connector-layer');
-  const path = document.getElementById('info-connector-path');
-  const scanner = document.getElementById('scanner-ui');
-  const card = document.getElementById('star-info-card');
-
-  if (!svg || !path || !scanner || !card) return;
-
-  const scannerRect = scanner.getBoundingClientRect();
-  const cardRect = card.getBoundingClientRect();
-
-  // Arranca exactamente desde el CENTRO SUPERIOR del círculo
-  const startX = scannerRect.left + (scannerRect.width / 2);
-  const startY = scannerRect.top;
-
-  // Punto de entrada al recuadro (lado izquierdo)
-  const endX = cardRect.left;
-  const endY = cardRect.top + Math.min(Math.max(cardRect.height * 0.42, 72), 110);
-
-  // Codo horizontal un poco antes de la card
-  const elbowX = cardRect.left - 26;
-
-  // Primer tramo: sube desde el círculo
-  const elbowY = startY - Math.max(70, Math.min(170, (startY - endY) * 0.48));
-
-  const d = `
-    M ${startX} ${startY}
-    V ${elbowY}
-    H ${elbowX}
-    V ${endY}
-    H ${endX}
-  `;
-
-  svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`);
-  svg.setAttribute('width', window.innerWidth);
-  svg.setAttribute('height', window.innerHeight);
-
-  path.setAttribute('d', d);
-
-  const len = path.getTotalLength();
-  svg.style.setProperty('--connector-length', len);
-}
-  function actualizarTiempoYPosiciones() {
-    const nuevaFecha = new Date();
-    const observador = new Astronomy.Observer(usuarioLat, usuarioLon, 0);
-    const posicionesActualizadas = {};
-
-    astrosDinamicos.forEach(astro => {
-      if (astro.tipoRef === 'planeta' || astro.tipoRef === 'estrella') {
-        let horizonte;
-        if (astro.tipoRef === 'planeta') {
-          const equ_2000 = Astronomy.Equator(astro.id, nuevaFecha, observador, true, true);
-          horizonte = Astronomy.Horizon(nuevaFecha, observador, equ_2000.ra, equ_2000.dec, 'normal');
-        } else {
-          horizonte = Astronomy.Horizon(nuevaFecha, observador, astro.ra, astro.dec, 'normal');
+        if (!name) {
+          nameInput.focus();
+          return;
         }
 
-        const nuevaPos = azAltToVector(
-          horizonte.azimuth,
-          horizonte.altitude,
-          astro.tipoRef === 'planeta' ? 500 : 800
-        );
+        if (!email || !emailIsValid) {
+          emailInput.focus();
+          return;
+        }
 
-        astro.mesh.position.copy(nuevaPos);
-        if (astro.id) posicionesActualizadas[astro.id] = nuevaPos;
-      }
-    });
+        if (!termsInput.checked) {
+          termsInput.focus();
+          return;
+        }
 
-    astrosDinamicos.forEach(astro => {
-      if (astro.tipoRef === 'linea' && posicionesActualizadas[astro.p1] && posicionesActualizadas[astro.p2]) {
-        const positions = astro.mesh.geometry.attributes.position.array;
-        positions[0] = posicionesActualizadas[astro.p1].x;
-        positions[1] = posicionesActualizadas[astro.p1].y;
-        positions[2] = posicionesActualizadas[astro.p1].z;
-        positions[3] = posicionesActualizadas[astro.p2].x;
-        positions[4] = posicionesActualizadas[astro.p2].y;
-        positions[5] = posicionesActualizadas[astro.p2].z;
-        astro.mesh.geometry.attributes.position.needsUpdate = true;
-      }
-    });
-  }
+        state.user.name = name;
+        state.user.email = email;
 
-  function procesarSensores(e) {
-    if (e.alpha === null) return;
+        // =====================================================
+        // ACÁ PODÉS ENVIAR EL REGISTRO AL BACKEND
+        // fetch("/api/register", { method: "POST", body: JSON.stringify(state.user) })
+        // =====================================================
 
-    currentAlpha = e.alpha;
-    currentBeta = e.beta ?? 0;
-    currentGamma = e.gamma ?? 0;
-
-    let absoluteHeading = null;
-
-    if (typeof e.webkitCompassHeading === 'number') {
-      absoluteHeading = e.webkitCompassHeading;
-      brujulaDetectada = true;
-    } else if (e.absolute === true && typeof e.alpha === 'number') {
-      absoluteHeading = (360 - e.alpha + 360) % 360;
-      brujulaDetectada = true;
+        showScreen("story");
+      });
     }
 
-    if (absoluteHeading !== null) {
-      headingOffset = absoluteHeading;
+    function lockIOSViewportQuirks() {
+      // Ayuda a evitar zoom involuntario y comportamientos raros de Safari iOS.
+      document.addEventListener("gesturestart", (event) => event.preventDefault(), { passive: false });
 
-      if (northCalibration === null) {
-        northCalibration = absoluteHeading;
-      }
-    }
-  }
-
-  async function iniciarApp() {
-    document.querySelector('.title-flat').innerText = "AUTORIZANDO...";
-
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-      try {
-        const permisoSensores = await DeviceOrientationEvent.requestPermission();
-        if (permisoSensores !== 'granted') return alert("Permiso de sensores denegado.");
-      } catch (e) {
-        return alert("Interactúa con la pantalla primero.");
-      }
+      let lastTouchEnd = 0;
+      document.addEventListener("touchend", (event) => {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) event.preventDefault();
+        lastTouchEnd = now;
+      }, { passive: false });
     }
 
-    document.querySelector('.title-flat').innerText = "BUSCANDO GPS...";
+    async function init() {
+      lockIOSViewportQuirks();
+      setupNavigation();
+      startStarLoader();
 
-    navigator.geolocation.getCurrentPosition((pos) => {
-      usuarioLat = pos.coords.latitude;
-      usuarioLon = pos.coords.longitude;
+      await preloadAssets();
 
-      document.getElementById('sys-info').innerText = `LAT:${usuarioLat.toFixed(2)} // LON:${usuarioLon.toFixed(2)}`;
-      document.getElementById('sys-info').classList.remove('oculto');
-
-      generarCieloReal();
-currentMissionIndex = 0;
-actualizarMissionTracker();
-actualizarInfoCard(getCurrentMission());
-      northCalibration = null;
-
-      if ('ondeviceorientationabsolute' in window) {
-        window.addEventListener('deviceorientationabsolute', procesarSensores);
-      } else {
-        window.addEventListener('deviceorientation', procesarSensores);
-      }
-
-      setTimeout(() => {
-        uiLayer.classList.add('oculto');
-document.getElementById('compass-container').classList.remove('oculto');
-document.getElementById('compass-pointer').classList.remove('oculto');
-document.getElementById('orientation-panel').classList.remove('oculto');
- }, 500);
-
-    }, () => alert("Error de GPS."));
-  }
-
-  function azimuthToDirection(azimuth) {
-    const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
-    return dirs[Math.round((((azimuth % 360) + 360) % 360) / 45) % 8];
-  }
-function shortestAngleDiff(from, to) {
-  let diff = to - from;
-  while (diff > 180) diff -= 360;
-  while (diff < -180) diff += 360;
-  return diff;
-}
-  function directionToIndex(dir) {
-    return ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'].indexOf(dir);
-  }
-
-  function getObserverLookFromCamera() {
-    const dir = new THREE.Vector3();
-    camera.getWorldDirection(dir);
-
-    let azimuth = THREE.MathUtils.radToDeg(Math.atan2(dir.x, -dir.z));
-    azimuth = (azimuth + 360) % 360;
-
-    const altitude = THREE.MathUtils.radToDeg(Math.asin(dir.y));
-
-    return {
-      azimuth,
-      altitude,
-      direction: azimuthToDirection(azimuth)
-    };
-  }
-function worldToScreen(pos) {
-  const projected = pos.clone().project(camera);
-  return {
-    x: (projected.x * 0.5 + 0.5) * window.innerWidth,
-    y: (-projected.y * 0.5 + 0.5) * window.innerHeight,
-    z: projected.z
-  };
-}
-  function actualizarPanelOrientaciones() {
-  const look = getObserverLookFromCamera();
-
-  lookDirectionVal.textContent = look.direction;
-  lookAzimuthVal.textContent = `${look.azimuth.toFixed(1)}°`;
-  lookAltitudeVal.textContent = `${look.altitude.toFixed(1)}°`;
-  northRefVal.textContent = northCalibration != null ? `${northCalibration.toFixed(1)}°` : '--';
-
-  // =========================
-  // BRÚJULA INFERIOR FLUIDA
-  // =========================
-
-  if (compassAzimuthVisual === null) {
-    compassAzimuthVisual = look.azimuth;
-  }
-
-  // suavizado angular
-  const diff = shortestAngleDiff(compassAzimuthVisual, look.azimuth);
-  compassAzimuthVisual += diff * 0.14;
-  compassAzimuthVisual = (compassAzimuthVisual + 360) % 360;
-
-  // Conversión de azimut a píxeles:
-  // 45° = 64px
-  const pxPerDegree = COMPASS_STEP / 45;
-
-  // Usamos la segunda vuelta (la del medio) para que siempre haya margen
-  // + COMPASS_STEP/2 centra la letra exactamente en la flecha
-  const x = -(
-    COMPASS_CYCLE_WIDTH +               // segunda vuelta
-    (compassAzimuthVisual * pxPerDegree) +
-    (COMPASS_STEP / 2)                  // centra la letra en la flecha
-  );
-
-  if (compassStrip) {
-    compassStrip.style.transform = `translateX(${x}px)`;
-  }
-}
-function setMissionStarVisual(astro, useStarIcon) {
-  if (!astro || !astro.mesh || astro.extra || !missionStarSprite) return;
-
-  const mesh = astro.mesh;
-
-  if (useStarIcon) {
-    // Guardamos cuál estrella está convertida
-    missionStarMesh = mesh;
-
-    // Ocultamos visualmente la bolita original, pero sin eliminarla
-    // para que siga funcionando la posición y la lógica.
-    if (mesh.material) {
-      mesh.material.transparent = true;
-      mesh.material.opacity = 0;
-      mesh.material.needsUpdate = true;
+      stopStarLoader();
+      showScreen("register");
     }
 
-    // Ponemos el ícono ★ exactamente donde está ESA estrella
-    missionStarSprite.position.copy(mesh.position);
-    missionStarSprite.visible = true;
-
-    mesh.userData.isStarIcon = true;
-  } else {
-    // Restauramos la estrella original
-    if (mesh.material) {
-      mesh.material.transparent = true;
-      mesh.material.opacity = 1;
-      mesh.material.needsUpdate = true;
-    }
-
-    // Si la estrella que sale era la convertida, ocultamos el sprite
-    if (missionStarMesh === mesh) {
-      missionStarSprite.visible = false;
-      missionStarMesh = null;
-    }
-
-    mesh.userData.isStarIcon = false;
-  }
-}
-function mostrarInfoEstrella() {
-  const card = document.getElementById('star-info-card');
-  const connector = document.getElementById('info-connector-layer');
-
-  if (!card || !connector) return;
-
-  clearTimeout(infoCardRevealTimeout);
-
-  actualizarConectorInfoCard();
-
-  card.classList.remove('hidden', 'visible');
-  connector.classList.remove('hidden', 'revealing');
-
-  void card.offsetWidth;
-  void connector.offsetWidth;
-
-  connector.classList.remove('hidden');
-  connector.classList.add('revealing');
-
-  infoCardRevealTimeout = setTimeout(() => {
-    card.classList.remove('hidden');
-    card.classList.add('visible');
-  }, 380);
-}
-
-
-function actualizarConectorInfoCard() {
-  const svg = document.getElementById('info-connector-layer');
-  const path = document.getElementById('info-connector-path');
-  const scanner = document.getElementById('scanner-ui');
-  const card = document.getElementById('star-info-card');
-
-  if (!svg || !path || !scanner || !card) return;
-
-  const scannerRect = scanner.getBoundingClientRect();
-  const cardRect = card.getBoundingClientRect();
-
-  // Centro superior del aro del scanner
-  const startX = scannerRect.left + scannerRect.width / 2;
-  const startY = scannerRect.top;
-
-  // Entrada a la card por el lado izquierdo, alineada al cuerpo de datos
-  const endX = cardRect.left;
-  const endY = cardRect.top + cardRect.height * 0.66;
-
-  // Primero sube, después va hacia la izquierda, baja/sube y entra a la card
-  const verticalUp = Math.max(72, Math.min(180, startY - cardRect.bottom + 40));
-  const midY = startY - verticalUp;
-  const midX = cardRect.left - 26;
-
-  const d = [
-    `M ${startX} ${startY}`,
-    `V ${midY}`,
-    `H ${midX}`,
-    `V ${endY}`,
-    `H ${endX}`
-  ].join(' ');
-
-  svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`);
-  svg.setAttribute('width', window.innerWidth);
-  svg.setAttribute('height', window.innerHeight);
-  path.setAttribute('d', d);
-
-  const len = path.getTotalLength();
-  svg.style.setProperty('--connector-length', len);
-}
-
-function mostrarInfoEstrella() {
-  const card = document.getElementById('star-info-card');
-  const connector = document.getElementById('info-connector-layer');
-
-  if (!card || !connector) return;
-
-  clearTimeout(infoCardRevealTimeout);
-
-  // La card tiene que dejar de estar hidden ANTES de medirla.
-  // Pero todavía no mostramos la .star-card porque aparece recién con .visible.
-  card.classList.remove('hidden', 'visible');
-  connector.classList.remove('hidden', 'revealing');
-
-  actualizarConectorInfoCard();
-
-  // Reinicia la animación del SVG
-  void connector.offsetWidth;
-
-  connector.classList.add('revealing');
-
-  infoCardRevealTimeout = setTimeout(() => {
-    card.classList.add('visible');
-  }, 380);
-}
-
-function ocultarInfoEstrella() {
-  const card = document.getElementById('star-info-card');
-  const connector = document.getElementById('info-connector-layer');
-
-  clearTimeout(infoCardRevealTimeout);
-
-  if (card) {
-    card.classList.remove('visible');
-    card.classList.add('hidden');
-  }
-
-  if (connector) {
-    connector.classList.remove('revealing');
-    connector.classList.add('hidden');
-  }
-
-  infoCardShown = false;
-}
-
-
-function actualizarCargaCaptura(insideCircle) {
-  const scannerProgress = document.getElementById('scanner-progress');
-
-  if (!scannerProgress) return;
-
-  if (insideCircle && !captureCompleted) {
-    if (captureStartTime === null) {
-      captureStartTime = performance.now();
-      scannerUi.classList.add('capturing');
-    }
-
-    const elapsed = performance.now() - captureStartTime;
-    captureProgress = Math.min(elapsed / CAPTURE_DURATION, 1);
-
-    scannerProgress.style.setProperty('--progress', captureProgress * 100);
-    if (captureProgress >= 0.25 && !infoCardShown) {
-      actualizarInfoCard(getCurrentMission());
-      mostrarInfoEstrella();
-      infoCardShown = true;
-    }
-
-if (captureProgress >= 1) {
-  captureCompleted = true;
-  scannerUi.classList.remove('capturing');
-  scannerUi.classList.add('capture-complete');
-
-  completarMisionActual();
-}
- } else if (!insideCircle) {
-  captureStartTime = null;
-  captureProgress = 0;
-  captureCompleted = false;
-
-  scannerUi.classList.remove('capturing');
-  scannerUi.classList.remove('capture-complete');
-  scannerProgress.style.setProperty('--progress', 0);
-
-  ocultarInfoEstrella();
-}
-}
-function getCurrentMission() {
-  return missionStars[currentMissionIndex] ?? null;
-}
-
-function getCurrentMissionAstro() {
-  const mission = getCurrentMission();
-  if (!mission) return null;
-
-  return astrosDinamicos.find(
-    astro => astro.id === mission.id && astro.tipoRef === 'estrella'
-  );
-}
-
-function actualizarInfoCard(mission) {
-  if (!mission) return;
-
-  const title = document.getElementById('star-card-title');
-  const code = document.getElementById('star-card-code');
-  const year = document.getElementById('star-card-year');
-  const ra = document.getElementById('star-card-ra');
-  const dec = document.getElementById('star-card-dec');
-  const gmag = document.getElementById('star-card-gmag');
-  const gaia = document.getElementById('star-card-gaia');
-
-  if (title) title.textContent = mission.title;
-  if (code) code.textContent = mission.code;
-  if (year) year.textContent = mission.year;
-  if (ra) ra.textContent = mission.raText;
-  if (dec) dec.textContent = mission.decText;
-  if (gmag) gmag.textContent = mission.gmagText;
-  if (gaia) gaia.textContent = mission.gaiaText;
-}
-
-function actualizarMissionTracker() {
-  const items = document.querySelectorAll('#mission-tracker .tracker-item');
-
-  items.forEach((item, index) => {
-    item.classList.toggle('completed', index < currentMissionIndex);
-    item.classList.toggle('active', index === currentMissionIndex);
-  });
-}
-function abrirModalMision(mission) {
-  const modal = document.getElementById('mission-modal');
-  const title = document.getElementById('mission-modal-title');
-  const text = document.getElementById('mission-modal-text');
-
-  if (!modal || !mission) return;
-
-  if (title) title.textContent = mission.title;
-
-  if (text) {
-    text.textContent = `Contenido ampliado de ${mission.title}. Acá luego vamos a colocar la historia, imágenes y datos especiales de esta estrella.`;
-  }
-
-  modal.classList.remove('hidden');
-}
-
-function cerrarModalMision() {
-  const modal = document.getElementById('mission-modal');
-  if (modal) modal.classList.add('hidden');
-}
-
-function avanzarASiguienteMision() {
-  cerrarModalMision();
-
-  currentMissionIndex = Math.min(currentMissionIndex + 1, missionStars.length);
-  actualizarMissionTracker();
-
-  pendingMissionAdvance = false;
-
-  captureStartTime = null;
-  captureProgress = 0;
-  captureCompleted = false;
-
-  const scannerProgress = document.getElementById('scanner-progress');
-  if (scannerProgress) scannerProgress.style.setProperty('--progress', 0);
-
-  scannerUi.classList.remove('capturing');
-  scannerUi.classList.remove('capture-complete');
-  scannerUi.classList.remove('locked-preview');
-
-  if (missionStarMesh && missionStarSprite) {
-    if (missionStarMesh.material) {
-      missionStarMesh.material.opacity = 1;
-      missionStarMesh.material.needsUpdate = true;
-    }
-
-    missionStarSprite.visible = false;
-    missionStarMesh.userData.isStarIcon = false;
-    missionStarMesh = null;
-  }
-
-  ocultarInfoEstrella();
-}
-function completarMisionActual() {
-  const mission = getCurrentMission();
-  if (!mission || pendingMissionAdvance) return;
-
-  pendingMissionAdvance = true;
-
-  actualizarInfoCard(mission);
-  mostrarInfoEstrella();
-
-  scannerUi.classList.remove('capturing');
-  scannerUi.classList.add('capture-complete');
-
-  abrirModalMision(mission);
-}
-function actualizarGuiaVisual() {
-  if (pendingMissionAdvance) {
-  guideArrow.style.opacity = '0';
-  return;
-}
-  const target = getCurrentMissionAstro();
-
-  if (!target || !target.mesh) {
-    guideArrow.style.opacity = '0';
-    scannerUi.classList.remove('locked-preview');
-    return;
-  }
-
-  const screen = worldToScreen(target.mesh.position);
-  const centerX = window.innerWidth / 2;
-  const centerY = window.innerHeight / 2;
-
-  const dx = screen.x - centerX;
-  const dy = screen.y - centerY;
-  const dist = Math.hypot(dx, dy);
-  const insideCircle = dist <= 54;
-
-  scannerUi.classList.toggle('locked-preview', insideCircle);
-  setMissionStarVisual(target, insideCircle);
-  actualizarCargaCaptura(insideCircle);
-
-  if (missionStarSprite && missionStarSprite.visible && missionStarMesh) {
-    missionStarSprite.position.copy(missionStarMesh.position);
-  }
-
-  const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
-  const radius = 46;
-
-  guideArrow.style.opacity = insideCircle ? '0' : '1';
-  guideArrow.style.transform = `translate(-50%, -56%) rotate(${angle}deg) translateY(-${radius}px)`;
-}
-  function actualizarCamaraYUI() {
-  if (!brujulaDetectada) return;
-
-  const alphaRad = brujulaDetectada
-    ? THREE.MathUtils.degToRad(360 - headingOffset)
-    : THREE.MathUtils.degToRad(currentAlpha);
-
-  const betaRad = THREE.MathUtils.degToRad(currentBeta || 0);
-  const gammaRad = THREE.MathUtils.degToRad(currentGamma || 0);
-  const screenRot = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
-
-  // Quaternion crudo del dispositivo
-  const qDispositivo = new THREE.Quaternion().setFromEuler(
-    new THREE.Euler(betaRad, alphaRad, -gammaRad, 'YXZ')
-  );
-
-  qDispositivo.multiply(
-    new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5))
-  );
-
-  qDispositivo.multiply(
-    new THREE.Quaternion().setFromAxisAngle(
-      new THREE.Vector3(0, 0, 1),
-      -screenRot
-    )
-  );
-
-  // En vez de copiar el roll completo a la cámara,
-  // sacamos solo la DIRECCIÓN hacia donde apunta.
-  const forward = new THREE.Vector3(0, 0, -1)
-    .applyQuaternion(qDispositivo)
-    .normalize();
-
-  // Convertimos esa dirección a azimut/altura
-  let azimuth = THREE.MathUtils.radToDeg(Math.atan2(forward.x, -forward.z));
-  azimuth = (azimuth + 360) % 360;
-
-  const altitude = THREE.MathUtils.radToDeg(Math.asin(forward.y));
-
-  // Reconstruimos una dirección limpia sin roll
-  const targetDir = azAltToVector(azimuth, altitude, 10);
-
-  camera.position.set(0, 0, 0);
-  camera.up.set(0, 1, 0);
-  camera.lookAt(targetDir);
-
-  // sombra horizonte
-  if (forward.y < 0.1) {
-    let opacidadSombra = 1.0 - ((forward.y + 0.2) / 0.3);
-    if (opacidadSombra > 1) opacidadSombra = 1;
-    if (opacidadSombra < 0) opacidadSombra = 0;
-    horizonShadow.style.opacity = opacidadSombra;
-  } else {
-    horizonShadow.style.opacity = 0;
-  }
-
-  actualizarPanelOrientaciones();
-actualizarGuiaVisual();
-}
-
-  function verificarIntersecciones() {
-    raycaster.setFromCamera(centerScreen, camera);
-    const colisiones = raycaster.intersectObjects(objetosInteractivos.filter(obj => obj.visible));
-    if (colisiones.length > 0) {
-      const objetivo = colisiones[0].object;
-
-      if (objetoEnfocado !== objetivo) {
-        if (objetoEnfocado) objetoEnfocado.scale.set(1, 1, 1);
-        objetoEnfocado = objetivo;
-        objetoEnfocado.scale.set(1.5, 1.5, 1.5);
-      }
-
-      // Ocultamos el círculo visual de captura
-        hoverRing.visible = false;
-
-     hudName.innerText = objetivo.userData.nombre;
-hudDesc.innerText = objetivo.userData.tipo;
-
-// Las estrellas de misión usan la card grande, no la pill chica.
-hud.style.opacity = objetivo.userData.mission ? 0 : 0.85;
-
-} else {
-      if (objetoEnfocado) {
-        objetoEnfocado.scale.set(1, 1, 1);
-        objetoEnfocado = null;
-      }
-      hoverRing.visible = false;
-      hud.style.opacity = 0;
-    }
-  }
-
-  function animar() {
-    requestAnimationFrame(animar);
-    actualizarCamaraYUI();
-    verificarIntersecciones();
-    renderer.render(scene, camera);
-  }
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-
-  actualizarConectorInfoCard();
-});
-const missionModalContinue = document.getElementById('mission-modal-continue');
-
-if (missionModalContinue) {
-  missionModalContinue.addEventListener('click', avanzarASiguienteMision);
-}
-  init3D();
-</script>
+    window.addEventListener("DOMContentLoaded", init);
+  </script>
 </body>
 </html>
