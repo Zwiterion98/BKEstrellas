@@ -406,6 +406,8 @@ let scene, camera, renderer, starGroup;
 let raycaster, centerScreen;
 let hoverRing;
 let skyDome = null;
+let missionStarSprite = null;
+let missionStarMesh = null;
 let objetosInteractivos = [];
 let objetoEnfocado = null;
 let astrosDinamicos = [];
@@ -582,16 +584,16 @@ crearSkyDome();
       transparent: true,
       opacity: 0.8
     });
-   hoverRing = new THREE.Mesh(ringGeo, ringMat);
-  hoverRing.visible = false;
-  scene.add(hoverRing);
+  hoverRing = new THREE.Mesh(ringGeo, ringMat);
+hoverRing.visible = false;
+scene.add(hoverRing);
 
-  // Ícono visual de estrella para cuando el objetivo entra en el círculo central
-  missionStarIcon = createStarSprite('★', '#ffffff', 72);
-  missionStarIcon.visible = false;
-  scene.add(missionStarIcon);
+// Sprite 3D que reemplaza visualmente a la estrella cuando entra en el círculo
+missionStarSprite = createStarSprite('★', '#ffffff', 64);
+missionStarSprite.visible = false;
+scene.add(missionStarSprite);
 
-  animar();
+animar();
   }
 
   function azAltToVector(azimuth, altitude, radius = 500) {
@@ -902,29 +904,42 @@ function worldToScreen(pos) {
   }
 }
 function setMissionStarVisual(astro, useStarIcon) {
-  if (!astro || !astro.mesh || astro.extra || !missionStarIcon) return;
+  if (!astro || !astro.mesh || astro.extra || !missionStarSprite) return;
 
-  if (!astro.mesh.material.transparent) {
-    astro.mesh.material.transparent = true;
-  }
+  const mesh = astro.mesh;
 
   if (useStarIcon) {
-    // Hace invisible la esfera original sin sacarla del raycast
-    astro.mesh.material.opacity = 0;
+    // Guardamos cuál estrella está convertida
+    missionStarMesh = mesh;
 
-    // Muestra el ícono de estrella en la misma posición
-    missionStarIcon.position.copy(astro.mesh.position);
-    missionStarIcon.visible = true;
+    // Ocultamos visualmente la bolita original, pero sin eliminarla
+    // para que siga funcionando la posición y la lógica.
+    if (mesh.material) {
+      mesh.material.transparent = true;
+      mesh.material.opacity = 0;
+      mesh.material.needsUpdate = true;
+    }
 
-    astro.mesh.userData.isStarIcon = true;
+    // Ponemos el ícono ★ exactamente donde está ESA estrella
+    missionStarSprite.position.copy(mesh.position);
+    missionStarSprite.visible = true;
+
+    mesh.userData.isStarIcon = true;
   } else {
-    // Restaura la esfera original
-    astro.mesh.material.opacity = 1;
+    // Restauramos la estrella original
+    if (mesh.material) {
+      mesh.material.transparent = true;
+      mesh.material.opacity = 1;
+      mesh.material.needsUpdate = true;
+    }
 
-    // Oculta el ícono
-    missionStarIcon.visible = false;
+    // Si la estrella que sale era la convertida, ocultamos el sprite
+    if (missionStarMesh === mesh) {
+      missionStarSprite.visible = false;
+      missionStarMesh = null;
+    }
 
-    astro.mesh.userData.isStarIcon = false;
+    mesh.userData.isStarIcon = false;
   }
 }
 function actualizarGuiaVisual() {
@@ -948,6 +963,10 @@ const insideCircle = dist <= 54;
 
 scannerUi.classList.toggle('locked-preview', insideCircle);
 setMissionStarVisual(target, insideCircle);
+
+if (missionStarSprite && missionStarSprite.visible && missionStarMesh) {
+  missionStarSprite.position.copy(missionStarMesh.position);
+}
  
  const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
 const radius = 46;
