@@ -401,50 +401,81 @@ transform-origin: 50% 36px;
     font-weight: 600;
   }
 #star-info-card {
+  --connector-length: 1000;
   position: absolute;
-  left: 50%;
-  top: 84px;
-  width: min(82vw, 360px);
+  top: clamp(46px, 8vh, 84px);
+  left: clamp(34px, 7vw, 78px);
+  width: min(76vw, 600px);
   z-index: 24;
   pointer-events: none;
   opacity: 1;
-  transform: translateX(-50%) translateY(0) scale(1);
-  transform-origin: top center;
-  transition:
-    opacity 0.35s ease,
-    transform 0.35s ease;
 }
 
 #star-info-card.hidden {
   opacity: 0;
-  transform: translateX(-50%) translateY(12px) scale(0.98);
+  visibility: hidden;
 }
+
+.star-card-connector-svg {
+  position: absolute;
+  left: -70px;
+  top: 18px;
+  width: clamp(210px, 34vw, 340px);
+  height: clamp(170px, 29vh, 290px);
+  overflow: visible;
+}
+
+#star-card-connector-path {
+  fill: none;
+  stroke: rgba(255,255,255,0.82);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  stroke-dasharray: var(--connector-length);
+  stroke-dashoffset: var(--connector-length);
+}
+
+#star-info-card.revealing #star-card-connector-path {
+  animation: drawInfoConnector 0.34s ease-out forwards;
+}
+
 .star-card {
   position: relative;
-  overflow: hidden;
   width: 100%;
-  background: rgba(18, 38, 50, 0.92);
-  border: 1px solid rgba(255,255,255,0.28);
+  overflow: hidden;
+  background: rgba(13, 31, 44, 0.97);
+  border: 1px solid rgba(126, 157, 179, 0.34);
   box-shadow:
-    0 12px 28px rgba(0,0,0,0.42),
-    inset 0 0 0 1px rgba(255,255,255,0.04);
+    0 10px 30px rgba(0,0,0,0.28),
+    inset 0 0 0 1px rgba(255,255,255,0.03);
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+#star-info-card.visible .star-card {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 0.24s ease,
+    transform 0.24s ease;
 }
 
 .star-card::before,
 .star-card::after {
   content: '';
   position: absolute;
-  width: 9px;
-  height: 9px;
-  border-color: rgba(255,255,255,0.9);
+  width: 11px;
+  height: 11px;
+  border-color: rgba(255,255,255,0.88);
   border-style: solid;
   pointer-events: none;
 }
 
 .star-card::before {
   left: -1px;
-  top: -1px;
-  border-width: 1px 0 0 1px;
+  top: 84px;
+  border-width: 0 0 0 1px;
 }
 
 .star-card::after {
@@ -454,135 +485,137 @@ transform-origin: 50% 36px;
 }
 
 .star-card-header {
-  height: clamp(36px, 11vw, 44px);
-  padding: 6px 12px 5px;
-  background: rgba(77, 124, 151, 0.88);
+  height: clamp(34px, 10vw, 68px);
+  padding: 0 12px 0 14px;
+  background: #5f8eae;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
 #star-card-title {
   min-width: 0;
-  font-size: clamp(22px, 7.1vw, 30px);
+  font-family: "Arial Black", Impact, Inter, sans-serif;
+  font-size: clamp(20px, 6.8vw, 56px);
   line-height: 0.95;
   font-weight: 900;
-  letter-spacing: -0.015em;
-  color: #f1f3f0;
+  letter-spacing: -0.045em;
+  color: #f2f1eb;
   text-transform: uppercase;
   white-space: nowrap;
-  text-shadow: 0 2px 0 rgba(0,0,0,0.14);
 }
 
 .star-card-target {
   flex: 0 0 auto;
-  font-size: clamp(18px, 5.6vw, 25px);
+  font-size: clamp(14px, 4.4vw, 26px);
   line-height: 1;
-  opacity: 0.9;
+  color: rgba(255,255,255,0.88);
 }
 
 .star-card-body {
   display: grid;
-  grid-template-columns: minmax(76px, 28%) 1px minmax(0, 1fr);
-  min-height: 88px;
-  background:
-    linear-gradient(90deg, rgba(255,255,255,0.035), transparent 40%),
-    rgba(20, 35, 45, 0.9);
+  grid-template-columns: clamp(86px, 24vw, 150px) 1px minmax(0, 1fr);
+  min-height: clamp(74px, 19vw, 160px);
+  background: rgba(13, 31, 44, 0.97);
 }
 
 .star-card-left {
-  min-width: 0;
-  padding: 11px 8px 9px 12px;
+  padding: 10px 8px 8px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .star-card-name-row {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: clamp(14px, 4.3vw, 18px);
+  gap: 4px;
+  font-size: clamp(12px, 3.6vw, 21px);
   line-height: 1;
-  color: rgba(255,255,255,0.94);
+  color: #f3f3ef;
   white-space: nowrap;
 }
 
 .star-card-play {
-  flex: 0 0 auto;
-  font-size: 11px;
+  font-size: clamp(9px, 2vw, 13px);
   transform: translateY(-1px);
 }
 
 .star-card-year {
-  margin-top: 4px;
-  font-size: clamp(34px, 11.6vw, 44px);
-  line-height: 0.82;
+  margin-top: 6px;
+  font-family: "Arial Black", Impact, Inter, sans-serif;
+  font-size: clamp(34px, 10.8vw, 78px);
+  line-height: 0.84;
   font-weight: 900;
-  letter-spacing: -0.07em;
+  letter-spacing: -0.08em;
   color: #f3f3ef;
   white-space: nowrap;
 }
 
 .star-card-divider {
   width: 1px;
-  background: repeating-linear-gradient(
-    to bottom,
-    rgba(255,255,255,0.22) 0,
-    rgba(255,255,255,0.22) 4px,
-    transparent 4px,
-    transparent 8px
-  );
+  background: rgba(255,255,255,0.12);
 }
 
 .star-card-data {
-  min-width: 0;
-  padding: 10px 10px 9px 12px;
-  font-size: clamp(7.4px, 2.35vw, 9.5px);
+  padding: 12px 12px 10px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  font-size: clamp(7px, 2.05vw, 14px);
   line-height: 1.28;
   color: rgba(255,255,255,0.95);
   font-weight: 600;
-  overflow-wrap: anywhere;
 }
 
 .star-card-data strong {
   font-weight: 900;
+  color: #f3f3ef;
 }
 
 .star-card-data div {
   max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
-.star-card-line {
-  position: absolute;
-  left: -24px;
-  top: 52px;
-  width: 24px;
-  height: 1px;
-  background: rgba(255,255,255,0.48);
-}
-
-.star-card-line::before {
-  content: '';
-  position: absolute;
-  left: -24px;
-  top: 0;
-  width: 24px;
-  height: 24px;
-  border-left: 1px solid rgba(255,255,255,0.48);
-  border-top: 1px solid rgba(255,255,255,0.48);
-  transform: translateY(-24px);
-}
 .star-card-gap {
-  height: 6px;
+  height: 8px;
 }
-@media (max-width: 380px) {
+
+.star-card-footer {
+  height: clamp(14px, 4.2vw, 26px);
+  background: rgba(14, 33, 46, 0.98);
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+@keyframes drawInfoConnector {
+  from {
+    stroke-dashoffset: var(--connector-length);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (max-width: 420px) {
   #star-info-card {
-    left: 50%;
-    top: 82px;
-    width: calc(100vw - 44px);
+    top: 52px;
+    left: 36px;
+    width: calc(100vw - 72px);
+  }
+
+  .star-card-connector-svg {
+    left: -56px;
+    top: 18px;
+    width: 250px;
+    height: 255px;
   }
 
   .star-card-body {
-    grid-template-columns: minmax(70px, 27%) 1px minmax(0, 1fr);
+    grid-template-columns: 72px 1px minmax(0, 1fr);
   }
 
   .star-card-left {
@@ -591,38 +624,13 @@ transform-origin: 50% 36px;
   }
 
   .star-card-data {
-    padding-left: 9px;
-    padding-right: 8px;
-    font-size: clamp(7px, 2.25vw, 8.5px);
-    line-height: 1.25;
-  }
-}
-
-@media (max-width: 340px) {
-  #star-info-card {
-    left: 50%;
-    top: 78px;
-    width: calc(100vw - 32px);
+    padding: 9px 10px 8px 10px;
+    font-size: 7.4px;
+    line-height: 1.24;
   }
 
-  #star-card-title {
-    font-size: 21px;
-  }
-
-  .star-card-body {
-    grid-template-columns: 74px 1px minmax(0, 1fr);
-  }
-
-  .star-card-year {
-    font-size: 33px;
-  }
-
-  .star-card-name-row {
-    font-size: 14px;
-  }
-
-  .star-card-data {
-    font-size: 6.8px;
+  .star-card-gap {
+    height: 6px;
   }
 }
 #mission-modal {
@@ -747,11 +755,13 @@ transform-origin: 50% 36px;
     <span class="target-type" id="target-desc">--</span>
   </div>
 <div id="star-info-card" class="hidden">
-  <div class="star-card-line"></div>
+  <svg class="star-card-connector-svg" viewBox="0 0 320 260" preserveAspectRatio="none" aria-hidden="true">
+    <path id="star-card-connector-path" d="M300 28 H20 V218 H214" />
+  </svg>
 
   <div class="star-card">
     <div class="star-card-header">
-      <span id="star-card-title">URUGUAY 1930</span>
+      <span id="star-card-title">COLOMBES 1924</span>
       <span class="star-card-target">◎</span>
     </div>
 
@@ -761,19 +771,21 @@ transform-origin: 50% 36px;
           <span class="star-card-play">▶</span>
           <span id="star-card-code">SCGA</span>
         </div>
-        <div id="star-card-year" class="star-card-year">1930</div>
+        <div id="star-card-year" class="star-card-year">1924</div>
       </div>
 
       <div class="star-card-divider"></div>
 
       <div class="star-card-data">
-        <div><strong>RA:</strong> <span id="star-card-ra">08h 19m 18.27s</span></div>
-        <div><strong>Dec:</strong> <span id="star-card-dec">-23° 47′ 49″</span></div>
-        <div><strong>Gmag:</strong> <span id="star-card-gmag">7.00</span></div>
-<div class="star-card-gap"></div>
-<div><strong>Gaia DR3:</strong> <span id="star-card-gaia">5696450279001453184</span></div>
-</div>
+        <div><strong>RA:</strong> <span id="star-card-ra">08h 18m 35.33s</span></div>
+        <div><strong>Dec:</strong> <span id="star-card-dec">-26° 14′ 53.6″</span></div>
+        <div><strong>Gmag (mag):</strong> <span id="star-card-gmag">9.14</span></div>
+        <div class="star-card-gap"></div>
+        <div><strong>Gaia DR3:</strong> <span id="star-card-gaia">5694395051252245376</span></div>
+      </div>
     </div>
+
+    <div class="star-card-footer"></div>
   </div>
 </div>
 <div id="mission-modal" class="hidden">
@@ -856,6 +868,8 @@ let missionStarIcon = null;
 let captureProgress = 0;
 let captureStartTime = null;
 let captureCompleted = false;
+let infoCardShown = false;
+let infoCardRevealTimeout = null;
 let pendingMissionAdvance = false;
 const CAPTURE_DURATION = 2000;
 
@@ -1440,6 +1454,41 @@ function mostrarInfoEstrella() {
 
   card.classList.remove('hidden');
 }
+function prepararVectorInfoCard() {
+  const card = document.getElementById('star-info-card');
+  const path = document.getElementById('star-card-connector-path');
+  if (!card || !path) return;
+
+  const len = path.getTotalLength();
+  card.style.setProperty('--connector-length', len);
+}
+
+function mostrarInfoEstrella() {
+  const card = document.getElementById('star-info-card');
+  if (!card) return;
+
+  clearTimeout(infoCardRevealTimeout);
+
+  card.classList.remove('hidden', 'revealing', 'visible');
+  void card.offsetWidth;
+
+  card.classList.remove('hidden');
+  card.classList.add('revealing');
+
+  infoCardRevealTimeout = setTimeout(() => {
+    card.classList.add('visible');
+  }, 340);
+}
+
+function ocultarInfoEstrella() {
+  const card = document.getElementById('star-info-card');
+  if (!card) return;
+
+  clearTimeout(infoCardRevealTimeout);
+  card.classList.remove('revealing', 'visible');
+  card.classList.add('hidden');
+  infoCardShown = false;
+}
 function actualizarCargaCaptura(insideCircle) {
   const scannerProgress = document.getElementById('scanner-progress');
 
@@ -1455,11 +1504,11 @@ function actualizarCargaCaptura(insideCircle) {
     captureProgress = Math.min(elapsed / CAPTURE_DURATION, 1);
 
     scannerProgress.style.setProperty('--progress', captureProgress * 100);
-
-   if (captureProgress >= 0.25) {
-  actualizarInfoCard(getCurrentMission());
-  mostrarInfoEstrella();
-}
+    if (captureProgress >= 0.25 && !infoCardShown) {
+      actualizarInfoCard(getCurrentMission());
+      mostrarInfoEstrella();
+      infoCardShown = true;
+    }
 
 if (captureProgress >= 1) {
   captureCompleted = true;
@@ -1477,10 +1526,7 @@ if (captureProgress >= 1) {
   scannerUi.classList.remove('capture-complete');
   scannerProgress.style.setProperty('--progress', 0);
 
-  if (!captureCompleted) {
-  const card = document.getElementById('star-info-card');
-  if (card) card.classList.add('hidden');
-}
+  ocultarInfoEstrella();
 }
 }
 function getCurrentMission() {
@@ -1575,8 +1621,7 @@ function avanzarASiguienteMision() {
     missionStarMesh = null;
   }
 
-  const card = document.getElementById('star-info-card');
-  if (card) card.classList.add('hidden');
+  ocultarInfoEstrella();
 }
 function completarMisionActual() {
   const mission = getCurrentMission();
@@ -1726,16 +1771,19 @@ hud.style.opacity = objetivo.userData.mission ? 0 : 0.85;
     renderer.render(scene, camera);
   }
 
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
+ window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  prepararVectorInfoCard();
+});
 const missionModalContinue = document.getElementById('mission-modal-continue');
 
 if (missionModalContinue) {
   missionModalContinue.addEventListener('click', avanzarASiguienteMision);
 }
+prepararVectorInfoCard();
   init3D();
 </script>
 </body>
