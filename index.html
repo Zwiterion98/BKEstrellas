@@ -377,7 +377,185 @@ transform-origin: 50% 36px;
     color: #fff;
     font-weight: 600;
   }
+#star-info-card {
+  position: absolute;
+  left: 40px;
+  top: 28px;
+  width: min(78vw, 340px);
+  z-index: 24;
+  pointer-events: none;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease;
+}
 
+#star-info-card.hidden {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.star-card {
+  position: relative;
+  overflow: hidden;
+  background: rgba(18, 38, 50, 0.92);
+  border: 1px solid rgba(255,255,255,0.28);
+  box-shadow:
+    0 12px 28px rgba(0,0,0,0.42),
+    inset 0 0 0 1px rgba(255,255,255,0.04);
+}
+
+.star-card::before,
+.star-card::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-color: rgba(255,255,255,0.9);
+  border-style: solid;
+  pointer-events: none;
+}
+
+.star-card::before {
+  left: -1px;
+  top: -1px;
+  border-width: 1px 0 0 1px;
+}
+
+.star-card::after {
+  right: -1px;
+  bottom: -1px;
+  border-width: 0 1px 1px 0;
+}
+
+.star-card-header {
+  height: 44px;
+  padding: 7px 12px 6px;
+  background: rgba(77, 124, 151, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#star-card-title {
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  color: #f1f3f0;
+  text-transform: uppercase;
+  text-shadow: 0 2px 0 rgba(0,0,0,0.14);
+}
+
+.star-card-target {
+  font-size: 25px;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+.star-card-body {
+  display: grid;
+  grid-template-columns: 90px 1px 1fr;
+  min-height: 88px;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.035), transparent 40%),
+    rgba(20, 35, 45, 0.9);
+}
+
+.star-card-left {
+  padding: 12px 10px 10px 14px;
+}
+
+.star-card-name-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 18px;
+  line-height: 1;
+  color: rgba(255,255,255,0.94);
+}
+
+.star-card-play {
+  font-size: 12px;
+  transform: translateY(-1px);
+}
+
+.star-card-year {
+  margin-top: 3px;
+  font-size: 42px;
+  line-height: 0.85;
+  font-weight: 900;
+  letter-spacing: -0.06em;
+  color: #f3f3ef;
+}
+
+.star-card-divider {
+  width: 1px;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.22) 0,
+    rgba(255,255,255,0.22) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+.star-card-data {
+  padding: 12px 10px;
+  font-size: 9px;
+  line-height: 1.35;
+  color: rgba(255,255,255,0.95);
+  font-weight: 600;
+}
+
+.star-card-data strong {
+  font-weight: 900;
+}
+
+.star-card-line {
+  position: absolute;
+  left: -24px;
+  top: 52px;
+  width: 24px;
+  height: 1px;
+  background: rgba(255,255,255,0.48);
+}
+
+.star-card-line::before {
+  content: '';
+  position: absolute;
+  left: -24px;
+  top: 0;
+  width: 24px;
+  height: 24px;
+  border-left: 1px solid rgba(255,255,255,0.48);
+  border-top: 1px solid rgba(255,255,255,0.48);
+  transform: translateY(-24px);
+}
+
+@media (max-width: 390px) {
+  #star-info-card {
+    left: 40px;
+    width: calc(100vw - 80px);
+  }
+
+  #star-card-title {
+    font-size: 25px;
+  }
+
+  .star-card-body {
+    grid-template-columns: 88px 1px 1fr;
+  }
+
+  .star-card-year {
+    font-size: 39px;
+  }
+
+  .star-card-data {
+    font-size: 8.5px;
+  }
+}
   .oculto {
     opacity: 0;
     pointer-events: none;
@@ -391,7 +569,36 @@ transform-origin: 50% 36px;
     <div class="pill" id="target-name">--</div>
     <span class="target-type" id="target-desc">--</span>
   </div>
+<div id="star-info-card" class="hidden">
+  <div class="star-card-line"></div>
 
+  <div class="star-card">
+    <div class="star-card-header">
+      <span id="star-card-title">URUGUAY 1930</span>
+      <span class="star-card-target">◎</span>
+    </div>
+
+    <div class="star-card-body">
+      <div class="star-card-left">
+        <div class="star-card-name-row">
+          <span class="star-card-play">▶</span>
+          <span id="star-card-code">SCGA</span>
+        </div>
+        <div id="star-card-year" class="star-card-year">1930</div>
+      </div>
+
+      <div class="star-card-divider"></div>
+
+      <div class="star-card-data">
+        <div><strong>RA:</strong> <span id="star-card-ra">08h 19m 18.27s</span></div>
+        <div><strong>Dec:</strong> <span id="star-card-dec">-23° 47′ 49″</span></div>
+        <div><strong>Gmag</strong> <span id="star-card-gmag">(mag): 7.00</span></div>
+        <br />
+        <div><strong>Gaia DR3:</strong> <span id="star-card-gaia">5696450279001453184</span></div>
+      </div>
+    </div>
+  </div>
+</div>
   <div id="horizon-shadow"></div>
 <div id="mission-tracker">
   <div class="tracker-item active"><span class="tracker-star">★</span><span>1924</span></div>
@@ -978,6 +1185,12 @@ function setMissionStarVisual(astro, useStarIcon) {
     mesh.userData.isStarIcon = false;
   }
 }
+function mostrarInfoEstrella() {
+  const card = document.getElementById('star-info-card');
+  if (!card) return;
+
+  card.classList.remove('hidden');
+}
 function actualizarCargaCaptura(insideCircle) {
   const scannerProgress = document.getElementById('scanner-progress');
 
@@ -995,22 +1208,24 @@ function actualizarCargaCaptura(insideCircle) {
     scannerProgress.style.setProperty('--progress', captureProgress * 100);
 
     if (captureProgress >= 1) {
-      captureCompleted = true;
-      scannerUi.classList.remove('capturing');
-      scannerUi.classList.add('capture-complete');
+  captureCompleted = true;
+  scannerUi.classList.remove('capturing');
+  scannerUi.classList.add('capture-complete');
 
-      // Acá después hacemos aparecer los datos
-      console.log('Captura completa: mostrar datos');
-    }
-  } else if (!insideCircle) {
-    captureStartTime = null;
-    captureProgress = 0;
-    captureCompleted = false;
+  mostrarInfoEstrella();
+}
+ } else if (!insideCircle) {
+  captureStartTime = null;
+  captureProgress = 0;
+  captureCompleted = false;
 
-    scannerUi.classList.remove('capturing');
-    scannerUi.classList.remove('capture-complete');
-    scannerProgress.style.setProperty('--progress', 0);
-  }
+  scannerUi.classList.remove('capturing');
+  scannerUi.classList.remove('capture-complete');
+  scannerProgress.style.setProperty('--progress', 0);
+
+  const card = document.getElementById('star-info-card');
+  if (card) card.classList.add('hidden');
+}
 }
 function actualizarGuiaVisual() {
   const target = astrosDinamicos.find(
