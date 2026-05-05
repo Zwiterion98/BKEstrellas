@@ -666,15 +666,14 @@ const mesh = new THREE.Mesh(
   nombre: estrella.n,
   tipo: estrella.extra
     ? 'Estrella de fondo'
-    : (missionOrder.includes(estrella.id) ? 'Objetivo Colombes' : 'Estrella principal'),
-  ra: estrella.ra,
+    :  (['scga1924', 'scga1928', 'scga1930', 'scga1950'].includes(estrella.id) ? 'Objetivo Colombes' : 'Estrella principal'),  ra: estrella.ra,
   dec: estrella.dec,
   code: estrella.code,
   short: estrella.short,
   gmag: estrella.gmag ?? null,
   gaia: estrella.gaia ?? null,
   constellation: estrella.constellation ?? null,
-  mission: missionOrder.includes(estrella.id),
+  mission: ['scga1924', 'scga1928', 'scga1930', 'scga1950'].includes(estrella.id),
   defaultScale: tam,
   isStarIcon: false
 };
