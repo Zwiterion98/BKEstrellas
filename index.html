@@ -165,7 +165,37 @@
     border: 1.5px solid rgba(255,255,255,0.82);
   }
 
+#scanner-progress {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  opacity: 0;
+  background:
+    conic-gradient(
+      rgba(255,255,255,0.96) calc(var(--progress, 0) * 1%),
+      rgba(255,255,255,0.14) 0
+    );
+  mask: radial-gradient(
+    transparent 0 47px,
+    black 48px 55px,
+    transparent 56px 100%
+  );
+  -webkit-mask: radial-gradient(
+    transparent 0 47px,
+    black 48px 55px,
+    transparent 56px 100%
+  );
+  filter: drop-shadow(0 0 8px rgba(88,167,232,0.55));
+  transition: opacity 0.15s ease;
+}
 
+#scanner-ui.capturing #scanner-progress {
+  opacity: 1;
+}
+
+#scanner-ui.capture-complete #scanner-progress {
+  opacity: 0;
+}
 #scanner-ui.locked-preview #scanner-cross {
   opacity: 0.35;
 }
@@ -373,6 +403,7 @@ transform-origin: 50% 36px;
 <div id="scanner-ui">
   <div id="guide-arrow"></div>
   <div id="scanner-ring"></div>
+  <div id="scanner-progress"></div>
   <div id="scanner-cross"></div>
 </div>
   <div id="compass-container" class="oculto">
@@ -412,6 +443,11 @@ let objetosInteractivos = [];
 let objetoEnfocado = null;
 let astrosDinamicos = [];
 let missionStarIcon = null;
+let captureProgress = 0;
+let captureStartTime = null;
+let captureCompleted = false;
+const CAPTURE_DURATION = 2000;
+
 
   const uiLayer = document.getElementById('ui-layer');
   const hud = document.getElementById('target-hud');
@@ -942,6 +978,40 @@ function setMissionStarVisual(astro, useStarIcon) {
     mesh.userData.isStarIcon = false;
   }
 }
+function actualizarCargaCaptura(insideCircle) {
+  const scannerProgress = document.getElementById('scanner-progress');
+
+  if (!scannerProgress) return;
+
+  if (insideCircle && !captureCompleted) {
+    if (captureStartTime === null) {
+      captureStartTime = performance.now();
+      scannerUi.classList.add('capturing');
+    }
+
+    const elapsed = performance.now() - captureStartTime;
+    captureProgress = Math.min(elapsed / CAPTURE_DURATION, 1);
+
+    scannerProgress.style.setProperty('--progress', captureProgress * 100);
+
+    if (captureProgress >= 1) {
+      captureCompleted = true;
+      scannerUi.classList.remove('capturing');
+      scannerUi.classList.add('capture-complete');
+
+      // Acá después hacemos aparecer los datos
+      console.log('Captura completa: mostrar datos');
+    }
+  } else if (!insideCircle) {
+    captureStartTime = null;
+    captureProgress = 0;
+    captureCompleted = false;
+
+    scannerUi.classList.remove('capturing');
+    scannerUi.classList.remove('capture-complete');
+    scannerProgress.style.setProperty('--progress', 0);
+  }
+}
 function actualizarGuiaVisual() {
   const target = astrosDinamicos.find(
     astro => astro.id === 'scga1924' && astro.tipoRef === 'estrella'
@@ -963,6 +1033,7 @@ const insideCircle = dist <= 54;
 
 scannerUi.classList.toggle('locked-preview', insideCircle);
 setMissionStarVisual(target, insideCircle);
+actualizarCargaCaptura(insideCircle);
 
 if (missionStarSprite && missionStarSprite.visible && missionStarMesh) {
   missionStarSprite.position.copy(missionStarMesh.position);
