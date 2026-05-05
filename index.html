@@ -260,41 +260,45 @@
 transform-origin: 50% 36px;
   filter: drop-shadow(0 2px 6px rgba(0,0,0,0.45));
 }
-  #target-hud {
+#target-hud {
   position: absolute;
   left: 50%;
-  bottom: 78px;
+  top: calc(50% + 76px);
   transform: translateX(-50%);
   text-align: center;
-  z-index: 10;
+  z-index: 18;
   opacity: 0;
   transition: opacity 0.2s ease;
   pointer-events: none;
 }
 
-  .pill {
-    background: rgba(10,24,36,0.72);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.16);
-    padding: 8px 20px;
-    border-radius: 14px;
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-  }
+.pill {
+  background: rgba(10,24,36,0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.16);
+  padding: 7px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  max-width: 78vw;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
-  .target-type {
-    display: block;
-    font-size: 11px;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.6);
-    margin-top: 8px;
-    letter-spacing: 0.16em;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-  }
+.target-type {
+  display: block;
+  font-size: 9px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.58);
+  margin-top: 5px;
+  letter-spacing: 0.14em;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
 
   /* brújula */
   #compass-container {
@@ -398,14 +402,14 @@ transform-origin: 50% 36px;
   }
 #star-info-card {
   position: absolute;
-  left: 40px;
-  top: 28px;
+  left: 50%;
+  top: 84px;
   width: min(82vw, 360px);
   z-index: 24;
   pointer-events: none;
   opacity: 1;
-  transform: translateY(0) scale(1);
-  transform-origin: top left;
+  transform: translateX(-50%) translateY(0) scale(1);
+  transform-origin: top center;
   transition:
     opacity 0.35s ease,
     transform 0.35s ease;
@@ -413,9 +417,8 @@ transform-origin: 50% 36px;
 
 #star-info-card.hidden {
   opacity: 0;
-  transform: translateY(12px) scale(0.98);
+  transform: translateX(-50%) translateY(12px) scale(0.98);
 }
-
 .star-card {
   position: relative;
   overflow: hidden;
@@ -573,9 +576,9 @@ transform-origin: 50% 36px;
 }
 @media (max-width: 380px) {
   #star-info-card {
-    left: 38px;
-    top: 28px;
-    width: calc(100vw - 76px);
+    left: 50%;
+    top: 82px;
+    width: calc(100vw - 44px);
   }
 
   .star-card-body {
@@ -597,8 +600,9 @@ transform-origin: 50% 36px;
 
 @media (max-width: 340px) {
   #star-info-card {
-    left: 28px;
-    width: calc(100vw - 56px);
+    left: 50%;
+    top: 78px;
+    width: calc(100vw - 32px);
   }
 
   #star-card-title {
@@ -626,12 +630,9 @@ transform-origin: 50% 36px;
   inset: 0;
   z-index: 80;
   background:
-    radial-gradient(circle at 50% 28%, rgba(88,167,232,0.22), transparent 34%),
-    rgba(0,0,0,0.92);
+    radial-gradient(circle at 50% 20%, rgba(88,167,232,0.26), transparent 36%),
+    linear-gradient(180deg, rgba(6,14,24,0.98), rgba(0,0,0,0.98));
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 22px;
   opacity: 1;
   pointer-events: auto;
   transition: opacity 0.35s ease;
@@ -643,42 +644,25 @@ transform-origin: 50% 36px;
 }
 
 .mission-modal-content {
-  width: min(100%, 420px);
-  min-height: min(78vh, 680px);
-  background: rgba(13, 31, 44, 0.92);
-  border: 1px solid rgba(255,255,255,0.22);
-  box-shadow:
-    0 22px 60px rgba(0,0,0,0.65),
-    inset 0 0 0 1px rgba(255,255,255,0.05);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  padding: 26px 22px 22px;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  min-height: 100dvh;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding: max(28px, env(safe-area-inset-top)) 22px max(24px, env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   position: relative;
+  overflow-y: auto;
 }
 
 .mission-modal-content::before,
 .mission-modal-content::after {
-  content: '';
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  border-color: rgba(255,255,255,0.8);
-  border-style: solid;
-  pointer-events: none;
-}
-
-.mission-modal-content::before {
-  left: -1px;
-  top: -1px;
-  border-width: 1px 0 0 1px;
-}
-
-.mission-modal-content::after {
-  right: -1px;
-  bottom: -1px;
-  border-width: 0 1px 1px 0;
+  display: none;
 }
 
 .mission-modal-kicker {
@@ -687,20 +671,23 @@ transform-origin: 50% 36px;
   text-transform: uppercase;
   color: rgba(255,255,255,0.58);
   margin-bottom: 8px;
+  margin-top: 12px;
 }
 
 #mission-modal-title {
-  margin: 0 0 18px;
-  font-size: clamp(34px, 10vw, 52px);
-  line-height: 0.92;
+  margin: 0 0 22px;
+  font-size: clamp(38px, 12vw, 62px);
+  line-height: 0.9;
   font-weight: 900;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.05em;
   color: #f3f3ef;
   text-transform: uppercase;
 }
 
 .mission-modal-image {
   width: 100%;
+  max-width: 520px;
+  margin: 0 auto 22px;
   aspect-ratio: 1 / 1;
   border: 1px dashed rgba(255,255,255,0.28);
   background:
@@ -713,11 +700,12 @@ transform-origin: 50% 36px;
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  margin-bottom: 18px;
 }
 
 #mission-modal-text {
-  margin: 0;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 520px;
   color: rgba(255,255,255,0.76);
   font-size: 15px;
   line-height: 1.45;
@@ -726,6 +714,8 @@ transform-origin: 50% 36px;
 #mission-modal-continue {
   margin-top: auto;
   width: 100%;
+  max-width: 520px;
+  align-self: center;
   padding: 15px 18px;
   border-radius: 999px;
   background: #f3f3ef;
@@ -734,7 +724,6 @@ transform-origin: 50% 36px;
     0 8px 18px rgba(0,0,0,0.38),
     0 0 18px rgba(88,167,232,0.28);
 }
-
 @media (max-height: 720px) {
   .mission-modal-content {
     min-height: auto;
@@ -1714,10 +1703,13 @@ actualizarGuiaVisual();
       // Ocultamos el círculo visual de captura
         hoverRing.visible = false;
 
-      hudName.innerText = objetivo.userData.nombre;
+     hudName.innerText = objetivo.userData.nombre;
 hudDesc.innerText = objetivo.userData.tipo;
-hud.style.opacity = objetivo.userData.nombre === 'COLOMBES 1924' ? 1 : 0.7;
-    } else {
+
+// Las estrellas de misión usan la card grande, no la pill chica.
+hud.style.opacity = objetivo.userData.mission ? 0 : 0.85;
+
+} else {
       if (objetoEnfocado) {
         objetoEnfocado.scale.set(1, 1, 1);
         objetoEnfocado = null;
