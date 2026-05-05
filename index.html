@@ -427,7 +427,7 @@ const COMPASS_CYCLE_WIDTH = 8 * 64;    // 8 direcciones = 512px
 let compassAzimuthVisual = null;       // azimut visual suavizado
 
 // CAMBIÁ esta ruta por la tuya
-const SKY_TEXTURE_URL = 'bg-dome.jpg';
+const SKY_TEXTURE_URL = '/assets/img/bg-dome.jpg';
 
  let usuarioLat = 0, usuarioLon = 0;
 let brujulaDetectada = false;
@@ -541,13 +541,25 @@ function crearSkyDome() {
     undefined,
     (err) => {
       console.warn('No se pudo cargar la textura de la bóveda:', err);
+
+      const geometry = new THREE.SphereGeometry(2200, 64, 64);
+      geometry.scale(-1, 1, 1);
+
+      const fallbackMaterial = new THREE.MeshBasicMaterial({
+        color: 0x000000,
+        side: THREE.BackSide
+      });
+
+      skyDome = new THREE.Mesh(geometry, fallbackMaterial);
+      scene.add(skyDome);
     }
   );
 }
   function init3D() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 2500);
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setClearColor(0x000000, 1);
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
