@@ -1009,9 +1009,8 @@ actualizarGuiaVisual();
         objetoEnfocado.scale.set(1.5, 1.5, 1.5);
       }
 
-      hoverRing.position.copy(objetivo.position);
-      hoverRing.lookAt(camera.position);
-      hoverRing.visible = true;
+      // Ocultamos el círculo visual de captura
+        hoverRing.visible = false;
 
       hudName.innerText = objetivo.userData.nombre;
 hudDesc.innerText = objetivo.userData.tipo;
