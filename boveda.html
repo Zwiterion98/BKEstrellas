@@ -1036,6 +1036,178 @@ button:active {
     aspect-ratio: 16 / 9;
   }
 }
+/* =========================================================
+   MODAL INFO ESTRELLA — CONTENIDO DINÁMICO
+========================================================= */
+
+#mission-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  opacity: 1;
+  pointer-events: auto;
+  background:
+    radial-gradient(circle at 50% 8%, rgba(88,167,232,0.20), transparent 34%),
+    linear-gradient(180deg, rgba(4,10,17,0.98), rgba(0,0,0,0.98));
+  transition: opacity 0.35s ease;
+}
+
+#mission-modal.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mission-modal-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100dvh;
+  padding:
+    max(24px, env(safe-area-inset-top))
+    18px
+    max(18px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+  background: transparent;
+}
+
+.mission-modal-kicker {
+  margin: 8px 0 8px;
+  color: rgba(255,255,255,0.58);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+#mission-modal-title {
+  margin: 0 0 16px;
+  color: #f6f3eb;
+  font-family: "FlameBold", "Arial Black", Impact, sans-serif;
+  font-size: clamp(34px, 11vw, 62px);
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+.mission-modal-hero {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: 0 0 16px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.14);
+}
+
+.mission-modal-hero img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.mission-modal-text-wrap {
+  width: 100%;
+  margin: 0 0 16px;
+  padding: 16px;
+  background: rgba(15, 33, 44, 0.72);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+#mission-modal-subtitle {
+  margin: 0 0 8px;
+  color: #f6f3eb;
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 18px;
+  line-height: 1.05;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+#mission-modal-text {
+  margin: 0;
+  color: rgba(255,255,255,0.78);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.38;
+}
+
+.mission-modal-facts {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.mission-modal-fact {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.78);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 12px;
+  line-height: 1.28;
+}
+
+.mission-modal-fact strong {
+  color: #f6f3eb;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.mission-modal-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.mission-modal-gallery figure {
+  margin: 0;
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.mission-modal-gallery img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+#mission-modal-continue {
+  width: 100%;
+  margin-top: auto;
+  padding: 15px 18px;
+  border-radius: 999px;
+  background: #f3f3ef;
+  color: #07121c;
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-weight: 900;
+  box-shadow:
+    0 8px 18px rgba(0,0,0,0.38),
+    0 0 18px rgba(88,167,232,0.20);
+}
+
+@media (min-width: 760px) {
+  .mission-modal-content {
+    max-width: 760px;
+    margin: 0 auto;
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .mission-modal-gallery {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
 </style>
 </head>
 <body>
@@ -1086,16 +1258,25 @@ button:active {
 </div>
 <div id="mission-modal" class="hidden">
   <div class="mission-modal-content">
-    <div class="mission-modal-kicker">Misión completada</div>
-    <h2 id="mission-modal-title">URUGUAY 1924</h2>
+    <div class="mission-modal-kicker" id="mission-modal-kicker">Misión completada</div>
 
-    <div class="mission-modal-image">
-      <span>Imagen / contenido de la estrella</span>
+    <h2 id="mission-modal-title">COLOMBES 1924</h2>
+
+    <div class="mission-modal-hero">
+      <img id="mission-modal-hero-img" src="" alt="" />
     </div>
 
-    <p id="mission-modal-text">
-      Acá luego vamos a colocar la historia, imágenes, datos ampliados y contenido especial de esta estrella.
-    </p>
+    <div class="mission-modal-text-wrap">
+      <h3 id="mission-modal-subtitle">La primera estrella</h3>
+
+      <p id="mission-modal-text">
+        Uruguay conquistó una estrella que marcó para siempre la historia del fútbol mundial.
+      </p>
+
+      <div id="mission-modal-facts" class="mission-modal-facts"></div>
+    </div>
+
+    <div id="mission-modal-gallery" class="mission-modal-gallery"></div>
 
     <button id="mission-modal-continue" type="button">
       Continuar
@@ -1255,8 +1436,28 @@ const missionStars = [
     raText: '08h 18m 35.33s',
     decText: '−26° 14\' 53.6"',
     gmagText: '9.14',
-    gaiaText: '5694395051252245376'
+    gaiaText: '5694395051252245376',
+
+    modalKicker: 'Primera estrella',
+    modalTitle: 'COLOMBES 1924',
+    modalSubtitle: 'La primera consagración mundial',
+    modalText:
+      'En Colombes, Uruguay transformó su forma de jugar en una señal para el mundo. La celeste apareció ante Europa con una identidad propia: técnica, velocidad, pausa y carácter.',
+    modalFacts: [
+      ['Sede', 'Colombes, Francia'],
+      ['Torneo', 'Juegos Olímpicos 1924'],
+      ['Valor histórico', 'Reconocido por FIFA como título mundial'],
+      ['Idea central', 'La primera estrella que puso a Uruguay en el cielo del fútbol']
+    ],
+    modalHero: 'assets/img/missions/img1924.png',
+    modalImages: [
+      'assets/img/missions/img1924-2.png',
+      'assets/img/missions/img1924-3.png',
+      'assets/img/missions/img1924-4.png',
+      'assets/img/missions/scga1924.png'
+    ]
   },
+
   {
     id: 'scga1928',
     title: 'ÁMSTERDAM 1928',
@@ -1265,8 +1466,28 @@ const missionStars = [
     raText: '08h 19m 11.27s',
     decText: '−23° 01\' 29.5"',
     gmagText: '9.47',
-    gaiaText: '5699516301534709504'
+    gaiaText: '5699516301534709504',
+
+    modalKicker: 'Segunda estrella',
+    modalTitle: 'ÁMSTERDAM 1928',
+    modalSubtitle: 'La confirmación de una potencia',
+    modalText:
+      'Cuatro años después, Uruguay volvió a levantar la mirada del mundo. Ámsterdam confirmó que lo de 1924 no había sido una casualidad: era una escuela, una identidad y una manera de entender el fútbol.',
+    modalFacts: [
+      ['Sede', 'Ámsterdam, Países Bajos'],
+      ['Torneo', 'Juegos Olímpicos 1928'],
+      ['Valor histórico', 'Segundo título mundial reconocido por FIFA'],
+      ['Idea central', 'La estrella que confirmó que Uruguay no había llegado por azar']
+    ],
+    modalHero: 'assets/img/missions/img1928.png',
+    modalImages: [
+      'assets/img/missions/img1928-2.png',
+      'assets/img/missions/img1928-3.png',
+      'assets/img/missions/img1928-4.png',
+      'assets/img/missions/scga1928.png'
+    ]
   },
+
   {
     id: 'scga1930',
     title: 'URUGUAY 1930',
@@ -1275,8 +1496,28 @@ const missionStars = [
     raText: '08h 19m 18.27s',
     decText: '−23° 47\' 49"',
     gmagText: '7.00',
-    gaiaText: '5696450279001453184'
+    gaiaText: '5696450279001453184',
+
+    modalKicker: 'Tercera estrella',
+    modalTitle: 'URUGUAY 1930',
+    modalSubtitle: 'El primer Mundial de la historia',
+    modalText:
+      'En casa, Uruguay fue anfitrión y protagonista del primer Mundial. La historia ya no se escribía solo en Europa: el fútbol también tenía cielo propio desde el Río de la Plata.',
+    modalFacts: [
+      ['Sede', 'Montevideo, Uruguay'],
+      ['Torneo', 'Copa Mundial FIFA 1930'],
+      ['Valor histórico', 'Primer Mundial oficial de la historia'],
+      ['Idea central', 'La estrella que convirtió a Uruguay en origen y campeón']
+    ],
+    modalHero: 'assets/img/missions/img1930.png',
+    modalImages: [
+      'assets/img/missions/img1930-2.png',
+      'assets/img/missions/img1930-3.png',
+      'assets/img/missions/img1930-4.png',
+      'assets/img/missions/scga1930.png'
+    ]
   },
+
   {
     id: 'scga1950',
     title: 'MARACANAZO 1950',
@@ -1285,7 +1526,33 @@ const missionStars = [
     raText: '08h 17m 42.89s',
     decText: '−69° 07\' 44.2"',
     gmagText: '8.46',
-    gaiaText: '5270171338893585792'
+    gaiaText: '5270171338893585792',
+
+    modalKicker: 'Cuarta estrella',
+    modalTitle: 'MARACANAZO 1950',
+    modalSubtitle: 'Boceto temporal',
+    modalText:
+      'Boceto temporal de contenido para 1950. Por ahora usa la estructura narrativa e información base de 1930 hasta reemplazarla por la historia definitiva del Maracanazo.',
+    modalFacts: [
+      ['Sede', 'Boceto temporal'],
+      ['Torneo', 'Contenido pendiente'],
+      ['Valor histórico', 'Pendiente de reemplazo por la información final de 1950'],
+      ['Idea central', 'Usando el formato de 1930 como base visual y narrativa']
+    ],
+    modalHero: 'assets/img/missions/img1950.png',
+    modalImages: [
+      'assets/img/missions/img1950-2.png',
+      'assets/img/missions/img1950-3.png',
+      'assets/img/missions/img1950-4.png',
+      'assets/img/missions/scga1950.png'
+    ],
+    fallbackHero: 'assets/img/missions/img1930.png',
+    fallbackImages: [
+      'assets/img/missions/img1930-2.png',
+      'assets/img/missions/img1930-3.png',
+      'assets/img/missions/img1930-4.png',
+      'assets/img/missions/scga1930.png'
+    ]
   }
 ];
 function ajustarTextoCard() {
@@ -2056,18 +2323,85 @@ function actualizarMissionTracker() {
 }
 function abrirModalMision(mission) {
   const modal = document.getElementById('mission-modal');
-  const title = document.getElementById('mission-modal-title');
-  const text = document.getElementById('mission-modal-text');
 
   if (!modal || !mission) return;
 
-  if (title) title.textContent = mission.title;
+  renderMissionModal(mission);
+  modal.classList.remove('hidden');
+}
 
-  if (text) {
-    text.textContent = `Contenido ampliado de ${mission.title}. Acá luego vamos a colocar la historia, imágenes y datos especiales de esta estrella.`;
+function renderMissionModal(mission) {
+  const kicker = document.getElementById('mission-modal-kicker');
+  const title = document.getElementById('mission-modal-title');
+  const subtitle = document.getElementById('mission-modal-subtitle');
+  const text = document.getElementById('mission-modal-text');
+  const heroImg = document.getElementById('mission-modal-hero-img');
+  const facts = document.getElementById('mission-modal-facts');
+  const gallery = document.getElementById('mission-modal-gallery');
+
+  if (kicker) kicker.textContent = mission.modalKicker || 'Misión completada';
+  if (title) title.textContent = mission.modalTitle || mission.title;
+  if (subtitle) subtitle.textContent = mission.modalSubtitle || '';
+  if (text) text.textContent = mission.modalText || '';
+
+  if (heroImg) {
+    heroImg.src = mission.modalHero || '';
+    heroImg.alt = mission.modalTitle || mission.title;
+
+    heroImg.onerror = () => {
+      if (mission.fallbackHero && heroImg.src.indexOf(mission.fallbackHero) === -1) {
+        heroImg.src = mission.fallbackHero;
+      }
+    };
   }
 
-  modal.classList.remove('hidden');
+  if (facts) {
+    facts.innerHTML = '';
+
+    const data = mission.modalFacts || [];
+
+    data.forEach(([label, value]) => {
+      const item = document.createElement('div');
+      item.className = 'mission-modal-fact';
+
+      const strong = document.createElement('strong');
+      strong.textContent = label;
+
+      const span = document.createElement('span');
+      span.textContent = value;
+
+      item.appendChild(strong);
+      item.appendChild(span);
+      facts.appendChild(item);
+    });
+  }
+
+  if (gallery) {
+    gallery.innerHTML = '';
+
+    const images = mission.modalImages || [];
+
+    images.forEach((src, index) => {
+      const figure = document.createElement('figure');
+      const img = document.createElement('img');
+
+      img.src = src;
+      img.alt = `${mission.modalTitle || mission.title} imagen ${index + 1}`;
+
+      img.onerror = () => {
+        const fallback = mission.fallbackImages?.[index];
+
+        if (fallback && img.src.indexOf(fallback) === -1) {
+          img.src = fallback;
+        } else {
+          figure.remove();
+        }
+      };
+
+      figure.appendChild(img);
+      gallery.appendChild(figure);
+    });
+  }
 }
 
 function cerrarModalMision() {
