@@ -2043,17 +2043,17 @@ function createStarSprite(symbol = '★', color = '#ffffff', size = 96) {
   canvas.width = 256;
   canvas.height = 256;
 
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.font = '900 150px Arial';
-  ctx.fillStyle = color;
+
   ctx.shadowColor = 'rgba(88,167,232,0.35)';
   ctx.shadowBlur = 18;
   ctx.fillText(symbol, canvas.width / 2, canvas.height / 2 + 4);
-
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   const texture = new THREE.CanvasTexture(canvas);
   const material = new THREE.SpriteMaterial({
     map: texture,
