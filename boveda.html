@@ -93,8 +93,10 @@ button:active {
 /* =========================
    BASE LAYERS
 ========================= */
-
 #canvas-container {
+  --dome-zenith-y: -42vh;
+  --dome-scale: 1.95;
+
   position: absolute;
   inset: 0;
   z-index: 1;
@@ -105,19 +107,28 @@ button:active {
 #canvas-container::before {
   content: "";
   position: absolute;
-  inset: 0;
+  left: 50%;
+  top: 50%;
   z-index: 0;
+  width: 100vmax;
+  height: 100vmax;
   pointer-events: none;
 
   background-image: url("./assets/img/bg-dome-square.png");
   background-repeat: no-repeat;
   background-position: center center;
-  background-size: cover;
+  background-size: contain;
 
-  opacity: 0.86;
+  opacity: 0.88;
   filter: brightness(0.72) contrast(1.08) saturate(0.92);
-  transform: scale(1.04);
+
+  transform:
+    translate(-50%, -50%)
+    translateY(var(--dome-zenith-y))
+    scale(var(--dome-scale));
+
   transform-origin: center center;
+  will-change: transform;
 }
 
 #canvas-container::after {
@@ -128,8 +139,8 @@ button:active {
   pointer-events: none;
 
   background:
-    radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.16) 58%, rgba(0,0,0,0.48) 100%),
-    linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0) 38%, rgba(0,0,0,0.42) 100%);
+    radial-gradient(circle at 50% 42%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.10) 52%, rgba(0,0,0,0.52) 100%),
+    linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0) 38%, rgba(0,0,0,0.45) 100%);
 }
 
 #canvas-container canvas {
@@ -1604,6 +1615,7 @@ let captureCompleted = false;
 let infoCardShown = false;
 let infoCardRevealTimeout = null;
 let pendingMissionAdvance = false;
+let domeZenithY = null;
 const CAPTURE_DURATION = 2000;
 
 
@@ -3008,6 +3020,41 @@ function actualizarGuiaVisual() {
   guideArrow.style.transform =
     `translate(-50%, -56%) rotate(${angle}deg) translateY(-${radius}px)`;
 }
+function actualizarFondoBoveda(altitude) {
+  const container = document.getElementById('canvas-container');
+  if (!container) return;
+
+  /*
+    altitude:
+    0°  = celular mirando al horizonte
+    90° = celular mirando al zenit
+
+    Cuando mira al horizonte, el centro de la imagen debe quedar arriba.
+    Cuando mira al zenit, el centro de la imagen baja al centro de pantalla.
+  */
+
+  const minAlt = -35;
+  const maxAlt = 90;
+
+  const t = THREE.MathUtils.clamp(
+    (altitude - minAlt) / (maxAlt - minAlt),
+    0,
+    1
+  );
+
+  const horizonY = -46; // vh: centro de la imagen arriba de la pantalla
+  const zenithY = 0;    // vh: centro de la imagen en el centro del display
+
+  const targetY = horizonY + (zenithY - horizonY) * t;
+
+  if (domeZenithY === null) {
+    domeZenithY = targetY;
+  } else {
+    domeZenithY += (targetY - domeZenithY) * 0.08;
+  }
+
+  container.style.setProperty('--dome-zenith-y', `${domeZenithY.toFixed(2)}vh`);
+}
   function actualizarCamaraYUI() {
   if (!brujulaDetectada) return;
 
@@ -3046,7 +3093,7 @@ function actualizarGuiaVisual() {
   azimuth = (azimuth + 360) % 360;
 
   const altitude = THREE.MathUtils.radToDeg(Math.asin(forward.y));
-
+actualizarFondoBoveda(altitude);
   // Reconstruimos una dirección limpia sin roll
   const targetDir = azAltToVector(azimuth, altitude, 10);
 
