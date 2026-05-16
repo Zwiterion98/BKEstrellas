@@ -7,6 +7,21 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
   <style>
+    @font-face {
+  font-family: "FlameBold";
+  src: url("./assets/fonts/1.Flame-Bold 2 3 2.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "FlameSans";
+  src: url("./assets/fonts/FlameSans-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
   :root {
     --bg-dark: #05080d;
     --bg-blue: #12384d;
@@ -350,211 +365,445 @@
     text-transform: uppercase;
     text-shadow: 0 1px 2px rgba(0,0,0,0.8);
   }
+/* =========================
+   INFO CONNECTOR
+========================= */
 
-  /* =========================
-     INFO CONNECTOR
-  ========================= */
+#info-connector-layer {
+  --connector-length: 1000;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  z-index: 23;
+  overflow: visible;
+  opacity: 1;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
 
-  #info-connector-layer {
-    --connector-length: 1000;
-    position: fixed;
-    inset: 0;
-    width: 100vw;
-    height: 100dvh;
-    z-index: 23;
-    overflow: visible;
-    opacity: 1;
-    pointer-events: none;
-  }
+#info-connector-layer.hidden {
+  opacity: 0;
+  visibility: hidden;
+}
 
-  #info-connector-layer.hidden {
-    opacity: 0;
-    visibility: hidden;
-  }
+#info-connector-path {
+  fill: none;
+  stroke: rgba(255,255,255,0.86);
+  stroke-width: 1.25;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  stroke-dasharray: var(--connector-length);
+  stroke-dashoffset: var(--connector-length);
+  vector-effect: non-scaling-stroke;
+}
 
-  #info-connector-path {
-    fill: none;
-    stroke: rgba(255,255,255,0.82);
-    stroke-width: 1.35;
-    stroke-linecap: square;
-    stroke-linejoin: miter;
-    stroke-dasharray: var(--connector-length);
+#info-connector-layer.revealing #info-connector-path {
+  animation: drawInfoConnector 0.48s ease-out forwards;
+}
+
+@keyframes drawInfoConnector {
+  from {
     stroke-dashoffset: var(--connector-length);
-    vector-effect: non-scaling-stroke;
   }
 
-  #info-connector-layer.revealing #info-connector-path {
-    animation: drawInfoConnector 0.38s ease-out forwards;
+  to {
+    stroke-dashoffset: 0;
   }
+}
 
-  @keyframes drawInfoConnector {
-    from {
-      stroke-dashoffset: var(--connector-length);
-    }
+/* =========================
+   MISSION INFO CARD
+========================= */
 
-    to {
-      stroke-dashoffset: 0;
-    }
-  }
+#star-info-card {
+  position: absolute;
+  top: clamp(42px, 7vh, 88px);
+  left: clamp(48px, 8vw, 96px);
+  width: min(calc(100vw - 88px), 760px);
+  z-index: 24;
+  opacity: 1;
+  pointer-events: none;
+}
 
-  /* =========================
-     MISSION INFO CARD
-  ========================= */
+#star-info-card.hidden {
+  opacity: 0;
+  visibility: hidden;
+}
 
+.star-card {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+  background: #112532;
+  border: 1px solid rgba(255,255,255,0.24);
+  box-shadow: 0 18px 44px rgba(0,0,0,0.22);
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+#star-info-card.visible .star-card {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s ease;
+}
+
+/* barra blanca izquierda */
+.star-card::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: clamp(84px, 13vw, 112px);
+  width: 7px;
+  height: clamp(112px, 17vw, 160px);
+  background: #fff;
+  pointer-events: none;
+}
+
+/* esquina blanca inferior derecha */
+.star-card::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 18px;
+  height: 18px;
+  border-right: 4px solid #fff;
+  border-bottom: 4px solid #fff;
+  pointer-events: none;
+}
+
+.star-card-header {
+  height: clamp(66px, 9.5vw, 90px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 0 clamp(18px, 3vw, 28px) 0 clamp(18px, 3vw, 26px);
+  background: #45687f;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+
+#star-card-title {
+  min-width: 0;
+  flex: 1 1 auto;
+  color: #f6f3eb;
+  font-family: "FlameBold", "Cooper Black", "Arial Black", Impact, sans-serif;
+  font-size: clamp(34px, 7vw, 76px);
+  line-height: 0.9;
+  letter-spacing: -0.015em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.star-card-target {
+  position: relative;
+  flex: 0 0 auto;
+  width: clamp(32px, 4.6vw, 44px);
+  height: clamp(32px, 4.6vw, 44px);
+}
+
+.star-card-target::before,
+.star-card-target::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: rgba(255,255,255,0.72);
+  transform: translate(-50%, -50%);
+}
+
+.star-card-target::before {
+  width: 100%;
+  height: 1px;
+}
+
+.star-card-target::after {
+  width: 1px;
+  height: 100%;
+}
+
+.target-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(22px, 3.3vw, 30px);
+  height: clamp(22px, 3.3vw, 30px);
+  border: 3px solid #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.target-dot::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(8px, 1.3vw, 12px);
+  height: clamp(8px, 1.3vw, 12px);
+  background: #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.star-card-body {
+  display: grid;
+  grid-template-columns: clamp(112px, 24vw, 210px) 1px minmax(0, 1fr);
+  min-height: clamp(118px, 18vw, 164px);
+  background: rgba(15, 33, 44, 0.98);
+}
+
+.star-card-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding:
+    clamp(12px, 2vw, 18px)
+    clamp(8px, 2vw, 18px)
+    clamp(12px, 2vw, 16px)
+    clamp(18px, 3vw, 28px);
+}
+
+.star-card-name-row {
+  display: flex;
+  align-items: center;
+  gap: clamp(5px, 1vw, 8px);
+  color: #fff;
+  font-family: "FlameSans", Arial, sans-serif;
+  font-size: clamp(20px, 4vw, 34px);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.star-card-play {
+  width: 0;
+  height: 0;
+  flex: 0 0 auto;
+  border-top: clamp(8px, 1.4vw, 13px) solid transparent;
+  border-bottom: clamp(8px, 1.4vw, 13px) solid transparent;
+  border-left: clamp(10px, 1.6vw, 16px) solid #fff;
+  transform: translateY(1px);
+}
+
+.star-card-year {
+  margin-top: 9px;
+  color: #fff;
+  font-family: "FlameSans", Arial, sans-serif;
+  font-size: clamp(54px, 10vw, 92px);
+  line-height: 0.78;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+
+.star-card-divider {
+  width: 1px;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.22) 0,
+    rgba(255,255,255,0.22) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+}
+
+.star-card-data {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(2px, 0.5vw, 4px);
+  min-width: 0;
+  padding:
+    clamp(14px, 2.4vw, 21px)
+    clamp(14px, 2.8vw, 26px)
+    clamp(14px, 2vw, 18px)
+    clamp(18px, 3vw, 30px);
+  color: #fff;
+  font-family: "FlameSans", Arial, sans-serif;
+  font-size: clamp(12px, 2.45vw, 23px);
+  line-height: 1.08;
+}
+
+.star-card-data strong {
+  font-weight: 400;
+}
+
+.star-card-data div {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.star-card-gap {
+  height: clamp(8px, 1.4vw, 15px);
+}
+
+.star-card-footer {
+  height: clamp(22px, 3.8vw, 34px);
+  background: rgba(14, 31, 42, 0.98);
+  border-top: 1px solid rgba(255,255,255,0.15);
+}
+
+/* Scanner más parecido a la referencia */
+
+#scanner-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.35px solid rgba(255,255,255,0.78);
+}
+
+#scanner-progress {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  opacity: 0;
+  background:
+    conic-gradient(
+      from -18deg,
+      rgba(255,255,255,0.98) calc(var(--progress, 0) * 1%),
+      rgba(255,255,255,0) 0
+    );
+  mask: radial-gradient(
+    transparent 0 49px,
+    black 50px 55px,
+    transparent 56px 100%
+  );
+  -webkit-mask: radial-gradient(
+    transparent 0 49px,
+    black 50px 55px,
+    transparent 56px 100%
+  );
+  filter: none;
+  transition: opacity 0.15s ease;
+}
+
+#scanner-ui.capturing #scanner-progress {
+  opacity: 1;
+}
+
+#scanner-ui.capture-complete #scanner-progress {
+  opacity: 0;
+}
+
+#scanner-ui.locked-preview #scanner-cross {
+  opacity: 0;
+}
+
+/* Responsive fino */
+
+@media (max-width: 620px) {
   #star-info-card {
-    position: absolute;
-    top: clamp(52px, 8vh, 88px);
-    left: clamp(34px, 7vw, 78px);
-    width: min(76vw, 600px);
-    z-index: 24;
-    opacity: 1;
-    pointer-events: none;
-  }
-
-  #star-info-card.hidden {
-    opacity: 0;
-    visibility: hidden;
-  }
-
-  .star-card {
-    position: relative;
-    width: 100%;
-    overflow: hidden;
-    background: var(--card-bg);
-    border: 1px solid var(--card-border);
-    opacity: 0;
-    transform: translateY(10px);
-    box-shadow:
-      0 10px 30px rgba(0,0,0,0.28),
-      inset 0 0 0 1px rgba(255,255,255,0.03);
-  }
-
-  #star-info-card.visible .star-card {
-    opacity: 1;
-    transform: translateY(0);
-    transition:
-      opacity 0.24s ease,
-      transform 0.24s ease;
-  }
-
-  .star-card::before,
-  .star-card::after {
-    content: '';
-    position: absolute;
-    width: 11px;
-    height: 11px;
-    border-color: rgba(255,255,255,0.88);
-    border-style: solid;
-    pointer-events: none;
-  }
-
-  .star-card::before {
-    left: -1px;
-    top: 84px;
-    border-width: 0 0 0 1px;
-  }
-
-  .star-card::after {
-    right: -1px;
-    bottom: -1px;
-    border-width: 0 1px 1px 0;
-  }
-
-  .star-card-header {
-    height: clamp(34px, 10vw, 68px);
-    padding: 0 12px 0 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    background: var(--card-header);
-    border-bottom: 1px solid rgba(255,255,255,0.06);
+    top: 52px;
+    left: 46px;
+    width: calc(100vw - 74px);
   }
 
   #star-card-title {
-    min-width: 0;
-    color: #f2f1eb;
-    font-family: "Arial Black", Impact, Inter, sans-serif;
-    font-size: clamp(20px, 6.8vw, 56px);
-    font-weight: 900;
-    line-height: 0.95;
-    letter-spacing: -0.045em;
-    text-transform: uppercase;
-    white-space: nowrap;
+    font-size: clamp(28px, 9vw, 52px);
   }
 
-  .star-card-target {
-    flex: 0 0 auto;
-    color: rgba(255,255,255,0.88);
-    font-size: clamp(14px, 4.4vw, 26px);
-    line-height: 1;
+  .star-card-header {
+    height: 78px;
+    padding-left: 18px;
+    padding-right: 18px;
   }
 
   .star-card-body {
-    display: grid;
-    grid-template-columns: clamp(86px, 24vw, 150px) 1px minmax(0, 1fr);
-    min-height: clamp(74px, 19vw, 160px);
-    background: var(--card-bg);
-  }
-
-  .star-card-left {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 10px 8px 8px 12px;
+    grid-template-columns: 124px 1px minmax(0, 1fr);
+    min-height: 126px;
   }
 
   .star-card-name-row {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    color: #f3f3ef;
-    font-size: clamp(12px, 3.6vw, 21px);
-    line-height: 1;
-    white-space: nowrap;
-  }
-
-  .star-card-play {
-    font-size: clamp(9px, 2vw, 13px);
-    transform: translateY(-1px);
+    font-size: 24px;
   }
 
   .star-card-year {
-    margin-top: 6px;
-    color: #f3f3ef;
-    font-family: "Arial Black", Impact, Inter, sans-serif;
-    font-size: clamp(34px, 10.8vw, 78px);
-    font-weight: 900;
-    line-height: 0.84;
-    letter-spacing: -0.08em;
-    white-space: nowrap;
-  }
-
-  .star-card-divider {
-    width: 1px;
-    background: rgba(255,255,255,0.12);
+    font-size: 68px;
   }
 
   .star-card-data {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 2px;
-    padding: 12px 12px 10px 14px;
-    color: rgba(255,255,255,0.95);
-    font-size: clamp(7px, 2.05vw, 14px);
-    font-weight: 600;
-    line-height: 1.28;
+    padding: 16px 16px 14px 20px;
+    font-size: 14px;
+    line-height: 1.15;
   }
 
-  .star-card-data strong {
-    color: #f3f3ef;
-    font-weight: 900;
+  .star-card-footer {
+    height: 27px;
   }
 
-  .star-card-data div {
-    max-width: 100%;
-    overflow-wrap: anywhere;
+  .star-card::before {
+    top: 88px;
+    height: 130px;
+  }
+}
+
+@media (max-width: 420px) {
+  #star-info-card {
+    top: 52px;
+    left: 38px;
+    width: calc(100vw - 50px);
+  }
+
+  .star-card-header {
+    height: 64px;
+    padding-left: 13px;
+    padding-right: 12px;
+    gap: 10px;
+  }
+
+  #star-card-title {
+    font-size: clamp(24px, 8.2vw, 36px);
+  }
+
+  .star-card-target {
+    width: 30px;
+    height: 30px;
+  }
+
+  .target-dot {
+    width: 22px;
+    height: 22px;
+    border-width: 2px;
+  }
+
+  .target-dot::after {
+    width: 8px;
+    height: 8px;
+  }
+
+  .star-card-body {
+    grid-template-columns: 86px 1px minmax(0, 1fr);
+    min-height: 106px;
+  }
+
+  .star-card-left {
+    padding: 10px 7px 10px 12px;
+  }
+
+  .star-card-name-row {
+    gap: 5px;
+    font-size: 16px;
+  }
+
+  .star-card-play {
+    border-top-width: 7px;
+    border-bottom-width: 7px;
+    border-left-width: 9px;
+  }
+
+  .star-card-year {
+    margin-top: 7px;
+    font-size: 48px;
+  }
+
+  .star-card-data {
+    padding: 11px 9px 9px 11px;
+    font-size: 9px;
+    line-height: 1.18;
   }
 
   .star-card-gap {
@@ -562,11 +811,23 @@
   }
 
   .star-card-footer {
-    height: clamp(14px, 4.2vw, 26px);
-    background: rgba(14, 33, 46, 0.98);
-    border-top: 1px solid rgba(255,255,255,0.08);
+    height: 17px;
   }
 
+  .star-card::before {
+    left: -6px;
+    width: 6px;
+    top: 74px;
+    height: 104px;
+  }
+
+  .star-card::after {
+    width: 15px;
+    height: 15px;
+    border-right-width: 3px;
+    border-bottom-width: 3px;
+  }
+}
   /* =========================
      COMPASS
   ========================= */
@@ -857,16 +1118,20 @@
 <div id="star-info-card" class="hidden">
   <div class="star-card">
     <div class="star-card-header">
-      <span id="star-card-title">COLOMBES 1924</span>
-      <span class="star-card-target">◎</span>
+      <span id="star-card-title">COLOMBES1924</span>
+
+      <span class="star-card-target" aria-hidden="true">
+        <span class="target-dot"></span>
+      </span>
     </div>
 
     <div class="star-card-body">
       <div class="star-card-left">
         <div class="star-card-name-row">
-          <span class="star-card-play">▶</span>
+          <span class="star-card-play"></span>
           <span id="star-card-code">SCGA</span>
         </div>
+
         <div id="star-card-year" class="star-card-year">1924</div>
       </div>
 
@@ -874,39 +1139,7 @@
 
       <div class="star-card-data">
         <div><strong>RA:</strong> <span id="star-card-ra">08h 18m 35.33s</span></div>
-        <div><strong>Dec:</strong> <span id="star-card-dec">-26° 14′ 53.6″</span></div>
-        <div><strong>Gmag (mag):</strong> <span id="star-card-gmag">9.14</span></div>
-        <div class="star-card-gap"></div>
-        <div><strong>Gaia DR3:</strong> <span id="star-card-gaia">5694395051252245376</span></div>
-      </div>
-    </div>
-
-    <div class="star-card-footer"></div>
-  </div>
-</div>
-<div id="star-info-card" class="hidden">
-  
-
-  <div class="star-card">
-    <div class="star-card-header">
-      <span id="star-card-title">COLOMBES 1924</span>
-      <span class="star-card-target">◎</span>
-    </div>
-
-    <div class="star-card-body">
-      <div class="star-card-left">
-        <div class="star-card-name-row">
-          <span class="star-card-play">▶</span>
-          <span id="star-card-code">SCGA</span>
-        </div>
-        <div id="star-card-year" class="star-card-year">1924</div>
-      </div>
-
-      <div class="star-card-divider"></div>
-
-      <div class="star-card-data">
-        <div><strong>RA:</strong> <span id="star-card-ra">08h 18m 35.33s</span></div>
-        <div><strong>Dec:</strong> <span id="star-card-dec">-26° 14′ 53.6″</span></div>
+        <div><strong>Dec:</strong> <span id="star-card-dec">−26° 14' 53.6"</span></div>
         <div><strong>Gmag (mag):</strong> <span id="star-card-gmag">9.14</span></div>
         <div class="star-card-gap"></div>
         <div><strong>Gaia DR3:</strong> <span id="star-card-gaia">5694395051252245376</span></div>
@@ -1081,43 +1314,43 @@ let northCalibration = null;
 const missionStars = [
   {
     id: 'scga1924',
-    title: 'URUGUAY 1924',
+    title: 'COLOMBES1924',
     code: 'SCGA',
     year: '1924',
-    raText: '08h 18m 35.28s',
-    decText: '-26° 14′ 53″',
-    gmagText: '7.00',
-    gaiaText: '5696450279001453184'
+    raText: '08h 18m 35.33s',
+    decText: '−26° 14\' 53.6"',
+    gmagText: '9.14',
+    gaiaText: '5694395051252245376'
   },
   {
     id: 'scga1928',
-    title: 'URUGUAY 1928',
+    title: 'ÁMSTERDAM1928',
     code: 'SCGA',
     year: '1928',
-    raText: '08h 19m 11.28s',
-    decText: '-23° 01′ 29″',
-    gmagText: '7.00',
-    gaiaText: '5696450279001453184'
+    raText: '08h 19m 11.27s',
+    decText: '−23° 01\' 29.5"',
+    gmagText: '9.47',
+    gaiaText: '5699516301534709504'
   },
   {
     id: 'scga1930',
-    title: 'URUGUAY 1930',
+    title: 'URUGUAY1930',
     code: 'SCGA',
     year: '1930',
     raText: '08h 19m 18.27s',
-    decText: '-23° 47′ 49″',
+    decText: '−23° 47\' 49"',
     gmagText: '7.00',
     gaiaText: '5696450279001453184'
   },
   {
     id: 'scga1950',
-    title: 'URUGUAY 1950',
+    title: 'MARACANAZO1950',
     code: 'SCGA',
     year: '1950',
-    raText: '08h 17m 42.72s',
-    decText: '-69° 07′ 44″',
-    gmagText: '7.00',
-    gaiaText: '5696450279001453184'
+    raText: '08h 17m 42.89s',
+    decText: '−69° 07\' 44.2"',
+    gmagText: '8.46',
+    gaiaText: '5270171338893585792'
   }
 ];
 
@@ -1369,27 +1602,30 @@ function actualizarConectorInfoCard() {
   const scannerRect = scanner.getBoundingClientRect();
   const cardRect = card.getBoundingClientRect();
 
-  // Arranca exactamente desde el CENTRO SUPERIOR del círculo
-  const startX = scannerRect.left + (scannerRect.width / 2);
+  // Punto de salida: centro superior del círculo
+  const startX = scannerRect.left + scannerRect.width / 2;
   const startY = scannerRect.top;
 
-  // Punto de entrada al recuadro (lado izquierdo)
+  // Punto de entrada: lado izquierdo de la card
   const endX = cardRect.left;
-  const endY = cardRect.top + Math.min(Math.max(cardRect.height * 0.42, 72), 110);
+  const endY = cardRect.top + Math.min(Math.max(cardRect.height * 0.26, 58), 112);
 
-  // Codo horizontal un poco antes de la card
-  const elbowX = cardRect.left - 26;
+  // Quiebre lateral izquierdo, como en la referencia
+  const leftX = Math.max(18, cardRect.left - Math.min(72, window.innerWidth * 0.09));
 
-  // Primer tramo: sube desde el círculo
-  const elbowY = startY - Math.max(70, Math.min(170, (startY - endY) * 0.48));
+  // Altura del tramo horizontal que sale desde el círculo
+  const horizontalY = startY - Math.max(42, Math.min(82, scannerRect.height * 0.58));
 
-  const d = `
-    M ${startX} ${startY}
-    V ${elbowY}
-    H ${elbowX}
-    V ${endY}
-    H ${endX}
-  `;
+  // Punto previo a la diagonal que entra a la card
+  const diagonalStartY = endY + Math.max(42, Math.min(72, cardRect.height * 0.26));
+
+  const d = [
+    `M ${startX} ${startY}`,
+    `V ${horizontalY}`,
+    `H ${leftX}`,
+    `V ${diagonalStartY}`,
+    `L ${endX} ${endY}`
+  ].join(' ');
 
   svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`);
   svg.setAttribute('width', window.innerWidth);
@@ -1399,6 +1635,31 @@ function actualizarConectorInfoCard() {
 
   const len = path.getTotalLength();
   svg.style.setProperty('--connector-length', len);
+}
+
+function mostrarInfoEstrella() {
+  const card = document.getElementById('star-info-card');
+  const connector = document.getElementById('info-connector-layer');
+
+  if (!card || !connector) return;
+
+  clearTimeout(infoCardRevealTimeout);
+
+  // Primero medimos con la card disponible pero todavía invisible.
+  card.classList.remove('hidden', 'visible');
+  connector.classList.remove('hidden', 'revealing');
+
+  actualizarConectorInfoCard();
+
+  // Reinicia animación del vector.
+  void connector.offsetWidth;
+
+  connector.classList.add('revealing');
+
+  // La card aparece después de que el vector se forma.
+  infoCardRevealTimeout = setTimeout(() => {
+    card.classList.add('visible');
+  }, 480);
 }
   function actualizarTiempoYPosiciones() {
     const nuevaFecha = new Date();
@@ -1658,30 +1919,7 @@ function setMissionStarVisual(astro, useStarIcon) {
     mesh.userData.isStarIcon = false;
   }
 }
-function mostrarInfoEstrella() {
-  const card = document.getElementById('star-info-card');
-  const connector = document.getElementById('info-connector-layer');
 
-  if (!card || !connector) return;
-
-  clearTimeout(infoCardRevealTimeout);
-
-  actualizarConectorInfoCard();
-
-  card.classList.remove('hidden', 'visible');
-  connector.classList.remove('hidden', 'revealing');
-
-  void card.offsetWidth;
-  void connector.offsetWidth;
-
-  connector.classList.remove('hidden');
-  connector.classList.add('revealing');
-
-  infoCardRevealTimeout = setTimeout(() => {
-    card.classList.remove('hidden');
-    card.classList.add('visible');
-  }, 380);
-}
 
 
 function actualizarConectorInfoCard() {
