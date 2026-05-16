@@ -94,46 +94,21 @@ button:active {
    BASE LAYERS
 ========================= */
 #canvas-container {
-  --dome-y: -42vh;
-  --dome-scale: 2.15;
-  --dome-tilt: 0deg;
-
   position: absolute;
   inset: 0;
   z-index: 1;
   overflow: hidden;
   background: #000;
-  perspective: 1400px;
-  perspective-origin: 50% 50%;
 }
 
-#canvas-container::before {
-  content: "";
+#dome-bg-canvas {
   position: absolute;
-  left: 50%;
-  top: 50%;
+  inset: 0;
   z-index: 0;
-  width: 165vmax;
-  height: 165vmax;
-  pointer-events: none;
-
-  background-image: url("./assets/img/bg-dome-square.png");
-  background-repeat: no-repeat;
-  background-position: center center;
-  background-size: 100% 100%;
-
-  border-radius: 50%;
-  opacity: 0.9;
-  filter: brightness(0.74) contrast(1.08) saturate(0.94);
-
-  transform:
-    translate(-50%, -50%)
-    translateY(var(--dome-y))
-    rotateX(var(--dome-tilt))
-    scale(var(--dome-scale));
-
-  transform-origin: center center;
-  will-change: transform;
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 0.92;
 }
 
 #canvas-container::after {
@@ -143,11 +118,11 @@ button:active {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 50% 52%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.10) 48%, rgba(0,0,0,0.42) 100%),
-    linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0) 34%, rgba(0,0,0,0.48) 100%);
+    radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.08) 54%, rgba(0,0,0,0.42) 100%),
+    linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0) 32%, rgba(0,0,0,0.40) 100%);
 }
 
-#canvas-container canvas {
+#canvas-container canvas:not(#dome-bg-canvas) {
   position: absolute;
   inset: 0;
   z-index: 1;
@@ -1623,6 +1598,19 @@ let domeZenithY = null;
 let domeY = null;
 let domeScale = null;
 let domeTilt = null;
+
+const DOME_BG_URL = './assets/img/bg-dome-square.png';
+const DOME_BG_RENDER_SCALE = 0.85;
+const DOME_BG_AZIMUTH_OFFSET = 0;
+
+let domeBgCanvas = null;
+let domeBgCtx = null;
+let domeBgSourceCanvas = null;
+let domeBgSourceCtx = null;
+let domeBgSourceData = null;
+let domeBgReady = false;
+let domeBgWidth = 0;
+let domeBgHeight = 0;
 const CAPTURE_DURATION = 2000;
 
 
@@ -2053,6 +2041,114 @@ function crearSkyDome() {
     }
   );
 }
+function initDomeBackground() {
+  const container = document.getElementById('canvas-container');
+  if (!container) return;
+
+  domeBgCanvas = document.createElement('canvas');
+  domeBgCanvas.id = 'dome-bg-canvas';
+  container.prepend(domeBgCanvas);
+
+  domeBgCtx = domeBgCanvas.getContext('2d', { alpha: true });
+
+  domeBgSourceCanvas = document.createElement('canvas');
+  domeBgSourceCtx = domeBgSourceCanvas.getContext('2d', { willReadFrequently: true });
+
+  const img = new Image();
+  img.onload = () => {
+    domeBgSourceCanvas.width = img.width;
+    domeBgSourceCanvas.height = img.height;
+    domeBgSourceCtx.drawImage(img, 0, 0);
+
+    domeBgWidth = img.width;
+    domeBgHeight = img.height;
+    domeBgSourceData = domeBgSourceCtx.getImageData(0, 0, domeBgWidth, domeBgHeight).data;
+    domeBgReady = true;
+
+    resizeDomeBackground();
+    renderDomeBackground();
+  };
+  img.src = DOME_BG_URL;
+}
+
+function resizeDomeBackground() {
+  if (!domeBgCanvas) return;
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  domeBgCanvas.width = Math.round(window.innerWidth * dpr * DOME_BG_RENDER_SCALE);
+  domeBgCanvas.height = Math.round(window.innerHeight * dpr * DOME_BG_RENDER_SCALE);
+
+  domeBgCanvas.style.width = '100%';
+  domeBgCanvas.style.height = '100%';
+}
+
+function renderDomeBackground() {
+  if (!domeBgReady || !domeBgCtx || !camera) return;
+
+  const w = domeBgCanvas.width;
+  const h = domeBgCanvas.height;
+
+  if (!w || !h) return;
+
+  const imageData = domeBgCtx.createImageData(w, h);
+  const out = imageData.data;
+
+  const aspect = w / h;
+  const tanHalfFov = Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
+
+  const ray = new THREE.Vector3();
+  const worldRay = new THREE.Vector3();
+
+  const cx = domeBgWidth * 0.5;
+  const cy = domeBgHeight * 0.5;
+  const maxRadius = Math.min(domeBgWidth, domeBgHeight) * 0.5;
+
+  for (let y = 0; y < h; y++) {
+    const sy = 1 - ((y + 0.5) / h) * 2;
+
+    for (let x = 0; x < w; x++) {
+      const sx = ((x + 0.5) / w) * 2 - 1;
+
+      // rayo en espacio de cámara
+      ray.set(
+        sx * tanHalfFov * aspect,
+        sy * tanHalfFov,
+        -1
+      ).normalize();
+
+      // lo llevamos al mundo según la orientación actual
+      worldRay.copy(ray).applyQuaternion(camera.quaternion);
+
+      // ángulo desde el zenit (+Y)
+      const theta = Math.acos(THREE.MathUtils.clamp(worldRay.y, -1, 1));
+
+      // PROYECCIÓN CLAVE:
+      // zenit -> centro
+      // horizonte -> borde exterior
+      // nadir -> vuelve al centro (se juntan los bordes)
+      const rho = Math.sin(theta);
+
+      // azimut: norte arriba, este derecha
+      const az = Math.atan2(worldRay.x, -worldRay.z) + DOME_BG_AZIMUTH_OFFSET;
+
+      const srcX = cx + Math.sin(az) * rho * maxRadius;
+      const srcY = cy - Math.cos(az) * rho * maxRadius;
+
+      const ix = Math.max(0, Math.min(domeBgWidth - 1, Math.round(srcX)));
+      const iy = Math.max(0, Math.min(domeBgHeight - 1, Math.round(srcY)));
+
+      const srcIndex = (iy * domeBgWidth + ix) * 4;
+      const outIndex = (y * w + x) * 4;
+
+      out[outIndex] = domeBgSourceData[srcIndex];
+      out[outIndex + 1] = domeBgSourceData[srcIndex + 1];
+      out[outIndex + 2] = domeBgSourceData[srcIndex + 2];
+      out[outIndex + 3] = domeBgSourceData[srcIndex + 3];
+    }
+  }
+
+  domeBgCtx.putImageData(imageData, 0, 0);
+}
   function init3D() {
   scene = new THREE.Scene();
   scene.background = null;
@@ -2079,18 +2175,13 @@ function crearSkyDome() {
     renderer.outputEncoding = THREE.sRGBEncoding;
   }
 
+  initDomeBackground();
+
   const canvasContainer = document.getElementById('canvas-container');
   canvasContainer.appendChild(renderer.domElement);
 
   starGroup = new THREE.Group();
   scene.add(starGroup);
-
-  /*
-    IMPORTANTE:
-    No usar crearSkyDome() con el fondo cuadrado.
-    El fondo bg-dome-square.png va por CSS en #canvas-container.
-  */
-  // crearSkyDome();
 
   raycaster = new THREE.Raycaster();
   raycaster.params.Points.threshold = 15;
@@ -2108,7 +2199,6 @@ function crearSkyDome() {
   hoverRing.visible = false;
   scene.add(hoverRing);
 
-  // Sprite 3D que reemplaza visualmente a la estrella cuando entra en el círculo
   missionStarSprite = createStarSprite('★', '#ffffff', 64);
   missionStarSprite.visible = false;
   scene.add(missionStarSprite);
@@ -3208,11 +3298,20 @@ hud.style.opacity = objetivo.userData.mission ? 0 : 0.85;
       hud.style.opacity = 0;
     }
   }
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
 
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  resizeDomeBackground();
+  renderDomeBackground();
+}
   function animar() {
     requestAnimationFrame(animar);
     actualizarCamaraYUI();
     verificarIntersecciones();
+     renderDomeBackground();
     renderer.render(scene, camera);
   }
 
