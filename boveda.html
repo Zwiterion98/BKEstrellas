@@ -1664,6 +1664,67 @@ body.manual-nav-active #canvas-container:active {
     font-size: 10px;
   }
 }
+/* =========================
+   BÓVEDA LOADING STARS
+========================= */
+
+.boveda-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+}
+
+.boveda-loader-stars {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: rgba(255,255,255,0.35);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.boveda-loader-stars span {
+  transition:
+    color 0.22s ease,
+    text-shadow 0.22s ease,
+    transform 0.22s ease;
+}
+
+.boveda-loader-stars span.is-filled {
+  color: #58a7e8;
+  transform: scale(1.08);
+  text-shadow:
+    0 0 8px rgba(88,167,232,0.95),
+    0 0 18px rgba(88,167,232,0.75),
+    0 0 30px rgba(88,167,232,0.35);
+}
+
+.boveda-loader-title {
+  margin: 0;
+  font-family: "FlameBold", "Arial Black", Impact, sans-serif;
+  font-size: clamp(36px, 11vw, 68px);
+  line-height: 0.86;
+  text-transform: uppercase;
+}
+
+.boveda-loader-title span {
+  display: block;
+}
+
+.boveda-loader-copy {
+  max-width: 260px;
+  margin: 0;
+  color: rgba(255,255,255,0.56);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
 </style>
 </head>
 <body>
@@ -1810,11 +1871,23 @@ body.manual-nav-active #canvas-container:active {
 <div id="canvas-container"></div>
   <div id="sys-info" class="oculto">SYS.OFF</div>
 
-  <div id="ui-layer">
-    <div class="title-flat">OBSERVATORIO</div>
-    <div class="subtitle-flat">Alineación Espacial</div>
-    <button onclick="iniciarApp()">Iniciar Enlace</button>
+<div id="ui-layer">
+  <div class="boveda-loader">
+    <div class="boveda-loader-stars" aria-hidden="true">
+      <span class="is-filled">★</span>
+      <span>☆</span>
+      <span>☆</span>
+      <span>☆</span>
+    </div>
+
+    <h1 class="boveda-loader-title" aria-label="Estrellas Reales">
+      <span>Estrellas</span>
+      <span>Reales</span>
+    </h1>
+
+    <p class="boveda-loader-copy">Preparando la bóveda celeste...</p>
   </div>
+</div>
 
 <script>
 let scene, camera, renderer, starGroup;
@@ -1841,6 +1914,8 @@ let domeTilt = null;
 let domeBackgroundEnabled = false;
 let manualNavigationEnabled = false;
 let modeFeedbackTimeout = null;
+let bovedaLoaderInterval = null;
+let bovedaLoaderStep = 0;
 
 const preloadedMissionImages = new Map();
 const missionPreloadPromises = new Map();
@@ -3065,61 +3140,164 @@ function mostrarInfoEstrella() {
       }
     }
   }
+function mostrarCargaBoveda(texto = "Preparando la bóveda celeste...") {
+  if (!uiLayer) return;
 
-  async function iniciarApp() {
-   document.querySelector('.title-flat').innerText = "AUTORIZANDO...";
+  uiLayer.classList.remove("oculto");
 
-let usarModoManualPorDefecto = false;
+  uiLayer.innerHTML = `
+    <div class="boveda-loader">
+      <div class="boveda-loader-stars" aria-hidden="true">
+        <span class="is-filled">★</span>
+        <span>☆</span>
+        <span>☆</span>
+        <span>☆</span>
+      </div>
 
-if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-  try {
-    const permisoSensores = await DeviceOrientationEvent.requestPermission();
+      <h1 class="boveda-loader-title" aria-label="Estrellas Reales">
+        <span>Estrellas</span>
+        <span>Reales</span>
+      </h1>
 
-    if (permisoSensores !== 'granted') {
-      usarModoManualPorDefecto = true;
+      <p class="boveda-loader-copy">${texto}</p>
+    </div>
+  `;
+
+  iniciarLoaderBoveda();
+}
+
+function iniciarLoaderBoveda() {
+  detenerLoaderBoveda();
+
+  const stars = Array.from(document.querySelectorAll(".boveda-loader-stars span"));
+
+  bovedaLoaderInterval = window.setInterval(() => {
+    bovedaLoaderStep = (bovedaLoaderStep % 4) + 1;
+
+    stars.forEach((star, index) => {
+      const active = index < bovedaLoaderStep;
+      star.classList.toggle("is-filled", active);
+      star.textContent = active ? "★" : "☆";
+    });
+  }, 280);
+}
+
+function detenerLoaderBoveda() {
+  if (bovedaLoaderInterval) {
+    window.clearInterval(bovedaLoaderInterval);
+    bovedaLoaderInterval = null;
+  }
+}
+  async function iniciarApp(options = {}) {
+  const params = new URLSearchParams(window.location.search);
+  const vieneDesdeIndex = options.fromIndex || params.get("start") === "1";
+
+  mostrarCargaBoveda("Preparando la bóveda celeste...");
+
+  let usarModoManualPorDefecto = sessionStorage.getItem("er_manual_mode") === "1";
+
+  /*
+    Si se abre directo boveda.html sin pasar por Index,
+    todavía pedimos permisos acá.
+    Si viene desde Index, NO mostramos textos intermedios,
+    porque los permisos ya se pidieron con el botón Comenzar.
+  */
+  if (!vieneDesdeIndex) {
+    if (
+      typeof DeviceOrientationEvent !== "undefined" &&
+      typeof DeviceOrientationEvent.requestPermission === "function"
+    ) {
+      try {
+        const permisoSensores = await DeviceOrientationEvent.requestPermission();
+
+        if (permisoSensores !== "granted") {
+          usarModoManualPorDefecto = true;
+        }
+      } catch (e) {
+        usarModoManualPorDefecto = true;
+      }
     }
-  } catch (e) {
+  }
+
+  const storedLat = parseFloat(sessionStorage.getItem("er_lat"));
+  const storedLon = parseFloat(sessionStorage.getItem("er_lon"));
+
+  const usarPosicion = (lat, lon) => {
+    usuarioLat = lat;
+    usuarioLon = lon;
+
+    document.getElementById("sys-info").innerText =
+      `LAT:${usuarioLat.toFixed(2)} // LON:${usuarioLon.toFixed(2)}`;
+
+    document.getElementById("sys-info").classList.remove("oculto");
+
+    generarCieloReal();
+
+    currentMissionIndex = 0;
+    actualizarMissionTracker();
+    actualizarInfoCard(getCurrentMission());
+
+    northCalibration = null;
+
+    if ("ondeviceorientationabsolute" in window) {
+      window.addEventListener("deviceorientationabsolute", procesarSensores);
+    } else {
+      window.addEventListener("deviceorientation", procesarSensores);
+    }
+
+    if (usarModoManualPorDefecto) {
+      setManualNavigationEnabled(true, false);
+    }
+
+    setTimeout(() => {
+      detenerLoaderBoveda();
+
+      uiLayer.classList.add("oculto");
+
+      document.getElementById("compass-container").classList.remove("oculto");
+      document.getElementById("compass-pointer").classList.remove("oculto");
+      document.getElementById("orientation-panel").classList.remove("oculto");
+
+      const skyControls = document.getElementById("sky-controls");
+      if (skyControls) skyControls.classList.remove("oculto");
+    }, 700);
+  };
+
+  if (Number.isFinite(storedLat) && Number.isFinite(storedLon)) {
+    usarPosicion(storedLat, storedLon);
+    return;
+  }
+
+  if (!navigator.geolocation) {
     usarModoManualPorDefecto = true;
+    usarPosicion(-34.91, -56.17);
+    return;
   }
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      sessionStorage.setItem("er_lat", String(pos.coords.latitude));
+      sessionStorage.setItem("er_lon", String(pos.coords.longitude));
+
+      usarPosicion(pos.coords.latitude, pos.coords.longitude);
+    },
+    () => {
+      /*
+        Fallback Montevideo.
+        La experiencia sigue funcionando en modo manual.
+      */
+      usarModoManualPorDefecto = true;
+      sessionStorage.setItem("er_manual_mode", "1");
+
+      usarPosicion(-34.91, -56.17);
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 9000,
+      maximumAge: 60000,
+    }
+  );
 }
-
-document.querySelector('.title-flat').innerText = usarModoManualPorDefecto
-  ? "MODO MANUAL..."
-  : "BUSCANDO GPS...";
-
-    navigator.geolocation.getCurrentPosition((pos) => {
-      usuarioLat = pos.coords.latitude;
-      usuarioLon = pos.coords.longitude;
-
-      document.getElementById('sys-info').innerText = `LAT:${usuarioLat.toFixed(2)} // LON:${usuarioLon.toFixed(2)}`;
-      document.getElementById('sys-info').classList.remove('oculto');
-
-      generarCieloReal();
-currentMissionIndex = 0;
-actualizarMissionTracker();
-actualizarInfoCard(getCurrentMission());
-      northCalibration = null;
-
-      if ('ondeviceorientationabsolute' in window) {
-  window.addEventListener('deviceorientationabsolute', procesarSensores);
-} else {
-  window.addEventListener('deviceorientation', procesarSensores);
-}
-
-if (usarModoManualPorDefecto) {
-  setManualNavigationEnabled(true);
-}
-
-setTimeout(() => {
-  uiLayer.classList.add('oculto');
-  document.getElementById('compass-container').classList.remove('oculto');
-  document.getElementById('compass-pointer').classList.remove('oculto');
-  document.getElementById('orientation-panel').classList.remove('oculto');
-  document.getElementById('sky-controls').classList.remove('oculto');
-}, 500);
-
-    }, () => alert("Error de GPS."));
-  }
 
   function azimuthToDirection(azimuth) {
     const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
@@ -4007,7 +4185,13 @@ if (missionModalContinue) {
 }
 setupSkyControls();
 preloadAllMissionImages();
-  init3D();
+init3D();
+
+const params = new URLSearchParams(window.location.search);
+
+if (params.get("start") === "1") {
+  iniciarApp({ fromIndex: true });
+}
 </script>
 </body>
 </html>

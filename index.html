@@ -874,8 +874,8 @@
         </article>
 
         <div class="start-btn-wrap">
-         <button class="btn" type="button" id="openSkyBtn" data-next="sensor-gate">Comenzar</button>
-         </div>
+        <button class="btn" type="button" id="openSkyBtn">Comenzar</button>
+       </div>
       </div>
     </section>
 
@@ -998,19 +998,127 @@
         minLoadingTime,
       ]);
     }
+function setIndexLoadingText(title = "Cargando", subtitle = "Preparando experiencia") {
+  const loadingScreen = SCREENS.loading;
+  if (!loadingScreen) return;
 
+  const titleEl = loadingScreen.querySelector(".hero-title");
+  const subtitleEl = loadingScreen.querySelector(".loading-copy, .subtitle, p");
+
+  if (titleEl) {
+    titleEl.innerHTML = `
+      <span class="top">Estrellas</span>
+      <span class="bottom">Reales</span>
+    `;
+  }
+
+  if (subtitleEl) {
+    subtitleEl.textContent = subtitle;
+  }
+}
+
+function requestMotionPermissionFromIndex() {
+  return new Promise(async (resolve) => {
+    if (
+      typeof DeviceOrientationEvent !== "undefined" &&
+      typeof DeviceOrientationEvent.requestPermission === "function"
+    ) {
+      try {
+        const permission = await DeviceOrientationEvent.requestPermission();
+        resolve(permission === "granted");
+      } catch (error) {
+        resolve(false);
+      }
+
+      return;
+    }
+
+    // Android / desktop normalmente no necesita requestPermission explícito.
+    resolve(true);
+  });
+}
+
+function requestGpsFromIndex() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve({
+        ok: false,
+        lat: null,
+        lon: null,
+      });
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        resolve({
+          ok: true,
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+        });
+      },
+      () => {
+        resolve({
+          ok: false,
+          lat: null,
+          lon: null,
+        });
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 9000,
+        maximumAge: 60000,
+      }
+    );
+  });
+}
+
+async function prepararYEntrarBoveda() {
+  const openSkyBtn = document.getElementById("openSkyBtn");
+  if (openSkyBtn) openSkyBtn.disabled = true;
+
+  sessionStorage.removeItem("er_lat");
+  sessionStorage.removeItem("er_lon");
+  sessionStorage.removeItem("er_manual_mode");
+  sessionStorage.removeItem("er_permissions_from_index");
+
+  setIndexLoadingText("Estrellas Reales", "Preparando la bóveda celeste...");
+  showScreen("loading");
+  startStarLoader();
+
+  const motionGranted = await requestMotionPermissionFromIndex();
+
+  const gps = await requestGpsFromIndex();
+
+  if (gps.ok) {
+    sessionStorage.setItem("er_lat", String(gps.lat));
+    sessionStorage.setItem("er_lon", String(gps.lon));
+  }
+
+  /*
+    Si sensores o GPS fallan, entramos igual,
+    pero dejamos listo el modo manual en la bóveda.
+  */
+  if (!motionGranted || !gps.ok) {
+    sessionStorage.setItem("er_manual_mode", "1");
+  } else {
+    sessionStorage.setItem("er_manual_mode", "0");
+  }
+
+  sessionStorage.setItem("er_permissions_from_index", "1");
+
+  window.location.href = "./boveda.html?start=1";
+}
     function setupNavigation() {
       document.querySelectorAll("[data-next]").forEach((button) => {
       button.addEventListener("click", () => {
     showScreen(button.dataset.next);
       });
     });
-    const openSkyBtn = document.getElementById("openSkyBtn");
+   const openSkyBtn = document.getElementById("openSkyBtn");
 
 if (openSkyBtn) {
-  openSkyBtn.addEventListener("click", () => {
-    window.location.href = "./boveda.html?start=1";
-  });
+  openSkyBtn.addEventListener("click", prepararYEntrarBoveda);
 }
 
       const form = document.getElementById("registerForm");
