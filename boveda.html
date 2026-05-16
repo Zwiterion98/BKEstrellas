@@ -6,7 +6,7 @@
   <title>SkyView Ultimate: brújula por dirección</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
- <style>
+<style>
 @font-face {
   font-family: "FlameBold";
   src: url("./assets/fonts/1.Flame-Bold 2 3 2.otf") format("opentype");
@@ -23,16 +23,29 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "HostGrotesk";
+  src: url("./assets/fonts/HostGrotesk-VariableFont_wght.ttf") format("truetype");
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --bg-dark: #05080d;
   --bg-blue: #12384d;
   --accent: #58a7e8;
   --text: #f3f3ef;
+  --text-muted: rgba(255,255,255,0.36);
   --panel: rgba(10, 24, 36, 0.58);
-  --card-bg: rgba(15, 33, 44, 0.96);
+  --line: rgba(255,255,255,0.78);
+
+  --card-bg: rgba(13, 31, 44, 0.97);
   --card-header: #496f86;
-  --card-border: rgba(255, 255, 255, 0.18);
-  --line: rgba(255, 255, 255, 0.78);
+  --card-border: rgba(126, 157, 179, 0.34);
+
+  --mission-blue: #12384d;
+  --mission-white: #f7f4ee;
 }
 
 * {
@@ -48,30 +61,28 @@ body {
 body {
   margin: 0;
   overflow: hidden;
-  background:
-    linear-gradient(
-      180deg,
-      #000 0%,
-      #000 56%,
-      #04131d 70%,
-      #12384d 100%
-    );
+  background: linear-gradient(
+    180deg,
+    #000 0%,
+    #000 56%,
+    #04131d 70%,
+    #12384d 100%
+  );
   color: var(--text);
-  font-family: "FlameSans", Arial, sans-serif;
+  font-family: "HostGrotesk", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 button {
-  border: 0;
-  border-radius: 999px;
-  padding: 16px 32px;
   background: #fff;
   color: #000;
-  font-family: inherit;
+  border: none;
+  padding: 16px 32px;
   font-size: 14px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  border-radius: 999px;
   cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   transition: transform 0.1s ease;
 }
 
@@ -93,18 +104,17 @@ button:active {
   position: absolute;
   left: 0;
   bottom: 0;
-  z-index: 2;
   width: 100vw;
   height: 35vh;
-  opacity: 0;
+  z-index: 2;
   pointer-events: none;
-  background:
-    linear-gradient(
-      to top,
-      rgba(0, 0, 0, 0.35) 0%,
-      rgba(0, 0, 0, 0.12) 30%,
-      rgba(0, 0, 0, 0) 100%
-    );
+  opacity: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0,0,0,0.35) 0%,
+    rgba(0,0,0,0.12) 30%,
+    rgba(0,0,0,0) 100%
+  );
   transition: opacity 0.1s linear;
 }
 
@@ -123,8 +133,8 @@ button:active {
   z-index: 30;
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   background: #000;
   transition: opacity 0.35s ease;
 }
@@ -139,10 +149,10 @@ button:active {
 
 .subtitle-flat {
   margin-bottom: 32px;
-  color: rgba(255, 255, 255, 0.5);
   font-size: 14px;
-  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.5);
   text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 /* =========================
@@ -167,7 +177,7 @@ button:active {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: rgba(255, 255, 255, 0.34);
+  color: rgba(255,255,255,0.34);
   transition: color 0.25s ease, opacity 0.25s ease;
 }
 
@@ -178,7 +188,7 @@ button:active {
   top: 50%;
   width: 1px;
   height: 38px;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255,255,255,0.18);
   transform: translateY(-50%);
 }
 
@@ -187,33 +197,36 @@ button:active {
 }
 
 .tracker-star {
-  color: rgba(255, 255, 255, 0.34);
   font-size: 20px;
   line-height: 1;
+  color: rgba(255,255,255,0.34);
   transform: translateY(-1px);
-  transition: color 0.25s ease, text-shadow 0.25s ease, transform 0.25s ease;
+  transition:
+    color 0.25s ease,
+    text-shadow 0.25s ease,
+    transform 0.25s ease;
 }
 
 .tracker-item.active {
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(255,255,255,0.92);
 }
 
 .tracker-item.active .tracker-star {
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(255,255,255,0.92);
   text-shadow: none;
 }
 
 .tracker-item.completed {
-  color: rgba(255, 255, 255, 0.96);
+  color: rgba(255,255,255,0.96);
 }
 
 .tracker-item.completed .tracker-star {
   color: var(--accent);
   transform: translateY(-1px) scale(1.08);
   text-shadow:
-    0 0 8px rgba(88, 167, 232, 0.95),
-    0 0 18px rgba(88, 167, 232, 0.75),
-    0 0 30px rgba(88, 167, 232, 0.35);
+    0 0 8px rgba(88,167,232,0.95),
+    0 0 18px rgba(88,167,232,0.75),
+    0 0 30px rgba(88,167,232,0.35);
 }
 
 .tracker-item.completed.active .tracker-star {
@@ -228,9 +241,9 @@ button:active {
   position: absolute;
   left: 50%;
   top: 50%;
-  z-index: 15;
   width: 110px;
   height: 110px;
+  z-index: 15;
   pointer-events: none;
   transform: translate(-50%, -50%);
 }
@@ -238,8 +251,8 @@ button:active {
 #scanner-ring {
   position: absolute;
   inset: 0;
-  border: 1.35px solid rgba(255, 255, 255, 0.78);
   border-radius: 50%;
+  border: 1.35px solid rgba(255,255,255,0.78);
 }
 
 #scanner-progress {
@@ -250,21 +263,19 @@ button:active {
   background:
     conic-gradient(
       from -18deg,
-      rgba(255, 255, 255, 0.98) calc(var(--progress, 0) * 1%),
-      rgba(255, 255, 255, 0) 0
+      rgba(255,255,255,0.98) calc(var(--progress, 0) * 1%),
+      rgba(255,255,255,0) 0
     );
-  mask:
-    radial-gradient(
-      transparent 0 49px,
-      black 50px 55px,
-      transparent 56px 100%
-    );
-  -webkit-mask:
-    radial-gradient(
-      transparent 0 49px,
-      black 50px 55px,
-      transparent 56px 100%
-    );
+  mask: radial-gradient(
+    transparent 0 49px,
+    black 50px 55px,
+    transparent 56px 100%
+  );
+  -webkit-mask: radial-gradient(
+    transparent 0 49px,
+    black 50px 55px,
+    transparent 56px 100%
+  );
   filter: none;
   transition: opacity 0.15s ease;
 }
@@ -293,7 +304,7 @@ button:active {
   position: absolute;
   left: 50%;
   top: 50%;
-  background: rgba(255, 255, 255, 0.86);
+  background: rgba(255,255,255,0.86);
   transform: translate(-50%, -50%);
 }
 
@@ -317,11 +328,11 @@ button:active {
   top: 50%;
   width: 0;
   height: 0;
-  border-right: 12px solid transparent;
   border-left: 12px solid transparent;
-  border-bottom: 24px solid rgba(255, 255, 255, 0.96);
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+  border-right: 12px solid transparent;
+  border-bottom: 24px solid rgba(255,255,255,0.96);
   transform-origin: 50% 36px;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.45));
 }
 
 /* =========================
@@ -333,39 +344,39 @@ button:active {
   left: 50%;
   top: calc(50% + 76px);
   z-index: 18;
+  text-align: center;
   opacity: 0;
   pointer-events: none;
-  text-align: center;
   transform: translateX(-50%);
   transition: opacity 0.2s ease;
 }
 
 .pill {
   max-width: 78vw;
-  overflow: hidden;
   padding: 7px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+  background: rgba(10,24,36,0.72);
+  border: 1px solid rgba(255,255,255,0.16);
   border-radius: 999px;
-  background: rgba(10, 24, 36, 0.72);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.08em;
-  text-overflow: ellipsis;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   text-transform: uppercase;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
 .target-type {
   display: block;
   margin-top: 5px;
-  color: rgba(255, 255, 255, 0.58);
   font-size: 9px;
+  color: rgba(255,255,255,0.58);
   letter-spacing: 0.14em;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
 }
 
 /* =========================
@@ -376,9 +387,9 @@ button:active {
   --connector-length: 1000;
   position: fixed;
   inset: 0;
-  z-index: 23;
   width: 100vw;
   height: 100dvh;
+  z-index: 23;
   overflow: visible;
   opacity: 1;
   pointer-events: none;
@@ -386,13 +397,13 @@ button:active {
 }
 
 #info-connector-layer.hidden {
-  visibility: hidden;
   opacity: 0;
+  visibility: hidden;
 }
 
 #info-connector-path {
   fill: none;
-  stroke: var(--line);
+  stroke: rgba(255,255,255,0.78);
   stroke-width: 1.05;
   stroke-linecap: square;
   stroke-linejoin: miter;
@@ -421,26 +432,26 @@ button:active {
 
 #star-info-card {
   position: absolute;
-  top: clamp(44px, 7vh, 80px);
-  left: clamp(46px, 7vw, 118px);
+  top: clamp(28px, 5vh, 56px);
+  left: clamp(14px, 4vw, 42px);
+  width: min(calc(100vw - 28px), 640px);
   z-index: 24;
-  width: min(76vw, 640px);
   opacity: 1;
   pointer-events: none;
 }
 
 #star-info-card.hidden {
-  visibility: hidden;
   opacity: 0;
+  visibility: hidden;
 }
 
 .star-card {
   position: relative;
   width: 100%;
   overflow: visible;
-  border: 1px solid var(--card-border);
-  background: var(--card-bg);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+  background: rgba(15, 33, 44, 0.96);
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.16);
   opacity: 0;
   transform: translateY(8px);
 }
@@ -448,14 +459,16 @@ button:active {
 #star-info-card.visible .star-card {
   opacity: 1;
   transform: translateY(0);
-  transition: opacity 0.28s ease, transform 0.28s ease;
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s ease;
 }
 
 .star-card::before {
   content: "";
   position: absolute;
   left: -5px;
-  top: clamp(56px, 10vw, 84px);
+  top: clamp(58px, 10vw, 84px);
   width: 5px;
   height: clamp(86px, 14vw, 118px);
   background: #fff;
@@ -475,35 +488,35 @@ button:active {
 }
 
 .star-card-header {
+  height: clamp(42px, 7vw, 58px);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  height: clamp(44px, 7vw, 64px);
-  padding: 0 clamp(12px, 2.4vw, 18px);
-  background: var(--card-header);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0 clamp(10px, 2vw, 18px) 0 clamp(12px, 2.2vw, 18px);
+  background: #496f86;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
 }
 
 #star-card-title {
-  flex: 1 1 auto;
   min-width: 0;
-  overflow: hidden;
+  flex: 1 1 auto;
   color: #f6f3eb;
   font-family: "FlameBold", "Cooper Black", "Arial Black", Impact, sans-serif;
-  font-size: clamp(24px, 5.8vw, 52px);
-  line-height: 0.92;
+  font-size: clamp(20px, 5.4vw, 44px);
+  line-height: 0.94;
   letter-spacing: 0;
-  text-overflow: clip;
   text-transform: uppercase;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
 }
 
 .star-card-target {
   position: relative;
   flex: 0 0 auto;
-  width: clamp(20px, 3vw, 30px);
-  height: clamp(20px, 3vw, 30px);
+  width: clamp(18px, 3vw, 28px);
+  height: clamp(18px, 3vw, 28px);
 }
 
 .star-card-target::before,
@@ -512,7 +525,7 @@ button:active {
   position: absolute;
   left: 50%;
   top: 50%;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255,255,255,0.72);
   transform: translate(-50%, -50%);
 }
 
@@ -530,8 +543,8 @@ button:active {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: clamp(15px, 2.2vw, 21px);
-  height: clamp(15px, 2.2vw, 21px);
+  width: clamp(14px, 2.2vw, 20px);
+  height: clamp(14px, 2.2vw, 20px);
   border: 2px solid #fff;
   border-radius: 50%;
   transform: translate(-50%, -50%);
@@ -544,28 +557,28 @@ button:active {
   top: 50%;
   width: clamp(5px, 0.8vw, 8px);
   height: clamp(5px, 0.8vw, 8px);
-  border-radius: 50%;
   background: #fff;
+  border-radius: 50%;
   transform: translate(-50%, -50%);
 }
 
 .star-card-body {
   display: grid;
-  grid-template-columns: clamp(84px, 20vw, 140px) 1px minmax(0, 1fr);
-  min-height: clamp(86px, 14vw, 118px);
+  grid-template-columns: clamp(74px, 19vw, 132px) 1px minmax(0, 1fr);
+  min-height: clamp(74px, 14vw, 112px);
   background: rgba(15, 33, 44, 0.98);
 }
 
 .star-card-left {
   display: flex;
-  min-width: 0;
-  overflow: hidden;
   flex-direction: column;
   justify-content: center;
+  min-width: 0;
+  overflow: hidden;
   padding:
-    clamp(8px, 1.5vw, 13px)
+    clamp(8px, 1.5vw, 12px)
     8px
-    clamp(8px, 1.5vw, 11px)
+    clamp(8px, 1.5vw, 10px)
     clamp(10px, 2vw, 16px);
 }
 
@@ -575,7 +588,7 @@ button:active {
   gap: 4px;
   color: #fff;
   font-family: "FlameSans", Arial, sans-serif;
-  font-size: clamp(11px, 2.2vw, 19px);
+  font-size: clamp(10px, 2vw, 18px);
   line-height: 1;
   white-space: nowrap;
 }
@@ -595,7 +608,7 @@ button:active {
   margin-top: 4px;
   color: #fff;
   font-family: "FlameSans", Arial, sans-serif;
-  font-size: clamp(32px, 6.8vw, 62px);
+  font-size: clamp(28px, 6.5vw, 58px);
   line-height: 0.82;
   letter-spacing: -0.05em;
   white-space: nowrap;
@@ -603,32 +616,25 @@ button:active {
 
 .star-card-divider {
   width: 1px;
-  background:
-    repeating-linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.2) 0,
-      rgba(255, 255, 255, 0.2) 3px,
-      transparent 3px,
-      transparent 6px
-    );
+  background: rgba(255,255,255,0.16);
 }
 
 .star-card-data {
   display: flex;
-  min-width: 0;
-  overflow: hidden;
   flex-direction: column;
   justify-content: center;
   gap: 2px;
+  min-width: 0;
+  overflow: hidden;
   padding:
-    clamp(8px, 1.6vw, 13px)
-    clamp(8px, 1.8vw, 15px)
-    clamp(8px, 1.4vw, 11px)
-    clamp(10px, 2vw, 17px);
+    clamp(8px, 1.6vw, 12px)
+    clamp(8px, 1.8vw, 14px)
+    clamp(8px, 1.4vw, 10px)
+    clamp(10px, 2vw, 16px);
   color: #fff;
   font-family: "FlameSans", Arial, sans-serif;
-  font-size: clamp(9px, 2vw, 16px);
-  line-height: 1.15;
+  font-size: clamp(9px, 1.95vw, 16px);
+  line-height: 1.16;
 }
 
 .star-card-data strong {
@@ -645,9 +651,9 @@ button:active {
 }
 
 .star-card-footer {
-  height: clamp(10px, 2vw, 20px);
+  height: clamp(10px, 2vw, 18px);
   background: rgba(14, 31, 42, 0.98);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255,255,255,0.10);
 }
 
 /* =========================
@@ -658,9 +664,9 @@ button:active {
   position: fixed;
   bottom: 22px;
   left: 50%;
-  z-index: 30;
   width: min(92vw, 520px);
   height: 40px;
+  z-index: 30;
   overflow: hidden;
   pointer-events: none;
   transform: translateX(-50%);
@@ -679,12 +685,12 @@ button:active {
 #compass-strip span {
   display: inline-block;
   width: 64px;
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(255,255,255,0.88);
   font-size: 18px;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-align: center;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
 }
 
 #compass-pointer {
@@ -695,8 +701,8 @@ button:active {
   color: #fff;
   font-size: 14px;
   pointer-events: none;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 1);
   transform: translateX(-50%);
+  text-shadow: 0 2px 4px rgba(0,0,0,1);
 }
 
 /* =========================
@@ -708,7 +714,7 @@ button:active {
   left: 30px;
   bottom: 82px;
   z-index: 18;
-  color: rgba(255, 255, 255, 0.42);
+  color: rgba(255,255,255,0.42);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 10px;
   letter-spacing: 0.12em;
@@ -721,9 +727,9 @@ button:active {
   z-index: 12;
   min-width: 220px;
   padding: 12px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
   background: var(--panel);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   color: #e8e8e8;
@@ -734,8 +740,8 @@ button:active {
 
 #orientation-panel .title {
   margin-bottom: 6px;
-  color: rgba(255, 255, 255, 0.58);
-  font-family: "FlameSans", Arial, sans-serif;
+  color: rgba(255,255,255,0.58);
+  font-family: "HostGrotesk", Inter, sans-serif;
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -748,7 +754,7 @@ button:active {
 }
 
 #orientation-panel .label {
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255,255,255,0.45);
 }
 
 #orientation-panel .value {
@@ -791,8 +797,7 @@ button:active {
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  background:
-    linear-gradient(180deg, #000 0 72%, #12384d 100%);
+  background: linear-gradient(180deg, #000 0 72%, #12384d 100%);
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
@@ -801,13 +806,26 @@ button:active {
   display: none;
 }
 
+.mission-detail .reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 620ms ease, transform 620ms ease;
+  will-change: opacity, transform;
+}
+
+.mission-detail .reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .mission-hero {
   position: relative;
   width: 100%;
   height: 282px;
   overflow: hidden;
   background:
-    radial-gradient(circle at 50% 48%, rgba(255,255,255,.95), rgba(87,171,255,.55) 9%, transparent 27%),
+    radial-gradient(circle at 50% 48%, rgba(255,255,255,.92), rgba(87,171,255,.55) 9%, transparent 27%),
+    radial-gradient(circle at 70% 30%, rgba(255,255,255,.5), transparent 20%),
     linear-gradient(135deg, var(--nebula-a, #b86a38), var(--nebula-b, #3a78bd) 52%, var(--nebula-c, #1b1b24));
 }
 
@@ -858,11 +876,12 @@ button:active {
 
 .mission-eyebrow {
   margin: 0 0 4px;
+  color: rgba(247,244,238,.78);
+  font-family: "HostGrotesk", Arial, sans-serif;
   font-size: 11px;
   line-height: 1;
   letter-spacing: .04em;
   text-transform: uppercase;
-  color: rgba(247,244,238,.78);
 }
 
 .mission-title {
@@ -947,6 +966,7 @@ button:active {
   margin: 0 0 18px;
   max-width: 315px;
   color: #f7f4ee;
+  font-family: "HostGrotesk", Arial, sans-serif;
   font-size: 19px;
   line-height: 1.08;
   font-weight: 900;
@@ -962,12 +982,18 @@ button:active {
 
 .mission-copy {
   position: relative;
-  max-width: 330px;
+  width: 100%;
   margin: 0;
-  color: rgba(255,255,255,.84);
+  color: rgba(255,255,255,.86);
+  font-family: "HostGrotesk", Arial, sans-serif;
   font-size: 13px;
   line-height: 1.28;
   font-weight: 400;
+}
+
+.mission-copy strong {
+  color: #fff;
+  font-weight: 900;
 }
 
 .mission-copy + .mission-copy {
@@ -986,60 +1012,84 @@ button:active {
   bottom: 2px;
   left: 0;
   width: 1px;
-  background: rgba(247,244,238,.38);
+  background: rgba(247,244,238,.44);
 }
 
-.mission-star-group {
+.mission-vector {
   position: relative;
-  padding-left: 13px;
+  padding-left: 25px;
 }
 
-.mission-star-group::before {
+.mission-vector::before {
   content: "";
   position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
+  left: 5px;
+  top: 5px;
+  bottom: 5px;
   width: 1px;
-  background: rgba(247,244,238,.38);
+  background: rgba(247,244,238,.44);
 }
 
-.mission-star-p {
+.mission-vector-item {
   position: relative;
-  padding-left: 18px;
-  margin: 0;
-  color: rgba(255,255,255,.84);
+  margin: 0 0 24px;
+  color: rgba(255,255,255,.86);
+  font-family: "HostGrotesk", Arial, sans-serif;
   font-size: 13px;
   line-height: 1.3;
+  font-weight: 400;
 }
 
-.mission-star-p + .mission-star-p,
-.mission-star-p + .mission-copy {
-  margin-top: 18px;
+.mission-vector-item:last-child {
+  margin-bottom: 0;
 }
 
-.mission-star-p::before {
+.mission-vector-item::before {
   content: "★";
   position: absolute;
-  left: 0;
+  left: -25px;
   top: -1px;
+  z-index: 2;
+  width: 12px;
+  height: 14px;
+  display: grid;
+  place-items: center;
   color: #fff;
+  background: #000;
   font-size: 11px;
   line-height: 1;
+}
+
+.mission-vector-item.no-star::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  left: -22px;
+  top: 5px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.18);
+}
+
+.mission-vector-item strong {
+  color: #fff;
+  font-weight: 900;
 }
 
 .mission-img {
   width: 100%;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  background: #111;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.01)),
+    var(--img-bg, #222);
 }
 
 .mission-img.tall {
   aspect-ratio: 1.25 / 1;
 }
 
-.mission-img img {
+.mission-img img,
+.mission-mini-map img {
   width: 100%;
   height: 100%;
   display: block;
@@ -1058,6 +1108,7 @@ button:active {
 .mission-inline-title {
   margin: 0;
   color: #fff;
+  font-family: "HostGrotesk", Arial, sans-serif;
   font-size: 19px;
   line-height: 1.05;
   font-weight: 900;
@@ -1071,13 +1122,6 @@ button:active {
   border: 1px solid rgba(255,255,255,.18);
 }
 
-.mission-mini-map img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
-}
-
 .mission-quote {
   padding: 26px 22px 30px;
   background: #12384d;
@@ -1086,6 +1130,7 @@ button:active {
 .mission-quote p {
   margin: 0;
   color: #fff;
+  font-family: "HostGrotesk", Arial, sans-serif;
   font-size: 21px;
   line-height: 1.16;
   font-weight: 900;
@@ -1125,12 +1170,122 @@ button:active {
   box-shadow: 0 11px 15px rgba(0,0,0,.42);
 }
 
-.mission-close-hit {
-  display: none;
-}
-
 body.mission-modal-open {
   overflow: hidden;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 480px) {
+  #star-info-card {
+    top: 26px;
+    left: 12px;
+    width: calc(100vw - 18px);
+  }
+
+  .star-card-header {
+    height: 40px;
+    padding-left: 10px;
+    padding-right: 10px;
+    gap: 8px;
+  }
+
+  #star-card-title {
+    font-size: clamp(18px, 5.8vw, 28px);
+  }
+
+  .star-card-target {
+    width: 20px;
+    height: 20px;
+  }
+
+  .target-dot {
+    width: 14px;
+    height: 14px;
+    border-width: 1.6px;
+  }
+
+  .target-dot::after {
+    width: 5px;
+    height: 5px;
+  }
+
+  .star-card-body {
+    grid-template-columns: 70px 1px minmax(0, 1fr);
+    min-height: 78px;
+  }
+
+  .star-card-left {
+    padding: 7px 6px 7px 10px;
+  }
+
+  .star-card-name-row {
+    font-size: 9.5px;
+    gap: 4px;
+  }
+
+  .star-card-play {
+    border-top-width: 4px;
+    border-bottom-width: 4px;
+    border-left-width: 5px;
+  }
+
+  .star-card-year {
+    margin-top: 3px;
+    font-size: 27px;
+  }
+
+  .star-card-data {
+    padding: 7px 7px 7px 9px;
+    font-size: 8.8px;
+    line-height: 1.15;
+  }
+
+  .star-card-gap {
+    height: 4px;
+  }
+
+  .star-card-footer {
+    height: 9px;
+  }
+
+  .star-card::before {
+    left: -4px;
+    width: 4px;
+    top: 50px;
+    height: 88px;
+  }
+
+  .star-card::after {
+    width: 11px;
+    height: 11px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+  }
+}
+
+@media (max-width: 420px) {
+  #mission-tracker {
+    top: 20px;
+    left: 14px;
+    gap: 10px;
+    font-size: 13px;
+  }
+
+  .tracker-item {
+    gap: 5px;
+  }
+
+  .tracker-item::after {
+    right: -6px;
+    height: 24px;
+  }
+
+  .tracker-star {
+    font-size: 14px;
+  }
 }
 
 @media (max-width: 360px) {
@@ -1147,7 +1302,7 @@ body.mission-modal-open {
   }
 
   .mission-copy,
-  .mission-star-p {
+  .mission-vector-item {
     font-size: 12px;
   }
 
@@ -1164,176 +1319,10 @@ body.mission-modal-open {
     width: 118px;
   }
 }
-/* =========================================================
-   MODAL INFO ESTRELLA — CONTENIDO DINÁMICO
-========================================================= */
 
-#mission-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  display: flex;
-  opacity: 1;
-  pointer-events: auto;
-  background:
-    radial-gradient(circle at 50% 8%, rgba(88,167,232,0.20), transparent 34%),
-    linear-gradient(180deg, rgba(4,10,17,0.98), rgba(0,0,0,0.98));
-  transition: opacity 0.35s ease;
-}
-
-#mission-modal.hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.mission-modal-content {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  width: 100vw;
-  height: 100dvh;
-  min-height: 100dvh;
-  padding:
-    max(24px, env(safe-area-inset-top))
-    18px
-    max(18px, env(safe-area-inset-bottom));
-  overflow-y: auto;
-  background: transparent;
-}
-
-.mission-modal-kicker {
-  margin: 8px 0 8px;
-  color: rgba(255,255,255,0.58);
-  font-family: "HostGrotesk", Arial, sans-serif;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-#mission-modal-title {
-  margin: 0 0 16px;
-  color: #f6f3eb;
-  font-family: "FlameBold", "Arial Black", Impact, sans-serif;
-  font-size: clamp(34px, 11vw, 62px);
-  line-height: 0.9;
-  letter-spacing: -0.02em;
-  text-transform: uppercase;
-}
-
-.mission-modal-hero {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  margin: 0 0 16px;
-  overflow: hidden;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.14);
-}
-
-.mission-modal-hero img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
-}
-
-.mission-modal-text-wrap {
-  width: 100%;
-  margin: 0 0 16px;
-  padding: 16px;
-  background: rgba(15, 33, 44, 0.72);
-  border: 1px solid rgba(255,255,255,0.12);
-}
-
-#mission-modal-subtitle {
-  margin: 0 0 8px;
-  color: #f6f3eb;
-  font-family: "HostGrotesk", Arial, sans-serif;
-  font-size: 18px;
-  line-height: 1.05;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-#mission-modal-text {
-  margin: 0;
-  color: rgba(255,255,255,0.78);
-  font-family: "HostGrotesk", Arial, sans-serif;
-  font-size: 14px;
-  line-height: 1.38;
-}
-
-.mission-modal-facts {
-  display: grid;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.mission-modal-fact {
-  display: grid;
-  grid-template-columns: 88px 1fr;
-  gap: 10px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255,255,255,0.12);
-  color: rgba(255,255,255,0.78);
-  font-family: "HostGrotesk", Arial, sans-serif;
-  font-size: 12px;
-  line-height: 1.28;
-}
-
-.mission-modal-fact strong {
-  color: #f6f3eb;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.mission-modal-gallery {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  width: 100%;
-  margin-bottom: 20px;
-}
-
-.mission-modal-gallery figure {
-  margin: 0;
-  overflow: hidden;
-  aspect-ratio: 1 / 1;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.12);
-}
-
-.mission-modal-gallery img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
-}
-
-#mission-modal-continue {
-  width: 100%;
-  margin-top: auto;
-  padding: 15px 18px;
-  border-radius: 999px;
-  background: #f3f3ef;
-  color: #07121c;
-  font-family: "HostGrotesk", Arial, sans-serif;
-  font-weight: 900;
-  box-shadow:
-    0 8px 18px rgba(0,0,0,0.38),
-    0 0 18px rgba(88,167,232,0.20);
-}
-
-@media (min-width: 760px) {
-  .mission-modal-content {
-    max-width: 760px;
-    margin: 0 auto;
-    padding-left: 28px;
-    padding-right: 28px;
-  }
-
-  .mission-modal-gallery {
-    grid-template-columns: repeat(4, 1fr);
+@media (max-height: 720px) {
+  .mission-detail-scroll {
+    min-height: auto;
   }
 }
 </style>
@@ -1386,14 +1375,12 @@ body.mission-modal-open {
 </div>
 <div id="mission-modal" class="hidden">
   <article id="mission-detail" class="mission-detail">
-    <button id="mission-modal-close" class="mission-close-hit" type="button" aria-label="Volver"></button>
-
     <section id="mission-detail-scroll" class="mission-detail-scroll">
       <div class="mission-hero">
         <img id="mission-hero-img" src="" alt="" />
       </div>
 
-      <header class="mission-heading">
+      <header class="mission-heading reveal">
         <div class="mission-heading-row">
           <div>
             <p class="mission-eyebrow">Estrella</p>
@@ -1410,7 +1397,7 @@ body.mission-modal-open {
 
       <main id="mission-detail-body"></main>
 
-      <section class="mission-end">
+      <section class="mission-end reveal">
         <button id="mission-modal-continue" class="mission-back-btn" type="button">
           Volver
         </button>
@@ -1575,7 +1562,7 @@ const missionStars = [
     detail: {
       theme: ['#b86a38', '#3a78bd', '#1b1b24'],
       title: 'SCGA 1924',
-      hero: 'assets/img/missions/nebula1924.png',
+      hero: 'assets/img/missions/scga1924.png',
       sections: [
         {
           type: 'intro',
@@ -1583,40 +1570,37 @@ const missionStars = [
           paragraphs: [
             'En 1924, cuando la Selección Uruguaya viajó a Europa, no llevaba cámaras, ni transmisión en vivo, ni multitudes siguiéndola minuto a minuto.',
             'Llevaba otra cosa: un fútbol desconocido, una convicción silenciosa y el peso invisible de un país chico que nadie miraba.',
-            'Del otro lado del mundo, en el Stade Olympique Yves-du-Manoir, empezó a escribirse algo que primero fue sorpresa, después asombro... y finalmente leyenda.'
+            'Del otro lado del mundo, en el Stade Olympique Yves-du-Manoir, empezó a escribirse algo que primero fue sorpresa, después asombro… y finalmente leyenda.'
           ]
         },
-        { type: 'image', src: 'assets/img/missions/img1924.png' },
+        { type: 'image', src: 'assets/img/missions/img1924.png', bg: '#584536' },
         {
-          type: 'stars',
+          type: 'vector',
           items: [
-            'El 26 de mayo de 1924 llegó el primer golpe. Uruguay debutó contra Yugoslavia y ganó 7 a 0. No fue solo una victoria: fue una irrupción.',
+            'El 26 de mayo de 1924 llegó el primer golpe. Uruguay debutó contra Yugoslavia y ganó 7 a 0. No fue solo una victoria: fue una irrupción. Europa, que esperaba un rival exótico, se encontró con un equipo que no corría la cancha, la pensaba.',
             'Los goles caían mientras el público pasaba del murmullo a la ovación, sin entender del todo lo que estaba viendo.',
-            'Mientras tanto, en Montevideo, no había gritos de gol en tiempo real. Había silencio, espera y ansiedad.',
+            'Mientras tanto, en Montevideo, no había gritos de gol en tiempo real. Había silencio, espera y ansiedad. Las noticias tardaban días. Llegaban en frases incompletas, en resultados que parecían exageraciones. Pero no lo eran. Partido a partido, Uruguay avanzaba, y el asombro crecía.',
             '<strong>Hasta que llegó el 9 de junio de 1924. La final.</strong>',
-            'Uruguay frente a Suiza, otra vez en Colombes. Y ahí, en el momento decisivo, apareció el talento que define épocas.'
+            'Uruguay frente a Suiza, otra vez en Colombes. Y ahí, en el momento decisivo, apareció el talento que define épocas: Héctor Scarone. Su gol fue el quiebre.',
+            'Después vendrían los otros —Pedro Petrone, Ángel Romano— y el 3 a 0 final que no dejó dudas.'
           ]
         },
+        { type: 'inline-map', title: 'La primera estrella estaba en el cielo.', src: 'assets/img/missions/img1924-2.png' },
+        { type: 'image', src: 'assets/img/missions/img1924-3.png', bg: '#3e3a33' },
         {
-          type: 'inline-map',
-          title: 'La primera estrella estaba en el cielo.',
-          src: 'assets/img/missions/scga1924.png'
-        },
-        { type: 'image', src: 'assets/img/missions/img1924-2.png' },
-        {
-          type: 'stars',
+          type: 'vector',
           blue: true,
           items: [
             'En Europa, la prensa se rindió. No había cómo explicar aquello sin decirlo con todas las letras: Uruguay era el mejor del mundo.',
-            'Y entonces llegó el reconocimiento. Un equipo venido de un país pequeño, consagrándose ante los ojos de todos.'
+            'Y entonces llegó el reconocimiento. Un equipo venido de un país pequeño, consagrándose ante los ojos de todos. Era la confirmación de que aquel debut imposible, aquel gol en la final, aquella tarde de junio, no habían sido hechos aislados. Habían sido capítulos de algo más grande.'
           ]
         },
-        { type: 'image', src: 'assets/img/missions/img1924-3.png' },
+        { type: 'image', src: 'assets/img/missions/img1924-4.png', bg: '#314235' },
         {
           type: 'quote',
           paragraphs: [
             'Porque lo que Uruguay hizo en Colombes no fue solo ganar. Fue decirle al mundo, sin pedir permiso, que el fútbol también podía ser arte.',
-            'Y desde entonces, cada vez que se habla de 1924, no se recuerda solo un campeonato. Se recuerda el momento en que Uruguay dejó de ser desconocido... y pasó a ser eterno.'
+            'Y desde entonces, cada vez que se habla de 1924, no se recuerda solo un campeonato. Se recuerda el momento en que Uruguay dejó de ser desconocido… y pasó a ser eterno.'
           ]
         }
       ]
@@ -1634,43 +1618,51 @@ const missionStars = [
     detail: {
       theme: ['#4c226b', '#7f4bcf', '#12384d'],
       title: 'SCGA 1928',
-      hero: 'assets/img/missions/nebula1928.png',
+      hero: 'assets/img/missions/scga1928.png',
       sections: [
         {
           type: 'intro',
           headline: 'La llegada de la segunda estrella.',
           paragraphs: [
             'Cuando Uruguay volvió a cruzar el océano para los Juegos Olímpicos de Ámsterdam, ya no era un desconocido. Era el campeón del mundo.',
-            '<strong>Y esta vez, el desafío era distinto: sostener la grandeza.</strong>',
-            'El 30 de mayo de 1928 llegó el primer mensaje. En su debut, Uruguay enfrentó a Holanda y ganó 2 a 0.'
+            '<strong>Y esta vez, el desafío era distinto: sostener la grandeza.</strong>'
           ]
         },
-        { type: 'image', src: 'assets/img/missions/img1928.png' },
         {
-          type: 'stars',
+          type: 'vector',
           items: [
-            'Y el recorrido no hizo más que reafirmarla. Uruguay avanzó con el torneo sin perder nunca su identidad.',
-            '<strong>Ya no quedaban dudas: no era el recuerdo de 1924... era la continuidad de una supremacía.</strong>'
+            'El 30 de mayo de 1928 llegó el primer mensaje. En su debut, Uruguay enfrentó a Holanda y ganó 2 a 0. No hubo asombro, hubo autoridad. Cada pase y cada movimiento tenían la seguridad de quien sabe exactamente lo que está haciendo.',
+            'Ya no había incredulidad en las tribunas: había respeto.'
+          ]
+        },
+        { type: 'image', src: 'assets/img/missions/img1928.png', bg: '#7f714f' },
+        {
+          type: 'vector',
+          items: [
+            'Y el recorrido no hizo más que reafirmarlo. Uruguay avanzó en el torneo sin perder nunca su identidad: precisión, inteligencia, control. Superó a Alemania con un contundente 4 a 1, y en semifinales dejó atrás a Italia por 3 a 2 en un partido intenso, donde el talento volvió a inclinar la balanza.',
+            '<strong>Ya no quedaban dudas: no era el recuerdo de 1924… era la continuidad de una supremacía.</strong>'
           ]
         },
         { type: 'spacer' },
-        { type: 'image', src: 'assets/img/missions/img1928-2.png' },
+        { type: 'image', src: 'assets/img/missions/img1928-2.png', bg: '#3e3a33' },
         {
-          type: 'stars',
+          type: 'vector',
           headline: 'Hasta que llegó el momento definitivo: la final contra Argentina.',
           items: [
             'El 10 de junio, en el Olympisch Stadion, Uruguay y Argentina empataron 1 a 1 en un partido áspero, tenso, jugado con el peso de dos países que ya se conocían demasiado.',
-            'Cada pelota dividida era una batalla. Uruguay se puso en ventaja con gol de Pedro Petrone, pero Argentina respondió. Y el empate no resolvió nada: dejó la historia en suspenso.',
-            'Dos días después, el 13 de junio de 1928, el desempate. Mismo escenario, pero otro clima.',
+            'Cada pelota dividida era una batalla, cada avance una amenaza. Uruguay se puso en ventaja con gol de Pedro Petrone, pero Argentina respondió. Y el empate no resolvió nada: dejó la historia en suspenso.',
+            'Hubo que esperar. Hubo que volver a empezar.',
+            'Dos días después, el 13 de junio de 1928, el desempate. Mismo escenario, pero otro clima. Ya no era solo fútbol: era resistencia, era carácter. Y ahí, cuando el margen desaparece y el error pesa el doble, Uruguay volvió a imponerse.',
+            'Primero golpeó Pedro Petrone. Después, en el momento justo, apareció Héctor Scarone para marcar la diferencia. Argentina descontó y empujó hasta el final, pero ya no alcanzaba. Uruguay sostuvo, resistió, y terminó de escribir la historia.',
             '<strong>El 2 a 1 no fue solo un resultado. Fue una confirmación. Uruguay, nuevamente campeón olímpico.</strong>'
           ]
         },
-        { type: 'image', src: 'assets/img/missions/img1928-3.png' },
+        { type: 'image', src: 'assets/img/missions/img1928-3.png', bg: '#314235' },
         {
           type: 'quote',
           paragraphs: [
-            'En Olympisch Stadion, los jugadores celestes recibieron el oro con la misma calma con la que jugaban. Ya no eran revelación. Eran referencia.',
-            'Porque si 1924 había sido la irrupción... 1928 fue la confirmación definitiva.',
+            'En Olympisch Stadion, los jugadores celestes recibieron el oro con la misma calma con la que jugaban. Ya no eran revelación. Eran referencia. El mundo ya no los descubría: los reconocía.',
+            'Porque si 1924 había sido la irrupción… 1928 fue la confirmación definitiva.',
             'Uruguay no había llegado para sorprender. Había llegado para quedarse.'
           ]
         }
@@ -1689,7 +1681,7 @@ const missionStars = [
     detail: {
       theme: ['#832f4c', '#1d7a84', '#1d1734'],
       title: 'SCGA 1930',
-      hero: 'assets/img/missions/nebula1930.png',
+      hero: 'assets/img/missions/scga1930.png',
       sections: [
         {
           type: 'intro',
@@ -1700,9 +1692,9 @@ const missionStars = [
             'Las lluvias retrasaban las obras, los obreros seguían trabajando y algunas tribunas todavía conservaban el cemento fresco el día de la inauguración.'
           ]
         },
-        { type: 'image', tall: true, src: 'assets/img/missions/img1930.png' },
+        { type: 'image', tall: true, src: 'assets/img/missions/img1930.png', bg: '#5b554c' },
         {
-          type: 'stars',
+          type: 'vector',
           headline: 'Uruguay debutó el 18 de julio frente a Perú.',
           centerHeadline: true,
           items: [
@@ -1711,30 +1703,31 @@ const missionStars = [
             'El 1 a 0 alivió al estadio entero.'
           ]
         },
-        { type: 'image', tall: true, src: 'assets/img/missions/img1930-2.png' },
+        { type: 'image', tall: true, src: 'assets/img/missions/img1930-2.png', bg: '#34424a' },
         {
-          type: 'stars',
+          type: 'vector',
           items: [
-            'Sin escuelas ni entrenamientos, Uruguay venció 4 a 0 a Rumania, recuperando la tranquilidad para luego derrotar 6 a 1 a Yugoslavia en la semifinal.'
+            'Sin escalas ni contratiempos, Uruguay venció 4 a 0 a Rumania, recuperando la tranquilidad, para luego derrotar 6 a 1 a Yugoslavia en la semifinal. Aunque los yugoslavos golpearon primero y silenciaron el Centenario durante algunos minutos, Uruguay reaccionó rápido.'
           ]
         },
-        { type: 'image', tall: true, src: 'assets/img/missions/img1930-3.png' },
+        { type: 'image', tall: true, src: 'assets/img/missions/img1930-3.png', bg: '#69492c' },
         {
-          type: 'stars',
+          type: 'vector',
           headline: 'Y entonces llegó la final.',
           items: [
             'El 30 de julio de 1930, el Estadio Centenario se llenó para recibir el partido más importante que el fútbol había vivido hasta ese momento: Uruguay contra Argentina.',
+            'Las tribunas desbordaban horas antes del comienzo. Afuera del estadio, miles de personas intentaban acercarse aunque ya no hubiera lugar. Adentro, el clima era irrepetible. Se jugaba un lugar definitivo en la historia.',
             'Argentina golpeó primero. Uruguay respondió.',
             'El partido cambió de dueño constantemente. Al entretiempo, Argentina ganaba 2 a 1.'
           ]
         },
-        { type: 'image', tall: true, src: 'assets/img/missions/img1930-4.png' },
+        { type: 'image', tall: true, src: 'assets/img/missions/img1930-4.png', bg: '#4d554a' },
         {
-          type: 'stars',
+          type: 'vector',
           blue: true,
           items: [
             'Y entonces llegó la reacción.',
-            'Primero Iscaro, después Cea. Después, Santos Iriarte. Y sobre el final, Héctor Castro —que jugaba sin parte de su brazo derecho— marcó el último gol de la tarde.',
+            'Primero José Pedro Cea. Después, Santos Iriarte. Y sobre el final, Héctor Castro —que jugaba sin parte de su brazo derecho— marcó el último gol de la tarde.',
             'El 4 a 2 no fue solamente una victoria.'
           ]
         },
@@ -1744,7 +1737,7 @@ const missionStars = [
             'Fue la confirmación definitiva de una era. Uruguay no solo había organizado el torneo más importante jamás realizado. Lo había ganado.'
           ]
         },
-        { type: 'image', tall: true, src: 'assets/img/missions/img1930-5.png' }
+        { type: 'image', tall: true, src: 'assets/img/missions/img1930-5.png', bg: '#43524b' }
       ]
     }
   },
@@ -1760,22 +1753,20 @@ const missionStars = [
     detail: {
       theme: ['#832f4c', '#1d7a84', '#1d1734'],
       title: 'SCGA 1950',
-      hero: 'assets/img/missions/nebula1930.png',
+      hero: 'assets/img/missions/scga1950.png',
       sections: [
         {
           type: 'intro',
           headline: 'Boceto temporal con estructura de 1930',
           paragraphs: [
-            'Esta pantalla queda armada con la misma diagramación de 1930 para testear flujo, scroll, imágenes, bloques y botón de volver.',
+            'Esta pantalla queda armada con la misma diagramación para testear flujo, scroll, imágenes, bloques y botón de volver.',
             'Cuando tengamos el texto y las imágenes finales de 1950, solo se reemplaza el contenido dentro del mismo layout.'
           ]
         },
-        { type: 'image', tall: true, src: 'assets/img/missions/img1950.png' },
+        { type: 'image', tall: true, src: 'assets/img/missions/img1950.png', bg: '#5b554c' },
         {
           type: 'quote',
-          paragraphs: [
-            'Maracanazo 1950: boceto visual pendiente de contenido final.'
-          ]
+          paragraphs: ['Maracanazo 1950: boceto visual pendiente de contenido final.']
         }
       ]
     }
@@ -2547,6 +2538,8 @@ function actualizarMissionTracker() {
     item.classList.toggle('active', index === currentMissionIndex);
   });
 }
+let missionRevealObserver = null;
+
 function abrirModalMision(mission) {
   const modal = document.getElementById('mission-modal');
   const scroll = document.getElementById('mission-detail-scroll');
@@ -2604,12 +2597,14 @@ function renderMissionDetail(mission) {
   (detail.sections || []).forEach((section) => {
     body.appendChild(createMissionSection(section));
   });
+
+  setupMissionReveal();
 }
 
 function createMissionSection(section) {
   if (section.type === 'intro') {
     const el = document.createElement('section');
-    el.className = 'mission-block compact';
+    el.className = 'mission-block compact reveal';
 
     el.innerHTML = `
       <h2 class="mission-headline">${section.headline || ''}</h2>
@@ -2623,7 +2618,8 @@ function createMissionSection(section) {
 
   if (section.type === 'image') {
     const el = document.createElement('div');
-    el.className = `mission-img${section.tall ? ' tall' : ''}`;
+    el.className = `mission-img${section.tall ? ' tall' : ''} reveal`;
+    el.style.setProperty('--img-bg', section.bg || '#222');
 
     el.innerHTML = `<img src="${section.src}" alt="" />`;
 
@@ -2635,7 +2631,7 @@ function createMissionSection(section) {
 
   if (section.type === 'inline-map') {
     const el = document.createElement('section');
-    el.className = 'mission-inline-grid';
+    el.className = 'mission-inline-grid reveal';
 
     el.innerHTML = `
       <h3 class="mission-inline-title">${section.title || ''}</h3>
@@ -2650,9 +2646,9 @@ function createMissionSection(section) {
     return el;
   }
 
-  if (section.type === 'stars') {
+  if (section.type === 'vector') {
     const el = document.createElement('section');
-    el.className = `mission-block${section.blue ? ' mission-blue' : ''}`;
+    el.className = `mission-block${section.blue ? ' mission-blue' : ''} reveal`;
 
     const headline = section.headline
       ? `<h2 class="mission-headline${section.centerHeadline ? ' center' : ''}">${section.headline}</h2>`
@@ -2660,9 +2656,9 @@ function createMissionSection(section) {
 
     el.innerHTML = `
       ${headline}
-      <div class="mission-star-group">
+      <div class="mission-vector">
         ${(section.items || []).map((item, index) => {
-          const cls = index === 0 ? 'mission-star-p' : 'mission-copy';
+          const cls = index === 0 || item.includes('<strong>') ? 'mission-vector-item' : 'mission-vector-item no-star';
           return `<p class="${cls}">${item}</p>`;
         }).join('')}
       </div>
@@ -2673,7 +2669,7 @@ function createMissionSection(section) {
 
   if (section.type === 'quote') {
     const el = document.createElement('section');
-    el.className = 'mission-quote';
+    el.className = 'mission-quote reveal';
 
     el.innerHTML = (section.paragraphs || [])
       .map(p => `<p>${p}</p>`)
@@ -2684,86 +2680,37 @@ function createMissionSection(section) {
 
   if (section.type === 'spacer') {
     const el = document.createElement('div');
-    el.className = 'mission-spacer-lg';
+    el.className = 'mission-spacer-lg reveal';
     return el;
   }
 
   return document.createElement('div');
 }
-function renderMissionModal(mission) {
-  const kicker = document.getElementById('mission-modal-kicker');
-  const title = document.getElementById('mission-modal-title');
-  const subtitle = document.getElementById('mission-modal-subtitle');
-  const text = document.getElementById('mission-modal-text');
-  const heroImg = document.getElementById('mission-modal-hero-img');
-  const facts = document.getElementById('mission-modal-facts');
-  const gallery = document.getElementById('mission-modal-gallery');
 
-  if (kicker) kicker.textContent = mission.modalKicker || 'Misión completada';
-  if (title) title.textContent = mission.modalTitle || mission.title;
-  if (subtitle) subtitle.textContent = mission.modalSubtitle || '';
-  if (text) text.textContent = mission.modalText || '';
+function setupMissionReveal() {
+  const scroll = document.getElementById('mission-detail-scroll');
+  if (!scroll) return;
 
-  if (heroImg) {
-    heroImg.src = mission.modalHero || '';
-    heroImg.alt = mission.modalTitle || mission.title;
+  if (missionRevealObserver) missionRevealObserver.disconnect();
 
-    heroImg.onerror = () => {
-      if (mission.fallbackHero && heroImg.src.indexOf(mission.fallbackHero) === -1) {
-        heroImg.src = mission.fallbackHero;
+  missionRevealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-visible');
+        missionRevealObserver.unobserve(entry.target);
       }
-    };
-  }
-
-  if (facts) {
-    facts.innerHTML = '';
-
-    const data = mission.modalFacts || [];
-
-    data.forEach(([label, value]) => {
-      const item = document.createElement('div');
-      item.className = 'mission-modal-fact';
-
-      const strong = document.createElement('strong');
-      strong.textContent = label;
-
-      const span = document.createElement('span');
-      span.textContent = value;
-
-      item.appendChild(strong);
-      item.appendChild(span);
-      facts.appendChild(item);
     });
-  }
+  }, {
+    root: scroll,
+    threshold: 0.12,
+    rootMargin: '0px 0px -8% 0px'
+  });
 
-  if (gallery) {
-    gallery.innerHTML = '';
-
-    const images = mission.modalImages || [];
-
-    images.forEach((src, index) => {
-      const figure = document.createElement('figure');
-      const img = document.createElement('img');
-
-      img.src = src;
-      img.alt = `${mission.modalTitle || mission.title} imagen ${index + 1}`;
-
-      img.onerror = () => {
-        const fallback = mission.fallbackImages?.[index];
-
-        if (fallback && img.src.indexOf(fallback) === -1) {
-          img.src = fallback;
-        } else {
-          figure.remove();
-        }
-      };
-
-      figure.appendChild(img);
-      gallery.appendChild(figure);
-    });
-  }
+  scroll.querySelectorAll('.reveal').forEach((el, index) => {
+    el.style.transitionDelay = `${Math.min(index * 35, 180)}ms`;
+    missionRevealObserver.observe(el);
+  });
 }
-
 const missionModalClose = document.getElementById('mission-modal-close');
 
 if (missionModalClose) {
