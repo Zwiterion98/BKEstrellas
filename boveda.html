@@ -99,6 +99,7 @@ button:active {
   z-index: 1;
   overflow: hidden;
   background: #000;
+  touch-action: none;
 }
 
 #dome-bg-canvas {
@@ -107,8 +108,12 @@ button:active {
   z-index: 0;
   width: 100%;
   height: 100%;
+  display: none;
+  opacity: 0.9;
+}
+
+#canvas-container.dome-bg-enabled #dome-bg-canvas {
   display: block;
-  opacity: 0.92;
 }
 
 #canvas-container::after {
@@ -1448,6 +1453,123 @@ body.mission-modal-open {
     min-height: auto;
   }
 }
+/* =========================
+   SKY CONTROLS
+   Switch sutil para fondo y modo manual
+========================= */
+
+#sky-controls {
+  position: absolute;
+  right: 18px;
+  top: 76px;
+  z-index: 34;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  opacity: 1;
+  transition: opacity 0.25s ease;
+  pointer-events: auto;
+}
+
+#sky-controls.oculto {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sky-switch {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  height: 24px;
+  padding: 4px 6px 4px 9px;
+  border-radius: 999px;
+  background: rgba(7, 18, 28, 0.52);
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: rgba(255,255,255,0.62);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.sky-switch input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sky-switch i {
+  position: relative;
+  width: 28px;
+  height: 14px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.14);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12);
+}
+
+.sky-switch i::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.72);
+  transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.sky-switch input:checked + i {
+  background: rgba(88,167,232,0.38);
+}
+
+.sky-switch input:checked + i::after {
+  transform: translateX(14px);
+  background: #fff;
+  box-shadow: 0 0 8px rgba(88,167,232,0.85);
+}
+
+body.manual-nav-active #canvas-container {
+  cursor: grab;
+}
+
+body.manual-nav-active #canvas-container:active {
+  cursor: grabbing;
+}
+
+@media (max-width: 480px) {
+  #sky-controls {
+    top: 58px;
+    right: 10px;
+    gap: 5px;
+  }
+
+  .sky-switch {
+    height: 22px;
+    font-size: 8px;
+    padding-left: 7px;
+  }
+
+  .sky-switch i {
+    width: 25px;
+    height: 13px;
+  }
+
+  .sky-switch i::after {
+    width: 9px;
+    height: 9px;
+  }
+
+  .sky-switch input:checked + i::after {
+    transform: translateX(12px);
+  }
+}
 </style>
 </head>
 <body>
@@ -1560,14 +1682,28 @@ body.mission-modal-open {
 <div id="compass-pointer" class="oculto">▲</div>
 
   <div id="orientation-panel" class="oculto">
-    <div class="title">Vista del observador</div>
-    <div class="row"><span class="label">dirección</span><span class="value" id="look-direction">--</span></div>
-    <div class="row"><span class="label">azimut</span><span class="value" id="look-azimuth">--</span></div>
-    <div class="row"><span class="label">altura</span><span class="value" id="look-altitude">--</span></div>
-    <div class="row"><span class="label">norte ref</span><span class="value" id="northref-val">--</span></div>
-  </div>
+  <div class="title">Vista del observador</div>
+  <div class="row"><span class="label">dirección</span><span class="value" id="look-direction">--</span></div>
+  <div class="row"><span class="label">azimut</span><span class="value" id="look-azimuth">--</span></div>
+  <div class="row"><span class="label">altura</span><span class="value" id="look-altitude">--</span></div>
+  <div class="row"><span class="label">norte ref</span><span class="value" id="northref-val">--</span></div>
+</div>
 
-  <div id="canvas-container"></div>
+<div id="sky-controls" class="oculto">
+  <label class="sky-switch">
+    <span>Fondo</span>
+    <input id="bg-render-switch" type="checkbox" />
+    <i></i>
+  </label>
+
+  <label class="sky-switch">
+    <span>Manual</span>
+    <input id="manual-nav-switch" type="checkbox" />
+    <i></i>
+  </label>
+</div>
+
+<div id="canvas-container"></div>
   <div id="sys-info" class="oculto">SYS.OFF</div>
 
   <div id="ui-layer">
@@ -1598,6 +1734,15 @@ let domeZenithY = null;
 let domeY = null;
 let domeScale = null;
 let domeTilt = null;
+let domeBackgroundEnabled = false;
+let manualNavigationEnabled = false;
+
+let manualAzimuth = 0;
+let manualAltitude = 0;
+let manualDragActive = false;
+let manualDragPointerId = null;
+let manualLastX = 0;
+let manualLastY = 0;
 
 const DOME_BG_URL = './assets/img/bg-dome-square.png';
 
@@ -2112,8 +2257,15 @@ function initDomeBackground() {
 
     domeBgReady = true;
 
-    resizeDomeBackground();
-    renderDomeBackground(true);
+resizeDomeBackground();
+
+if (domeBgCanvas) {
+  domeBgCanvas.style.display = domeBackgroundEnabled ? 'block' : 'none';
+}
+
+if (domeBackgroundEnabled) {
+  renderDomeBackground(true);
+}
   };
 
   img.onerror = () => {
@@ -2173,6 +2325,7 @@ function resizeDomeBackground() {
 }
 
 function renderDomeBackground(force = false) {
+  if (!domeBackgroundEnabled) return;
   if (
     !domeBgReady ||
     !domeBgCtx ||
@@ -2280,6 +2433,114 @@ function renderDomeBackground(force = false) {
   }
 
   domeBgCtx.putImageData(domeBgImageData, 0, 0);
+}function normalizeDegrees(value) {
+  return ((value % 360) + 360) % 360;
+}
+
+function setDomeBackgroundEnabled(enabled) {
+  domeBackgroundEnabled = enabled;
+
+  const container = document.getElementById('canvas-container');
+  const input = document.getElementById('bg-render-switch');
+
+  if (input) input.checked = enabled;
+  if (container) container.classList.toggle('dome-bg-enabled', enabled);
+
+  if (enabled) {
+    if (!domeBgCanvas) {
+      initDomeBackground();
+    } else {
+      domeBgCanvas.style.display = 'block';
+      resizeDomeBackground();
+      renderDomeBackground(true);
+    }
+  } else {
+    if (domeBgCanvas && domeBgCtx) {
+      domeBgCtx.clearRect(0, 0, domeBgCanvas.width, domeBgCanvas.height);
+      domeBgCanvas.style.display = 'none';
+    }
+  }
+}
+
+function setManualNavigationEnabled(enabled) {
+  manualNavigationEnabled = enabled;
+
+  const input = document.getElementById('manual-nav-switch');
+  if (input) input.checked = enabled;
+
+  document.body.classList.toggle('manual-nav-active', enabled);
+
+  if (enabled && camera) {
+    const look = getObserverLookFromCamera();
+    manualAzimuth = look.azimuth;
+    manualAltitude = THREE.MathUtils.clamp(look.altitude, -85, 88);
+  }
+}
+
+function setupSkyControls() {
+  const bgSwitch = document.getElementById('bg-render-switch');
+  const manualSwitch = document.getElementById('manual-nav-switch');
+
+  if (bgSwitch) {
+    bgSwitch.checked = false;
+    bgSwitch.addEventListener('change', () => {
+      setDomeBackgroundEnabled(bgSwitch.checked);
+    });
+  }
+
+  if (manualSwitch) {
+    manualSwitch.checked = false;
+    manualSwitch.addEventListener('change', () => {
+      setManualNavigationEnabled(manualSwitch.checked);
+    });
+  }
+
+  setDomeBackgroundEnabled(false);
+  setManualNavigationEnabled(false);
+}
+
+function setupManualDragControls() {
+  const container = document.getElementById('canvas-container');
+  if (!container) return;
+
+  container.addEventListener('pointerdown', (event) => {
+    if (!manualNavigationEnabled) return;
+
+    manualDragActive = true;
+    manualDragPointerId = event.pointerId;
+    manualLastX = event.clientX;
+    manualLastY = event.clientY;
+
+    container.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  }, { passive: false });
+
+  container.addEventListener('pointermove', (event) => {
+    if (!manualNavigationEnabled) return;
+    if (!manualDragActive || event.pointerId !== manualDragPointerId) return;
+
+    const dx = event.clientX - manualLastX;
+    const dy = event.clientY - manualLastY;
+
+    manualLastX = event.clientX;
+    manualLastY = event.clientY;
+
+    manualAzimuth = normalizeDegrees(manualAzimuth - dx * 0.18);
+    manualAltitude = THREE.MathUtils.clamp(manualAltitude - dy * 0.18, -85, 88);
+
+    event.preventDefault();
+  }, { passive: false });
+
+  function endDrag(event) {
+    if (event.pointerId !== manualDragPointerId) return;
+
+    manualDragActive = false;
+    manualDragPointerId = null;
+  }
+
+  container.addEventListener('pointerup', endDrag);
+  container.addEventListener('pointercancel', endDrag);
+  container.addEventListener('pointerleave', endDrag);
 }
   function init3D() {
   scene = new THREE.Scene();
@@ -2307,8 +2568,6 @@ function renderDomeBackground(force = false) {
     renderer.outputEncoding = THREE.sRGBEncoding;
   }
 
-  initDomeBackground();
-
   const canvasContainer = document.getElementById('canvas-container');
   canvasContainer.appendChild(renderer.domElement);
 
@@ -2334,7 +2593,7 @@ function renderDomeBackground(force = false) {
   missionStarSprite = createStarSprite('★', '#ffffff', 64);
   missionStarSprite.visible = false;
   scene.add(missionStarSprite);
-
+setupManualDragControls();
   animar();
 }
 
@@ -2603,18 +2862,25 @@ function mostrarInfoEstrella() {
   }
 
   async function iniciarApp() {
-    document.querySelector('.title-flat').innerText = "AUTORIZANDO...";
+   document.querySelector('.title-flat').innerText = "AUTORIZANDO...";
 
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-      try {
-        const permisoSensores = await DeviceOrientationEvent.requestPermission();
-        if (permisoSensores !== 'granted') return alert("Permiso de sensores denegado.");
-      } catch (e) {
-        return alert("Interactúa con la pantalla primero.");
-      }
+let usarModoManualPorDefecto = false;
+
+if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+  try {
+    const permisoSensores = await DeviceOrientationEvent.requestPermission();
+
+    if (permisoSensores !== 'granted') {
+      usarModoManualPorDefecto = true;
     }
+  } catch (e) {
+    usarModoManualPorDefecto = true;
+  }
+}
 
-    document.querySelector('.title-flat').innerText = "BUSCANDO GPS...";
+document.querySelector('.title-flat').innerText = usarModoManualPorDefecto
+  ? "MODO MANUAL..."
+  : "BUSCANDO GPS...";
 
     navigator.geolocation.getCurrentPosition((pos) => {
       usuarioLat = pos.coords.latitude;
@@ -2630,17 +2896,22 @@ actualizarInfoCard(getCurrentMission());
       northCalibration = null;
 
       if ('ondeviceorientationabsolute' in window) {
-        window.addEventListener('deviceorientationabsolute', procesarSensores);
-      } else {
-        window.addEventListener('deviceorientation', procesarSensores);
-      }
+  window.addEventListener('deviceorientationabsolute', procesarSensores);
+} else {
+  window.addEventListener('deviceorientation', procesarSensores);
+}
 
-      setTimeout(() => {
-        uiLayer.classList.add('oculto');
-document.getElementById('compass-container').classList.remove('oculto');
-document.getElementById('compass-pointer').classList.remove('oculto');
-document.getElementById('orientation-panel').classList.remove('oculto');
- }, 500);
+if (usarModoManualPorDefecto) {
+  setManualNavigationEnabled(true);
+}
+
+setTimeout(() => {
+  uiLayer.classList.add('oculto');
+  document.getElementById('compass-container').classList.remove('oculto');
+  document.getElementById('compass-pointer').classList.remove('oculto');
+  document.getElementById('orientation-panel').classList.remove('oculto');
+  document.getElementById('sky-controls').classList.remove('oculto');
+}, 500);
 
     }, () => alert("Error de GPS."));
   }
@@ -3341,63 +3612,71 @@ function actualizarFondoBoveda(altitude) {
   container.style.setProperty('--dome-tilt', `${domeTilt.toFixed(2)}deg`);
 }
   function actualizarCamaraYUI() {
-  if (!brujulaDetectada) return;
+  let forward = null;
 
-  const alphaRad = brujulaDetectada
-    ? THREE.MathUtils.degToRad(360 - headingOffset)
-    : THREE.MathUtils.degToRad(currentAlpha);
+  if (manualNavigationEnabled) {
+    const targetDir = azAltToVector(manualAzimuth, manualAltitude, 10);
 
-  const betaRad = THREE.MathUtils.degToRad(currentBeta || 0);
-  const gammaRad = THREE.MathUtils.degToRad(currentGamma || 0);
-  const screenRot = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
+    camera.position.set(0, 0, 0);
+    camera.up.set(0, 1, 0);
+    camera.lookAt(targetDir);
 
-  // Quaternion crudo del dispositivo
-  const qDispositivo = new THREE.Quaternion().setFromEuler(
-    new THREE.Euler(betaRad, alphaRad, -gammaRad, 'YXZ')
-  );
-
-  qDispositivo.multiply(
-    new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5))
-  );
-
-  qDispositivo.multiply(
-    new THREE.Quaternion().setFromAxisAngle(
-      new THREE.Vector3(0, 0, 1),
-      -screenRot
-    )
-  );
-
-  // En vez de copiar el roll completo a la cámara,
-  // sacamos solo la DIRECCIÓN hacia donde apunta.
-  const forward = new THREE.Vector3(0, 0, -1)
-    .applyQuaternion(qDispositivo)
-    .normalize();
-
-  // Convertimos esa dirección a azimut/altura
-  let azimuth = THREE.MathUtils.radToDeg(Math.atan2(forward.x, -forward.z));
-  azimuth = (azimuth + 360) % 360;
-
-  const altitude = THREE.MathUtils.radToDeg(Math.asin(forward.y));
-actualizarFondoBoveda(altitude);
-  // Reconstruimos una dirección limpia sin roll
-  const targetDir = azAltToVector(azimuth, altitude, 10);
-
-  camera.position.set(0, 0, 0);
-  camera.up.set(0, 1, 0);
-  camera.lookAt(targetDir);
-
-  // sombra horizonte
-  if (forward.y < 0.1) {
-    let opacidadSombra = 1.0 - ((forward.y + 0.2) / 0.3);
-    if (opacidadSombra > 1) opacidadSombra = 1;
-    if (opacidadSombra < 0) opacidadSombra = 0;
-    horizonShadow.style.opacity = opacidadSombra;
+    forward = targetDir.clone().normalize();
   } else {
-    horizonShadow.style.opacity = 0;
+    if (!brujulaDetectada) return;
+
+    const alphaRad = brujulaDetectada
+      ? THREE.MathUtils.degToRad(360 - headingOffset)
+      : THREE.MathUtils.degToRad(currentAlpha);
+
+    const betaRad = THREE.MathUtils.degToRad(currentBeta || 0);
+    const gammaRad = THREE.MathUtils.degToRad(currentGamma || 0);
+    const screenRot = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
+
+    const qDispositivo = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(betaRad, alphaRad, -gammaRad, 'YXZ')
+    );
+
+    qDispositivo.multiply(
+      new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5))
+    );
+
+    qDispositivo.multiply(
+      new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 0, 1),
+        -screenRot
+      )
+    );
+
+    forward = new THREE.Vector3(0, 0, -1)
+      .applyQuaternion(qDispositivo)
+      .normalize();
+
+    let azimuth = THREE.MathUtils.radToDeg(Math.atan2(forward.x, -forward.z));
+    azimuth = normalizeDegrees(azimuth);
+
+    const altitude = THREE.MathUtils.radToDeg(Math.asin(forward.y));
+
+    const targetDir = azAltToVector(azimuth, altitude, 10);
+
+    camera.position.set(0, 0, 0);
+    camera.up.set(0, 1, 0);
+    camera.lookAt(targetDir);
+  }
+
+  if (forward && horizonShadow) {
+    if (forward.y < 0.1) {
+      let opacidadSombra = 1.0 - ((forward.y + 0.2) / 0.3);
+      if (opacidadSombra > 1) opacidadSombra = 1;
+      if (opacidadSombra < 0) opacidadSombra = 0;
+      horizonShadow.style.opacity = opacidadSombra;
+    } else {
+      horizonShadow.style.opacity = 0;
+    }
   }
 
   actualizarPanelOrientaciones();
-actualizarGuiaVisual();
+  actualizarGuiaVisual();
 }
 
   function verificarIntersecciones() {
@@ -3442,6 +3721,9 @@ function onWindowResize() {
   function animar() {
     requestAnimationFrame(animar);
     actualizarCamaraYUI();
+     if (domeBackgroundEnabled) {
+    renderDomeBackground();
+  }
     verificarIntersecciones();
      renderDomeBackground();
     renderer.render(scene, camera);
@@ -3450,9 +3732,14 @@ function onWindowResize() {
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
+
   renderer.setSize(window.innerWidth, window.innerHeight);
-  resizeDomeBackground();
-  renderDomeBackground(true);
+
+  if (domeBackgroundEnabled) {
+    resizeDomeBackground();
+    renderDomeBackground(true);
+  }
+
   actualizarConectorInfoCard();
 });
 const missionModalContinue = document.getElementById('mission-modal-continue');
@@ -3460,6 +3747,7 @@ const missionModalContinue = document.getElementById('mission-modal-continue');
 if (missionModalContinue) {
   missionModalContinue.addEventListener('click', avanzarASiguienteMision);
 }
+setupSkyControls();
   init3D();
 </script>
 </body>
