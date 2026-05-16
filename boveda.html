@@ -428,13 +428,14 @@ button:active {
 
 /* =========================
    MISSION INFO CARD
+   Card chica que aparece al capturar estrella
 ========================= */
 
 #star-info-card {
   position: absolute;
-  top: clamp(28px, 5vh, 56px);
-  left: clamp(14px, 4vw, 42px);
-  width: min(calc(100vw - 28px), 640px);
+  top: clamp(34px, 6vh, 64px);
+  left: clamp(18px, 5vw, 64px);
+  width: min(calc(100vw - 36px), 640px);
   z-index: 24;
   opacity: 1;
   pointer-events: none;
@@ -445,7 +446,7 @@ button:active {
   visibility: hidden;
 }
 
-.star-card {
+#star-info-card .star-card {
   position: relative;
   width: 100%;
   overflow: visible;
@@ -464,7 +465,8 @@ button:active {
     transform 0.28s ease;
 }
 
-.star-card::before {
+/* barra blanca lateral */
+#star-info-card .star-card::before {
   content: "";
   position: absolute;
   left: -5px;
@@ -475,7 +477,8 @@ button:active {
   pointer-events: none;
 }
 
-.star-card::after {
+/* esquina blanca inferior derecha */
+#star-info-card .star-card::after {
   content: "";
   position: absolute;
   right: -1px;
@@ -487,13 +490,13 @@ button:active {
   pointer-events: none;
 }
 
-.star-card-header {
-  height: clamp(42px, 7vw, 58px);
+#star-info-card .star-card-header {
+  height: clamp(48px, 7.5vw, 76px);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 0 clamp(10px, 2vw, 18px) 0 clamp(12px, 2.2vw, 18px);
+  padding: 0 clamp(12px, 2vw, 18px);
   background: #496f86;
   border-bottom: 1px solid rgba(255,255,255,0.12);
 }
@@ -503,8 +506,8 @@ button:active {
   flex: 1 1 auto;
   color: #f6f3eb;
   font-family: "FlameBold", "Cooper Black", "Arial Black", Impact, sans-serif;
-  font-size: clamp(20px, 5.4vw, 44px);
-  line-height: 0.94;
+  font-size: clamp(24px, 6.2vw, 58px);
+  line-height: 0.92;
   letter-spacing: 0;
   text-transform: uppercase;
   white-space: nowrap;
@@ -512,15 +515,15 @@ button:active {
   text-overflow: clip;
 }
 
-.star-card-target {
+#star-info-card .star-card-target {
   position: relative;
   flex: 0 0 auto;
-  width: clamp(18px, 3vw, 28px);
-  height: clamp(18px, 3vw, 28px);
+  width: clamp(22px, 3.5vw, 34px);
+  height: clamp(22px, 3.5vw, 34px);
 }
 
-.star-card-target::before,
-.star-card-target::after {
+#star-info-card .star-card-target::before,
+#star-info-card .star-card-target::after {
   content: "";
   position: absolute;
   left: 50%;
@@ -529,97 +532,98 @@ button:active {
   transform: translate(-50%, -50%);
 }
 
-.star-card-target::before {
+#star-info-card .star-card-target::before {
   width: 100%;
   height: 1px;
 }
 
-.star-card-target::after {
+#star-info-card .star-card-target::after {
   width: 1px;
   height: 100%;
 }
 
-.target-dot {
+/* IMPORTANTE: target-dot queda scopiado solo a la card chica */
+#star-info-card .target-dot {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: clamp(14px, 2.2vw, 20px);
-  height: clamp(14px, 2.2vw, 20px);
+  width: clamp(16px, 2.5vw, 24px);
+  height: clamp(16px, 2.5vw, 24px);
   border: 2px solid #fff;
   border-radius: 50%;
   transform: translate(-50%, -50%);
 }
 
-.target-dot::after {
+#star-info-card .target-dot::after {
   content: "";
   position: absolute;
   left: 50%;
   top: 50%;
-  width: clamp(5px, 0.8vw, 8px);
-  height: clamp(5px, 0.8vw, 8px);
+  width: clamp(6px, 0.9vw, 9px);
+  height: clamp(6px, 0.9vw, 9px);
   background: #fff;
   border-radius: 50%;
   transform: translate(-50%, -50%);
 }
 
-.star-card-body {
+#star-info-card .star-card-body {
   display: grid;
-  grid-template-columns: clamp(74px, 19vw, 132px) 1px minmax(0, 1fr);
-  min-height: clamp(74px, 14vw, 112px);
+  grid-template-columns: clamp(86px, 22vw, 164px) 1px minmax(0, 1fr);
+  min-height: clamp(88px, 15vw, 136px);
   background: rgba(15, 33, 44, 0.98);
 }
 
-.star-card-left {
+#star-info-card .star-card-left {
   display: flex;
   flex-direction: column;
   justify-content: center;
   min-width: 0;
   overflow: hidden;
   padding:
-    clamp(8px, 1.5vw, 12px)
+    clamp(8px, 1.5vw, 14px)
     8px
-    clamp(8px, 1.5vw, 10px)
-    clamp(10px, 2vw, 16px);
+    clamp(8px, 1.5vw, 12px)
+    clamp(10px, 2vw, 18px);
 }
 
-.star-card-name-row {
+#star-info-card .star-card-name-row {
   display: flex;
   align-items: center;
   gap: 4px;
   color: #fff;
   font-family: "FlameSans", Arial, sans-serif;
-  font-size: clamp(10px, 2vw, 18px);
+  font-size: clamp(13px, 2.8vw, 26px);
   line-height: 1;
   white-space: nowrap;
 }
 
-.star-card-play {
+#star-info-card .star-card-play {
   width: 0;
   height: 0;
   flex: 0 0 auto;
-  border-top: clamp(4px, 0.8vw, 7px) solid transparent;
-  border-bottom: clamp(4px, 0.8vw, 7px) solid transparent;
-  border-left: clamp(5px, 1vw, 9px) solid #fff;
+  border-top: clamp(5px, 0.9vw, 9px) solid transparent;
+  border-bottom: clamp(5px, 0.9vw, 9px) solid transparent;
+  border-left: clamp(6px, 1vw, 11px) solid #fff;
   transform: translateY(1px);
 }
 
-.star-card-year {
+#star-info-card .star-card-year {
   max-width: 100%;
-  margin-top: 4px;
+  margin-top: 5px;
   color: #fff;
   font-family: "FlameSans", Arial, sans-serif;
-  font-size: clamp(28px, 6.5vw, 58px);
+  font-size: clamp(38px, 8vw, 72px);
   line-height: 0.82;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.055em;
   white-space: nowrap;
 }
 
-.star-card-divider {
+#star-info-card .star-card-divider {
   width: 1px;
   background: rgba(255,255,255,0.16);
 }
 
-.star-card-data {
+#star-info-card .star-card-data {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -627,35 +631,120 @@ button:active {
   min-width: 0;
   overflow: hidden;
   padding:
-    clamp(8px, 1.6vw, 12px)
-    clamp(8px, 1.8vw, 14px)
-    clamp(8px, 1.4vw, 10px)
-    clamp(10px, 2vw, 16px);
+    clamp(9px, 1.6vw, 14px)
+    clamp(9px, 1.8vw, 16px)
+    clamp(9px, 1.4vw, 12px)
+    clamp(11px, 2vw, 18px);
   color: #fff;
   font-family: "FlameSans", Arial, sans-serif;
-  font-size: clamp(9px, 1.95vw, 16px);
-  line-height: 1.16;
+  font-size: clamp(8.8px, 2vw, 19px);
+  line-height: 1.14;
 }
 
-.star-card-data strong {
+#star-info-card .star-card-data strong {
   font-weight: 400;
 }
 
-.star-card-data div {
+#star-info-card .star-card-data div {
   max-width: 100%;
   overflow-wrap: anywhere;
 }
 
-.star-card-gap {
+#star-info-card .star-card-gap {
   height: 6px;
 }
 
-.star-card-footer {
-  height: clamp(10px, 2vw, 18px);
+#star-info-card .star-card-footer {
+  height: clamp(12px, 2.4vw, 26px);
   background: rgba(14, 31, 42, 0.98);
   border-top: 1px solid rgba(255,255,255,0.10);
 }
 
+/* =========================
+   RESPONSIVE CARD CHICA
+========================= */
+
+@media (max-width: 480px) {
+  #star-info-card {
+    top: 34px;
+    left: 14px;
+    width: calc(100vw - 22px);
+  }
+
+  #star-info-card .star-card-header {
+    height: 52px;
+    padding-left: 12px;
+    padding-right: 12px;
+    gap: 8px;
+  }
+
+  #star-card-title {
+    font-size: clamp(23px, 7.7vw, 34px);
+  }
+
+  #star-info-card .star-card-target {
+    width: 24px;
+    height: 24px;
+  }
+
+  #star-info-card .target-dot {
+    width: 17px;
+    height: 17px;
+    border-width: 1.8px;
+  }
+
+  #star-info-card .target-dot::after {
+    width: 6px;
+    height: 6px;
+  }
+
+  #star-info-card .star-card-body {
+    grid-template-columns: 92px 1px minmax(0, 1fr);
+    min-height: 88px;
+  }
+
+  #star-info-card .star-card-left {
+    padding: 8px 6px 8px 10px;
+  }
+
+  #star-info-card .star-card-name-row {
+    font-size: 13px;
+  }
+
+  #star-info-card .star-card-play {
+    border-top-width: 5px;
+    border-bottom-width: 5px;
+    border-left-width: 7px;
+  }
+
+  #star-info-card .star-card-year {
+    font-size: 38px;
+  }
+
+  #star-info-card .star-card-data {
+    padding: 9px 8px 8px 10px;
+    font-size: 8.7px;
+    line-height: 1.12;
+  }
+
+  #star-info-card .star-card-footer {
+    height: 12px;
+  }
+
+  #star-info-card .star-card::before {
+    left: -4px;
+    width: 4px;
+    top: 54px;
+    height: 86px;
+  }
+
+  #star-info-card .star-card::after {
+    width: 11px;
+    height: 11px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+  }
+}
 /* =========================
    COMPASS
 ========================= */
