@@ -1600,17 +1600,44 @@ let domeScale = null;
 let domeTilt = null;
 
 const DOME_BG_URL = './assets/img/bg-dome-square.png';
-const DOME_BG_RENDER_SCALE = 0.85;
+
+/*
+  Offset de rotación.
+  Si el fondo queda rotado, probá:
+  Math.PI / 2
+  Math.PI
+  -Math.PI / 2
+*/
 const DOME_BG_AZIMUTH_OFFSET = 0;
+
+/*
+  Calidad del fondo.
+  Más bajo = más rápido.
+  Recomendado mobile: 0.32 a 0.45.
+*/
+const DOME_BG_RENDER_SCALE = 0.38;
+const DOME_BG_SOURCE_SIZE = 1024;
+const DOME_BG_MIN_RENDER_INTERVAL = 70; // ms
 
 let domeBgCanvas = null;
 let domeBgCtx = null;
+
 let domeBgSourceCanvas = null;
 let domeBgSourceCtx = null;
 let domeBgSourceData = null;
 let domeBgReady = false;
 let domeBgWidth = 0;
 let domeBgHeight = 0;
+
+let domeRayX = null;
+let domeRayY = null;
+let domeRayZ = null;
+let domeBgImageData = null;
+
+let domeLastRenderTime = 0;
+let domeLastQuat = new THREE.Quaternion();
+let domeHasLastQuat = false;
+let domeFrameToggle = 0;
 const CAPTURE_DURATION = 2000;
 
 
@@ -2049,59 +2076,78 @@ function initDomeBackground() {
   domeBgCanvas.id = 'dome-bg-canvas';
   container.prepend(domeBgCanvas);
 
-  domeBgCtx = domeBgCanvas.getContext('2d', { alpha: true });
+  domeBgCtx = domeBgCanvas.getContext('2d', {
+    alpha: true,
+    desynchronized: true
+  });
 
   domeBgSourceCanvas = document.createElement('canvas');
-  domeBgSourceCtx = domeBgSourceCanvas.getContext('2d', { willReadFrequently: true });
+  domeBgSourceCtx = domeBgSourceCanvas.getContext('2d', {
+    willReadFrequently: true
+  });
 
   const img = new Image();
-  img.onload = () => {
-    domeBgSourceCanvas.width = img.width;
-    domeBgSourceCanvas.height = img.height;
-    domeBgSourceCtx.drawImage(img, 0, 0);
 
-    domeBgWidth = img.width;
-    domeBgHeight = img.height;
-    domeBgSourceData = domeBgSourceCtx.getImageData(0, 0, domeBgWidth, domeBgHeight).data;
+  img.onload = () => {
+    domeBgSourceCanvas.width = DOME_BG_SOURCE_SIZE;
+    domeBgSourceCanvas.height = DOME_BG_SOURCE_SIZE;
+
+    domeBgSourceCtx.drawImage(
+      img,
+      0,
+      0,
+      DOME_BG_SOURCE_SIZE,
+      DOME_BG_SOURCE_SIZE
+    );
+
+    domeBgWidth = DOME_BG_SOURCE_SIZE;
+    domeBgHeight = DOME_BG_SOURCE_SIZE;
+
+    domeBgSourceData = domeBgSourceCtx.getImageData(
+      0,
+      0,
+      domeBgWidth,
+      domeBgHeight
+    ).data;
+
     domeBgReady = true;
 
     resizeDomeBackground();
-    renderDomeBackground();
+    renderDomeBackground(true);
   };
+
+  img.onerror = () => {
+    console.warn('No se pudo cargar el fondo de bóveda:', DOME_BG_URL);
+  };
+
   img.src = DOME_BG_URL;
 }
 
 function resizeDomeBackground() {
-  if (!domeBgCanvas) return;
+  if (!domeBgCanvas || !camera) return;
 
-  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-  domeBgCanvas.width = Math.round(window.innerWidth * dpr * DOME_BG_RENDER_SCALE);
-  domeBgCanvas.height = Math.round(window.innerHeight * dpr * DOME_BG_RENDER_SCALE);
+  const screenW = window.innerWidth;
+  const screenH = window.innerHeight;
+
+  const w = Math.max(120, Math.round(screenW * DOME_BG_RENDER_SCALE));
+  const h = Math.max(220, Math.round(screenH * DOME_BG_RENDER_SCALE));
+
+  domeBgCanvas.width = w;
+  domeBgCanvas.height = h;
 
   domeBgCanvas.style.width = '100%';
   domeBgCanvas.style.height = '100%';
-}
 
-function renderDomeBackground() {
-  if (!domeBgReady || !domeBgCtx || !camera) return;
+  domeBgImageData = domeBgCtx.createImageData(w, h);
 
-  const w = domeBgCanvas.width;
-  const h = domeBgCanvas.height;
-
-  if (!w || !h) return;
-
-  const imageData = domeBgCtx.createImageData(w, h);
-  const out = imageData.data;
+  domeRayX = new Float32Array(w * h);
+  domeRayY = new Float32Array(w * h);
+  domeRayZ = new Float32Array(w * h);
 
   const aspect = w / h;
   const tanHalfFov = Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
 
-  const ray = new THREE.Vector3();
-  const worldRay = new THREE.Vector3();
-
-  const cx = domeBgWidth * 0.5;
-  const cy = domeBgHeight * 0.5;
-  const maxRadius = Math.min(domeBgWidth, domeBgHeight) * 0.5;
+  let i = 0;
 
   for (let y = 0; y < h; y++) {
     const sy = 1 - ((y + 0.5) / h) * 2;
@@ -2109,45 +2155,131 @@ function renderDomeBackground() {
     for (let x = 0; x < w; x++) {
       const sx = ((x + 0.5) / w) * 2 - 1;
 
-      // rayo en espacio de cámara
-      ray.set(
-        sx * tanHalfFov * aspect,
-        sy * tanHalfFov,
-        -1
-      ).normalize();
+      const rx = sx * tanHalfFov * aspect;
+      const ry = sy * tanHalfFov;
+      const rz = -1;
 
-      // lo llevamos al mundo según la orientación actual
-      worldRay.copy(ray).applyQuaternion(camera.quaternion);
+      const invLen = 1 / Math.sqrt(rx * rx + ry * ry + rz * rz);
 
-      // ángulo desde el zenit (+Y)
-      const theta = Math.acos(THREE.MathUtils.clamp(worldRay.y, -1, 1));
+      domeRayX[i] = rx * invLen;
+      domeRayY[i] = ry * invLen;
+      domeRayZ[i] = rz * invLen;
 
-      // PROYECCIÓN CLAVE:
-      // zenit -> centro
-      // horizonte -> borde exterior
-      // nadir -> vuelve al centro (se juntan los bordes)
-      const rho = Math.sin(theta);
-
-      // azimut: norte arriba, este derecha
-      const az = Math.atan2(worldRay.x, -worldRay.z) + DOME_BG_AZIMUTH_OFFSET;
-
-      const srcX = cx + Math.sin(az) * rho * maxRadius;
-      const srcY = cy - Math.cos(az) * rho * maxRadius;
-
-      const ix = Math.max(0, Math.min(domeBgWidth - 1, Math.round(srcX)));
-      const iy = Math.max(0, Math.min(domeBgHeight - 1, Math.round(srcY)));
-
-      const srcIndex = (iy * domeBgWidth + ix) * 4;
-      const outIndex = (y * w + x) * 4;
-
-      out[outIndex] = domeBgSourceData[srcIndex];
-      out[outIndex + 1] = domeBgSourceData[srcIndex + 1];
-      out[outIndex + 2] = domeBgSourceData[srcIndex + 2];
-      out[outIndex + 3] = domeBgSourceData[srcIndex + 3];
+      i++;
     }
   }
 
-  domeBgCtx.putImageData(imageData, 0, 0);
+  domeHasLastQuat = false;
+}
+
+function renderDomeBackground(force = false) {
+  if (
+    !domeBgReady ||
+    !domeBgCtx ||
+    !domeBgImageData ||
+    !domeBgSourceData ||
+    !camera ||
+    !domeRayX
+  ) {
+    return;
+  }
+
+  const now = performance.now();
+
+  /*
+    Limitamos FPS del fondo.
+    Las estrellas y UI siguen a 60fps; solo el fondo se actualiza menos.
+  */
+  if (!force && now - domeLastRenderTime < DOME_BG_MIN_RENDER_INTERVAL) {
+    return;
+  }
+
+  /*
+    Si la cámara casi no cambió, no redibujamos.
+  */
+  const q = camera.quaternion;
+
+  if (!force && domeHasLastQuat) {
+    const dot = Math.abs(domeLastQuat.dot(q));
+
+    if (dot > 0.99992) {
+      return;
+    }
+  }
+
+  domeLastRenderTime = now;
+  domeLastQuat.copy(q);
+  domeHasLastQuat = true;
+
+  const w = domeBgCanvas.width;
+  const h = domeBgCanvas.height;
+  const out = domeBgImageData.data;
+
+  const sxData = domeRayX;
+  const syData = domeRayY;
+  const szData = domeRayZ;
+
+  const qx = q.x;
+  const qy = q.y;
+  const qz = q.z;
+  const qw = q.w;
+
+  const cx = domeBgWidth * 0.5;
+  const cy = domeBgHeight * 0.5;
+  const maxRadius = Math.min(domeBgWidth, domeBgHeight) * 0.5;
+
+  const sourceW = domeBgWidth;
+  const sourceH = domeBgHeight;
+  const source = domeBgSourceData;
+
+  const azOffset = DOME_BG_AZIMUTH_OFFSET;
+
+  const brightness = 0.78;
+
+  for (let i = 0, p = 0; i < sxData.length; i++, p += 4) {
+    const x = sxData[i];
+    const y = syData[i];
+    const z = szData[i];
+
+    /*
+      Rotación de vector por quaternion.
+      Versión inline para evitar crear THREE.Vector3 por pixel.
+    */
+    const tx = 2 * (qy * z - qz * y);
+    const ty = 2 * (qz * x - qx * z);
+    const tz = 2 * (qx * y - qy * x);
+
+    const wx = x + qw * tx + (qy * tz - qz * ty);
+    const wy = y + qw * ty + (qz * tx - qx * tz);
+    const wz = z + qw * tz + (qx * ty - qy * tx);
+
+    /*
+      Proyección polar:
+      zenit = centro,
+      horizonte = borde,
+      nadir vuelve a centro.
+    */
+    const clampedY = Math.max(-1, Math.min(1, wy));
+    const theta = Math.acos(clampedY);
+    const rho = Math.sin(theta);
+
+    const az = Math.atan2(wx, -wz) + azOffset;
+
+    const srcX = cx + Math.sin(az) * rho * maxRadius;
+    const srcY = cy - Math.cos(az) * rho * maxRadius;
+
+    const ix = Math.max(0, Math.min(sourceW - 1, srcX | 0));
+    const iy = Math.max(0, Math.min(sourceH - 1, srcY | 0));
+
+    const sp = (iy * sourceW + ix) * 4;
+
+    out[p] = source[sp] * brightness;
+    out[p + 1] = source[sp + 1] * brightness;
+    out[p + 2] = source[sp + 2] * brightness;
+    out[p + 3] = 255;
+  }
+
+  domeBgCtx.putImageData(domeBgImageData, 0, 0);
 }
   function init3D() {
   scene = new THREE.Scene();
@@ -3319,7 +3451,8 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-
+  resizeDomeBackground();
+  renderDomeBackground(true);
   actualizarConectorInfoCard();
 });
 const missionModalContinue = document.getElementById('mission-modal-continue');
