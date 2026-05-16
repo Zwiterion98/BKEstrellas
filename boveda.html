@@ -1101,6 +1101,167 @@
       aspect-ratio: 16 / 9;
     }
   }
+  /* =========================================================
+   FIX RESPONSIVE CARD INFO — MOBILE SAFE
+   Pegar al final del CSS
+========================================================= */
+
+#star-card-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+/* El body ahora reserva mejor espacio para el año */
+.star-card-body {
+  grid-template-columns: minmax(120px, 29%) 1px minmax(0, 1fr);
+}
+
+.star-card-left {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.star-card-year {
+  max-width: 100%;
+  font-size: clamp(48px, 9vw, 92px);
+  line-height: 0.82;
+  letter-spacing: -0.055em;
+  white-space: nowrap;
+}
+
+.star-card-data {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.star-card-data div {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/* Ajuste tablet / mobile */
+@media (max-width: 620px) {
+  #star-info-card {
+    top: 52px;
+    left: 20px;
+    width: calc(100vw - 36px);
+  }
+
+  .star-card-header {
+    height: 58px;
+    padding-left: 14px;
+    padding-right: 12px;
+    gap: 8px;
+  }
+
+  #star-card-title {
+    font-size: clamp(22px, 7.8vw, 38px);
+    line-height: 0.92;
+  }
+
+  .star-card-target {
+    width: 28px;
+    height: 28px;
+  }
+
+  .target-dot {
+    width: 20px;
+    height: 20px;
+    border-width: 2px;
+  }
+
+  .target-dot::after {
+    width: 7px;
+    height: 7px;
+  }
+
+  .star-card-body {
+    grid-template-columns: 108px 1px minmax(0, 1fr);
+    min-height: 104px;
+  }
+
+  .star-card-left {
+    padding: 10px 7px 9px 12px;
+  }
+
+  .star-card-name-row {
+    gap: 5px;
+    font-size: 15px;
+  }
+
+  .star-card-play {
+    border-top-width: 6px;
+    border-bottom-width: 6px;
+    border-left-width: 8px;
+  }
+
+  .star-card-year {
+    margin-top: 6px;
+    font-size: 48px;
+    letter-spacing: -0.06em;
+  }
+
+  .star-card-data {
+    padding: 10px 8px 9px 10px;
+    font-size: 8.7px;
+    line-height: 1.16;
+    gap: 1px;
+  }
+
+  .star-card-gap {
+    height: 6px;
+  }
+
+  .star-card-footer {
+    height: 16px;
+  }
+
+  .star-card::before {
+    left: -5px;
+    width: 5px;
+    top: 64px;
+    height: 98px;
+  }
+}
+
+/* Ajuste extremo para pantallas tipo 320px */
+@media (max-width: 360px) {
+  #star-info-card {
+    left: 16px;
+    width: calc(100vw - 28px);
+  }
+
+  .star-card-header {
+    height: 54px;
+    padding-left: 12px;
+    padding-right: 10px;
+  }
+
+  #star-card-title {
+    font-size: clamp(19px, 7vw, 26px);
+  }
+
+  .star-card-body {
+    grid-template-columns: 98px 1px minmax(0, 1fr);
+    min-height: 98px;
+  }
+
+  .star-card-name-row {
+    font-size: 13px;
+  }
+
+  .star-card-year {
+    font-size: 43px;
+  }
+
+  .star-card-data {
+    font-size: 7.8px;
+    line-height: 1.16;
+    padding-left: 9px;
+    padding-right: 7px;
+  }
+}
 </style>
 </head>
 <body>
@@ -1314,7 +1475,7 @@ let northCalibration = null;
 const missionStars = [
   {
     id: 'scga1924',
-    title: 'COLOMBES1924',
+    title: 'COLOMBES 1924',
     code: 'SCGA',
     year: '1924',
     raText: '08h 18m 35.33s',
@@ -1324,7 +1485,7 @@ const missionStars = [
   },
   {
     id: 'scga1928',
-    title: 'ÁMSTERDAM1928',
+    title: 'ÁMSTERDAM 1928',
     code: 'SCGA',
     year: '1928',
     raText: '08h 19m 11.27s',
@@ -1334,7 +1495,7 @@ const missionStars = [
   },
   {
     id: 'scga1930',
-    title: 'URUGUAY1930',
+    title: 'URUGUAY 1930',
     code: 'SCGA',
     year: '1930',
     raText: '08h 19m 18.27s',
@@ -1344,7 +1505,7 @@ const missionStars = [
   },
   {
     id: 'scga1950',
-    title: 'MARACANAZO1950',
+    title: 'MARACANAZO 1950',
     code: 'SCGA',
     year: '1950',
     raText: '08h 17m 42.89s',
@@ -1353,7 +1514,39 @@ const missionStars = [
     gaiaText: '5270171338893585792'
   }
 ];
+function ajustarTextoCard() {
+  const title = document.getElementById('star-card-title');
+  const year = document.getElementById('star-card-year');
+  const leftCol = document.querySelector('.star-card-left');
 
+  if (title) {
+    title.style.fontSize = '';
+
+    requestAnimationFrame(() => {
+      let size = parseFloat(getComputedStyle(title).fontSize);
+      const minSize = window.innerWidth <= 360 ? 18 : 22;
+
+      while (title.scrollWidth > title.clientWidth && size > minSize) {
+        size -= 1;
+        title.style.fontSize = `${size}px`;
+      }
+    });
+  }
+
+  if (year && leftCol) {
+    year.style.fontSize = '';
+
+    requestAnimationFrame(() => {
+      let size = parseFloat(getComputedStyle(year).fontSize);
+      const minSize = window.innerWidth <= 360 ? 36 : 40;
+
+      while (year.scrollWidth > leftCol.clientWidth && size > minSize) {
+        size -= 1;
+        year.style.fontSize = `${size}px`;
+      }
+    });
+  }
+}
 let currentMissionIndex = 0;
   function seededRandom(seed) {
     const x = Math.sin(seed) * 10000;
@@ -2079,6 +2272,7 @@ function actualizarInfoCard(mission) {
   if (dec) dec.textContent = mission.decText;
   if (gmag) gmag.textContent = mission.gmagText;
   if (gaia) gaia.textContent = mission.gaiaText;
+  ajustarTextoCard();
 }
 
 function actualizarMissionTracker() {
