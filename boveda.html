@@ -94,14 +94,17 @@ button:active {
    BASE LAYERS
 ========================= */
 #canvas-container {
-  --dome-zenith-y: -42vh;
-  --dome-scale: 1.95;
+  --dome-y: -42vh;
+  --dome-scale: 2.15;
+  --dome-tilt: 0deg;
 
   position: absolute;
   inset: 0;
   z-index: 1;
   overflow: hidden;
   background: #000;
+  perspective: 1400px;
+  perspective-origin: 50% 50%;
 }
 
 #canvas-container::before {
@@ -110,21 +113,23 @@ button:active {
   left: 50%;
   top: 50%;
   z-index: 0;
-  width: 100vmax;
-  height: 100vmax;
+  width: 165vmax;
+  height: 165vmax;
   pointer-events: none;
 
   background-image: url("./assets/img/bg-dome-square.png");
   background-repeat: no-repeat;
   background-position: center center;
-  background-size: contain;
+  background-size: 100% 100%;
 
-  opacity: 0.88;
-  filter: brightness(0.72) contrast(1.08) saturate(0.92);
+  border-radius: 50%;
+  opacity: 0.9;
+  filter: brightness(0.74) contrast(1.08) saturate(0.94);
 
   transform:
     translate(-50%, -50%)
-    translateY(var(--dome-zenith-y))
+    translateY(var(--dome-y))
+    rotateX(var(--dome-tilt))
     scale(var(--dome-scale));
 
   transform-origin: center center;
@@ -137,10 +142,9 @@ button:active {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-
   background:
-    radial-gradient(circle at 50% 42%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.10) 52%, rgba(0,0,0,0.52) 100%),
-    linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0) 38%, rgba(0,0,0,0.45) 100%);
+    radial-gradient(circle at 50% 52%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.10) 48%, rgba(0,0,0,0.42) 100%),
+    linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0) 34%, rgba(0,0,0,0.48) 100%);
 }
 
 #canvas-container canvas {
@@ -1616,6 +1620,9 @@ let infoCardShown = false;
 let infoCardRevealTimeout = null;
 let pendingMissionAdvance = false;
 let domeZenithY = null;
+let domeY = null;
+let domeScale = null;
+let domeTilt = null;
 const CAPTURE_DURATION = 2000;
 
 
@@ -3026,14 +3033,17 @@ function actualizarFondoBoveda(altitude) {
 
   /*
     altitude:
-    0°  = celular mirando al horizonte
-    90° = celular mirando al zenit
+    +90 = zenit
+    0   = horizonte
+    -90 = nadir
 
-    Cuando mira al horizonte, el centro de la imagen debe quedar arriba.
-    Cuando mira al zenit, el centro de la imagen baja al centro de pantalla.
+    Queremos:
+    - zenit: centro del disco visible en pantalla
+    - horizonte: centro del disco más arriba
+    - nadir: ver más del disco completo / bordes
   */
 
-  const minAlt = -35;
+  const minAlt = -90;
   const maxAlt = 90;
 
   const t = THREE.MathUtils.clamp(
@@ -3042,18 +3052,71 @@ function actualizarFondoBoveda(altitude) {
     1
   );
 
-  const horizonY = -46; // vh: centro de la imagen arriba de la pantalla
-  const zenithY = 0;    // vh: centro de la imagen en el centro del display
+  /*
+    Interpolaciones:
+    t=0   => nadir
+    t=0.5 => horizonte
+    t=1   => zenit
+  */
 
-  const targetY = horizonY + (zenithY - horizonY) * t;
+  // posición vertical del centro del disco
+  const nadirY = 30;
+  const horizonY = -42;
+  const zenithY = 0;
 
-  if (domeZenithY === null) {
-    domeZenithY = targetY;
+  let targetY;
+  if (t < 0.5) {
+    const tt = t / 0.5;
+    targetY = nadirY + (horizonY - nadirY) * tt;
   } else {
-    domeZenithY += (targetY - domeZenithY) * 0.08;
+    const tt = (t - 0.5) / 0.5;
+    targetY = horizonY + (zenithY - horizonY) * tt;
   }
 
-  container.style.setProperty('--dome-zenith-y', `${domeZenithY.toFixed(2)}vh`);
+  // escala del disco:
+  // más chico en nadir para que se vean más bordes
+  // más grande en horizonte
+  // intermedio en zenit
+  const nadirScale = 1.12;
+  const horizonScale = 2.15;
+  const zenithScale = 1.35;
+
+  let targetScale;
+  if (t < 0.5) {
+    const tt = t / 0.5;
+    targetScale = nadirScale + (horizonScale - nadirScale) * tt;
+  } else {
+    const tt = (t - 0.5) / 0.5;
+    targetScale = horizonScale + (zenithScale - horizonScale) * tt;
+  }
+
+  // inclinación visual para simular curvatura
+  const nadirTilt = -68;
+  const horizonTilt = 0;
+  const zenithTilt = 68;
+
+  let targetTilt;
+  if (t < 0.5) {
+    const tt = t / 0.5;
+    targetTilt = nadirTilt + (horizonTilt - nadirTilt) * tt;
+  } else {
+    const tt = (t - 0.5) / 0.5;
+    targetTilt = horizonTilt + (zenithTilt - horizonTilt) * tt;
+  }
+
+  // suavizado
+  if (domeY === null) domeY = targetY;
+  else domeY += (targetY - domeY) * 0.08;
+
+  if (domeScale === null) domeScale = targetScale;
+  else domeScale += (targetScale - domeScale) * 0.08;
+
+  if (domeTilt === null) domeTilt = targetTilt;
+  else domeTilt += (targetTilt - domeTilt) * 0.08;
+
+  container.style.setProperty('--dome-y', `${domeY.toFixed(2)}vh`);
+  container.style.setProperty('--dome-scale', domeScale.toFixed(3));
+  container.style.setProperty('--dome-tilt', `${domeTilt.toFixed(2)}deg`);
 }
   function actualizarCamaraYUI() {
   if (!brujulaDetectada) return;
