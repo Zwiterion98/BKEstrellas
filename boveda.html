@@ -99,16 +99,37 @@ button:active {
   inset: 0;
   z-index: 1;
   overflow: hidden;
-  background: url("./assets/img/bg-dome.jpg") center center / cover no-repeat;
+  background: #000;
 }
 
 #canvas-container::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: url("./assets/img/bg-dome.jpg") center center / cover no-repeat;
   z-index: 0;
   pointer-events: none;
+
+  background-image: url("./assets/img/bg-dome-square.png");
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+
+  opacity: 0.86;
+  filter: brightness(0.72) contrast(1.08) saturate(0.92);
+  transform: scale(1.04);
+  transform-origin: center center;
+}
+
+#canvas-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+
+  background:
+    radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.16) 58%, rgba(0,0,0,0.48) 100%),
+    linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0) 38%, rgba(0,0,0,0.42) 100%);
 }
 
 #canvas-container canvas {
@@ -2033,16 +2054,24 @@ function crearSkyDome() {
   renderer.setPixelRatio(window.devicePixelRatio || 1);
   renderer.setSize(window.innerWidth, window.innerHeight);
 
-  if (renderer.outputEncoding !== undefined) {
+  if (renderer.outputColorSpace !== undefined && THREE.SRGBColorSpace) {
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+  } else if (renderer.outputEncoding !== undefined) {
     renderer.outputEncoding = THREE.sRGBEncoding;
   }
 
-  document.getElementById('canvas-container').appendChild(renderer.domElement);
+  const canvasContainer = document.getElementById('canvas-container');
+  canvasContainer.appendChild(renderer.domElement);
 
   starGroup = new THREE.Group();
   scene.add(starGroup);
 
-  crearSkyDome();
+  /*
+    IMPORTANTE:
+    No usar crearSkyDome() con el fondo cuadrado.
+    El fondo bg-dome-square.png va por CSS en #canvas-container.
+  */
+  // crearSkyDome();
 
   raycaster = new THREE.Raycaster();
   raycaster.params.Points.threshold = 15;
