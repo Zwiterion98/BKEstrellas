@@ -1570,6 +1570,100 @@ body.manual-nav-active #canvas-container:active {
     transform: translateX(12px);
   }
 }
+/* =========================
+   MODE FEEDBACK
+   Toast visual al cambiar Manual / Movimiento
+========================= */
+
+#mode-feedback {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 90;
+  opacity: 1;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s ease;
+}
+
+#mode-feedback.hidden {
+  opacity: 0;
+  transform: translate(-50%, -44%) scale(0.96);
+}
+
+.mode-feedback-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 230px;
+  max-width: calc(100vw - 48px);
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(7, 18, 28, 0.76);
+  border: 1px solid rgba(255,255,255,0.16);
+  color: #fff;
+  box-shadow:
+    0 18px 40px rgba(0,0,0,0.42),
+    0 0 22px rgba(88,167,232,0.16);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.mode-feedback-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(88,167,232,0.22);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.mode-feedback-title {
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mode-feedback-text {
+  margin-top: 4px;
+  color: rgba(255,255,255,0.68);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 480px) {
+  .mode-feedback-card {
+    min-width: 214px;
+    padding: 12px 14px;
+    border-radius: 16px;
+  }
+
+  .mode-feedback-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+  }
+
+  .mode-feedback-title {
+    font-size: 12px;
+  }
+
+  .mode-feedback-text {
+    font-size: 10px;
+  }
+}
 </style>
 </head>
 <body>
@@ -1703,6 +1797,16 @@ body.manual-nav-active #canvas-container:active {
   </label>
 </div>
 
+<div id="mode-feedback" class="hidden">
+  <div class="mode-feedback-card">
+    <div class="mode-feedback-icon" id="mode-feedback-icon">↔</div>
+    <div>
+      <div class="mode-feedback-title" id="mode-feedback-title">Modo manual</div>
+      <div class="mode-feedback-text" id="mode-feedback-text">Arrastrá para mirar la bóveda</div>
+    </div>
+  </div>
+</div>
+
 <div id="canvas-container"></div>
   <div id="sys-info" class="oculto">SYS.OFF</div>
 
@@ -1736,6 +1840,10 @@ let domeScale = null;
 let domeTilt = null;
 let domeBackgroundEnabled = false;
 let manualNavigationEnabled = false;
+let modeFeedbackTimeout = null;
+
+const preloadedMissionImages = new Map();
+const missionPreloadPromises = new Map();
 
 let manualAzimuth = 0;
 let manualAltitude = 0;
@@ -2461,8 +2569,101 @@ function setDomeBackgroundEnabled(enabled) {
     }
   }
 }
+function mostrarFeedbackModo(mode) {
+  const feedback = document.getElementById('mode-feedback');
+  const icon = document.getElementById('mode-feedback-icon');
+  const title = document.getElementById('mode-feedback-title');
+  const text = document.getElementById('mode-feedback-text');
 
-function setManualNavigationEnabled(enabled) {
+  if (!feedback || !icon || !title || !text) return;
+
+  if (mode === 'manual') {
+    icon.textContent = '↔';
+    title.textContent = 'Modo manual';
+    text.textContent = 'Arrastrá para mirar la bóveda';
+  } else {
+    icon.textContent = '◉';
+    title.textContent = 'Modo movimiento';
+    text.textContent = 'Mové el celular para explorar';
+  }
+
+  clearTimeout(modeFeedbackTimeout);
+
+  feedback.classList.remove('hidden');
+
+  modeFeedbackTimeout = setTimeout(() => {
+    feedback.classList.add('hidden');
+  }, 1450);
+}
+
+function getMissionImageSources(mission) {
+  const sources = new Set();
+
+  if (!mission || !mission.detail) return [];
+
+  if (mission.detail.hero) {
+    sources.add(mission.detail.hero);
+  }
+
+  (mission.detail.sections || []).forEach((section) => {
+    if ((section.type === 'image' || section.type === 'inline-map') && section.src) {
+      sources.add(section.src);
+    }
+  });
+
+  return [...sources];
+}
+
+function preloadImage(src) {
+  if (!src) return Promise.resolve(null);
+
+  if (preloadedMissionImages.has(src)) {
+    return Promise.resolve(preloadedMissionImages.get(src));
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+
+    img.onload = () => {
+      preloadedMissionImages.set(src, img);
+      resolve(img);
+    };
+
+    img.onerror = () => {
+      console.warn('No se pudo precargar imagen:', src);
+      resolve(null);
+    };
+
+    img.src = src;
+  });
+}
+
+function preloadMissionImages(mission) {
+  if (!mission) return Promise.resolve([]);
+
+  if (missionPreloadPromises.has(mission.id)) {
+    return missionPreloadPromises.get(mission.id);
+  }
+
+  const sources = getMissionImageSources(mission);
+
+  const promise = Promise.all(sources.map(preloadImage));
+
+  missionPreloadPromises.set(mission.id, promise);
+
+  return promise;
+}
+
+function preloadAllMissionImages() {
+  if (!Array.isArray(missionStars)) return;
+
+  missionStars.forEach((mission) => {
+    preloadMissionImages(mission);
+  });
+}
+function setManualNavigationEnabled(enabled, showFeedback = true) {
+  const previousValue = manualNavigationEnabled;
+
   manualNavigationEnabled = enabled;
 
   const input = document.getElementById('manual-nav-switch');
@@ -2474,6 +2675,10 @@ function setManualNavigationEnabled(enabled) {
     const look = getObserverLookFromCamera();
     manualAzimuth = look.azimuth;
     manualAltitude = THREE.MathUtils.clamp(look.altitude, -85, 88);
+  }
+
+  if (showFeedback && previousValue !== enabled) {
+    mostrarFeedbackModo(enabled ? 'manual' : 'movement');
   }
 }
 
@@ -2495,8 +2700,8 @@ function setupSkyControls() {
     });
   }
 
-  setDomeBackgroundEnabled(false);
-  setManualNavigationEnabled(false);
+setDomeBackgroundEnabled(false);
+setManualNavigationEnabled(false, false);
 }
 
 function setupManualDragControls() {
@@ -3238,11 +3443,35 @@ function actualizarMissionTracker() {
 }
 let missionRevealObserver = null;
 
-function abrirModalMision(mission) {
+async function abrirModalMision(mission) {
   const modal = document.getElementById('mission-modal');
   const scroll = document.getElementById('mission-detail-scroll');
+  const heroImg = document.getElementById('mission-hero-img');
+  const body = document.getElementById('mission-detail-body');
 
   if (!modal || !mission) return;
+
+  /*
+    Limpieza inmediata para evitar que se vea la imagen
+    anterior mientras carga la nueva pantalla.
+  */
+  if (heroImg) {
+    heroImg.onload = null;
+    heroImg.onerror = null;
+    heroImg.removeAttribute('src');
+    heroImg.alt = '';
+  }
+
+  if (body) {
+    body.innerHTML = '';
+  }
+
+  /*
+    Si todavía no terminó la precarga, esperamos esta misión.
+    Como ya preloadAllMissionImages corre al inicio, normalmente
+    esto debería ser instantáneo.
+  */
+  await preloadMissionImages(mission);
 
   renderMissionDetail(mission);
 
@@ -3271,26 +3500,41 @@ function renderMissionDetail(mission) {
   if (!detail || !root || !hero || !heroImg || !title || !body) return;
 
   const [a, b, c] = detail.theme || ['#b86a38', '#3a78bd', '#1b1b24'];
+
   root.style.setProperty('--nebula-a', a);
   root.style.setProperty('--nebula-b', b);
   root.style.setProperty('--nebula-c', c);
 
   title.textContent = detail.title || mission.title;
 
+  hero.classList.remove('has-image');
+
+  heroImg.onload = null;
+  heroImg.onerror = null;
+  heroImg.removeAttribute('src');
+  heroImg.alt = '';
+
+  body.innerHTML = '';
+
   if (detail.hero) {
-    hero.classList.add('has-image');
-    heroImg.src = detail.hero;
-    heroImg.alt = detail.title || mission.title;
+    const preloaded = preloadedMissionImages.get(detail.hero);
+
+    heroImg.onload = () => {
+      hero.classList.add('has-image');
+    };
+
     heroImg.onerror = () => {
       hero.classList.remove('has-image');
       heroImg.removeAttribute('src');
     };
-  } else {
-    hero.classList.remove('has-image');
-    heroImg.removeAttribute('src');
-  }
 
-  body.innerHTML = '';
+    heroImg.alt = detail.title || mission.title;
+    heroImg.src = preloaded ? preloaded.src : detail.hero;
+
+    if (preloaded) {
+      hero.classList.add('has-image');
+    }
+  }
 
   (detail.sections || []).forEach((section) => {
     body.appendChild(createMissionSection(section));
@@ -3315,34 +3559,48 @@ function createMissionSection(section) {
   }
 
   if (section.type === 'image') {
-    const el = document.createElement('div');
-    el.className = `mission-img${section.tall ? ' tall' : ''} reveal`;
-    el.style.setProperty('--img-bg', section.bg || '#222');
+  const el = document.createElement('div');
+  el.className = `mission-img${section.tall ? ' tall' : ''} reveal`;
+  el.style.setProperty('--img-bg', section.bg || '#222');
 
-    el.innerHTML = `<img src="${section.src}" alt="" />`;
+  const img = document.createElement('img');
+  const preloaded = preloadedMissionImages.get(section.src);
 
-    const img = el.querySelector('img');
-    img.onerror = () => el.remove();
+  img.alt = '';
+  img.src = preloaded ? preloaded.src : section.src;
 
-    return el;
-  }
+  img.onerror = () => el.remove();
+
+  el.appendChild(img);
+
+  return el;
+}
 
   if (section.type === 'inline-map') {
-    const el = document.createElement('section');
-    el.className = 'mission-inline-grid reveal';
+  const el = document.createElement('section');
+  el.className = 'mission-inline-grid reveal';
 
-    el.innerHTML = `
-      <h3 class="mission-inline-title">${section.title || ''}</h3>
-      <div class="mission-mini-map">
-        <img src="${section.src}" alt="" />
-      </div>
-    `;
+  const title = document.createElement('h3');
+  title.className = 'mission-inline-title';
+  title.textContent = section.title || '';
 
-    const img = el.querySelector('img');
-    img.onerror = () => img.remove();
+  const map = document.createElement('div');
+  map.className = 'mission-mini-map';
 
-    return el;
-  }
+  const img = document.createElement('img');
+  const preloaded = preloadedMissionImages.get(section.src);
+
+  img.alt = section.title || '';
+  img.src = preloaded ? preloaded.src : section.src;
+
+  img.onerror = () => img.remove();
+
+  map.appendChild(img);
+  el.appendChild(title);
+  el.appendChild(map);
+
+  return el;
+}
 
   if (section.type === 'vector') {
     const el = document.createElement('section');
@@ -3748,6 +4006,7 @@ if (missionModalContinue) {
   missionModalContinue.addEventListener('click', avanzarASiguienteMision);
 }
 setupSkyControls();
+preloadAllMissionImages();
   init3D();
 </script>
 </body>
