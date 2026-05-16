@@ -389,8 +389,8 @@
 
 #info-connector-path {
   fill: none;
-  stroke: rgba(255,255,255,0.86);
-  stroke-width: 1.25;
+  stroke: rgba(255,255,255,0.78);
+  stroke-width: 1.05;
   stroke-linecap: square;
   stroke-linejoin: miter;
   stroke-dasharray: var(--connector-length);
@@ -1262,6 +1262,221 @@
     padding-right: 7px;
   }
 }
+/* =========================================================
+   AJUSTE FINAL CARD — MÁS SUTIL Y COMPACTA
+   pegar al final del CSS
+========================================================= */
+
+#star-info-card {
+  top: clamp(28px, 5vh, 56px);
+  left: clamp(14px, 4vw, 42px);
+  width: min(calc(100vw - 28px), 640px);
+}
+
+.star-card {
+  background: rgba(15, 33, 44, 0.96);
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.16);
+}
+
+/* barra blanca lateral más sutil */
+.star-card::before {
+  left: -5px;
+  width: 5px;
+  top: clamp(58px, 10vw, 84px);
+  height: clamp(86px, 14vw, 118px);
+}
+
+/* esquina inferior derecha más sutil */
+.star-card::after {
+  width: 14px;
+  height: 14px;
+  border-right: 3px solid #fff;
+  border-bottom: 3px solid #fff;
+}
+
+.star-card-header {
+  height: clamp(42px, 7vw, 58px);
+  padding: 0 clamp(10px, 2vw, 18px) 0 clamp(12px, 2.2vw, 18px);
+  gap: 10px;
+  background: #496f86;
+}
+
+#star-card-title {
+  font-size: clamp(20px, 5.4vw, 44px);
+  line-height: 0.94;
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+/* retícula derecha */
+.star-card-target {
+  width: clamp(18px, 3vw, 28px);
+  height: clamp(18px, 3vw, 28px);
+}
+
+.target-dot {
+  width: clamp(14px, 2.2vw, 20px);
+  height: clamp(14px, 2.2vw, 20px);
+  border-width: 2px;
+}
+
+.target-dot::after {
+  width: clamp(5px, 0.8vw, 8px);
+  height: clamp(5px, 0.8vw, 8px);
+}
+
+.star-card-body {
+  grid-template-columns: clamp(74px, 19vw, 132px) 1px minmax(0, 1fr);
+  min-height: clamp(74px, 14vw, 112px);
+}
+
+.star-card-left {
+  padding: clamp(8px, 1.5vw, 12px) 8px clamp(8px, 1.5vw, 10px) clamp(10px, 2vw, 16px);
+}
+
+.star-card-name-row {
+  gap: 4px;
+  font-size: clamp(10px, 2vw, 18px);
+  line-height: 1;
+}
+
+/* triangulito play */
+.star-card-play {
+  border-top: clamp(4px, 0.8vw, 7px) solid transparent;
+  border-bottom: clamp(4px, 0.8vw, 7px) solid transparent;
+  border-left: clamp(5px, 1vw, 9px) solid #fff;
+}
+
+.star-card-year {
+  margin-top: 4px;
+  font-size: clamp(28px, 6.5vw, 58px);
+  line-height: 0.82;
+  letter-spacing: -0.05em;
+}
+
+.star-card-divider {
+  background: rgba(255,255,255,0.16);
+}
+
+.star-card-data {
+  padding: clamp(8px, 1.6vw, 12px) clamp(8px, 1.8vw, 14px) clamp(8px, 1.4vw, 10px) clamp(10px, 2vw, 16px);
+  font-size: clamp(9px, 1.95vw, 16px);
+  line-height: 1.16;
+  gap: 2px;
+}
+
+/* OJO: info un poco más grande que antes */
+.star-card-data strong {
+  font-weight: 400;
+}
+
+.star-card-data div {
+  overflow-wrap: anywhere;
+}
+
+.star-card-gap {
+  height: 6px;
+}
+
+.star-card-footer {
+  height: clamp(10px, 2vw, 18px);
+  background: rgba(14, 31, 42, 0.98);
+  border-top: 1px solid rgba(255,255,255,0.10);
+}
+
+/* =========================
+   MOBILE
+========================= */
+@media (max-width: 480px) {
+  #star-info-card {
+    top: 26px;
+    left: 12px;
+    width: calc(100vw - 18px);
+  }
+
+  .star-card-header {
+    height: 40px;
+    padding-left: 10px;
+    padding-right: 10px;
+    gap: 8px;
+  }
+
+  #star-card-title {
+    font-size: clamp(18px, 5.8vw, 28px);
+  }
+
+  .star-card-target {
+    width: 20px;
+    height: 20px;
+  }
+
+  .target-dot {
+    width: 14px;
+    height: 14px;
+    border-width: 1.6px;
+  }
+
+  .target-dot::after {
+    width: 5px;
+    height: 5px;
+  }
+
+  .star-card-body {
+    grid-template-columns: 70px 1px minmax(0, 1fr);
+    min-height: 78px;
+  }
+
+  .star-card-left {
+    padding: 7px 6px 7px 10px;
+  }
+
+  .star-card-name-row {
+    font-size: 9.5px;
+    gap: 4px;
+  }
+
+  .star-card-play {
+    border-top-width: 4px;
+    border-bottom-width: 4px;
+    border-left-width: 5px;
+  }
+
+  .star-card-year {
+    margin-top: 3px;
+    font-size: 27px;
+  }
+
+  .star-card-data {
+    padding: 7px 7px 7px 9px;
+    font-size: 8.8px;
+    line-height: 1.15;
+  }
+
+  .star-card-gap {
+    height: 4px;
+  }
+
+  .star-card-footer {
+    height: 9px;
+  }
+
+  .star-card::before {
+    left: -4px;
+    width: 4px;
+    top: 50px;
+    height: 88px;
+  }
+
+  .star-card::after {
+    width: 11px;
+    height: 11px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+  }
+}
 </style>
 </head>
 <body>
@@ -1795,29 +2010,29 @@ function actualizarConectorInfoCard() {
   const scannerRect = scanner.getBoundingClientRect();
   const cardRect = card.getBoundingClientRect();
 
-  // Punto de salida: centro superior del círculo
+  // círculo
   const startX = scannerRect.left + scannerRect.width / 2;
   const startY = scannerRect.top;
 
-  // Punto de entrada: lado izquierdo de la card
+  // entrada al recuadro: lateral izquierdo, zona alta
   const endX = cardRect.left;
-  const endY = cardRect.top + Math.min(Math.max(cardRect.height * 0.26, 58), 112);
+  const endY = cardRect.top + Math.min(Math.max(cardRect.height * 0.34, 44), 78);
 
-  // Quiebre lateral izquierdo, como en la referencia
-  const leftX = Math.max(18, cardRect.left - Math.min(72, window.innerWidth * 0.09));
+  // el vector queda SIEMPRE por afuera del recuadro, a la izquierda
+  const outerLeftX = Math.max(6, cardRect.left - Math.min(70, window.innerWidth * 0.10));
 
-  // Altura del tramo horizontal que sale desde el círculo
-  const horizontalY = startY - Math.max(42, Math.min(82, scannerRect.height * 0.58));
+  // tramo horizontal del círculo
+  const midY = startY - Math.max(36, Math.min(68, scannerRect.height * 0.60));
 
-  // Punto previo a la diagonal que entra a la card
-  const diagonalStartY = endY + Math.max(42, Math.min(72, cardRect.height * 0.26));
+  // altura del quiebre superior izquierdo (más arriba que la entrada)
+  const topY = Math.max(8, endY - Math.max(24, Math.min(52, cardRect.height * 0.26)));
 
   const d = [
-    `M ${startX} ${startY}`,
-    `V ${horizontalY}`,
-    `H ${leftX}`,
-    `V ${diagonalStartY}`,
-    `L ${endX} ${endY}`
+    `M ${startX} ${startY}`,   // sale del círculo
+    `V ${midY}`,               // sube
+    `H ${outerLeftX}`,         // va a la izquierda
+    `V ${topY}`,               // sube por la izquierda
+    `L ${endX} ${endY}`        // entra en diagonal al lateral del recuadro
   ].join(' ');
 
   svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`);
