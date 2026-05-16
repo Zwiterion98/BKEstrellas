@@ -1567,6 +1567,7 @@ body.mission-modal-open {
 
 <script>
 let scene, camera, renderer, starGroup;
+let backgroundDome = null;
 let raycaster, centerScreen;
 let hoverRing;
 let skyDome = null;
@@ -1884,6 +1885,8 @@ const missionStars = [
     }
   }
 ];
+
+
 function ajustarTextoCard() {
   const title = document.getElementById('star-card-title');
   const year = document.getElementById('star-card-year');
@@ -1956,78 +1959,92 @@ function crearSkyDome() {
   loader.load(
     SKY_TEXTURE_URL,
     (texture) => {
-      texture.encoding = THREE.sRGBEncoding;
+      if (THREE.SRGBColorSpace) {
+        texture.colorSpace = THREE.SRGBColorSpace;
+      } else {
+        texture.encoding = THREE.sRGBEncoding;
+      }
+
       texture.minFilter = THREE.LinearFilter;
       texture.magFilter = THREE.LinearFilter;
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
 
       const geometry = new THREE.SphereGeometry(2200, 96, 96);
-      geometry.scale(-1, 1, 1);
 
       const material = new THREE.MeshBasicMaterial({
         map: texture,
         side: THREE.BackSide,
-        transparent: false,
-        depthWrite: false
+        depthWrite: false,
+        depthTest: false
       });
 
       skyDome = new THREE.Mesh(geometry, material);
-      skyDome.renderOrder = -10;
+      skyDome.renderOrder = -1000;
+      skyDome.frustumCulled = false;
+
       scene.add(skyDome);
     },
     undefined,
     (err) => {
       console.warn('No se pudo cargar la textura de la bóveda:', err);
-
-      const geometry = new THREE.SphereGeometry(2200, 96, 96);
-      geometry.scale(-1, 1, 1);
-
-      const fallbackMaterial = new THREE.MeshBasicMaterial({
-        color: 0x000000,
-        side: THREE.BackSide,
-        depthWrite: false
-      });
-
-      skyDome = new THREE.Mesh(geometry, fallbackMaterial);
-      skyDome.renderOrder = -10;
-      scene.add(skyDome);
     }
   );
 }
   function init3D() {
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 2500);
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-renderer.setClearColor(0x000000, 1);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.getElementById('canvas-container').appendChild(renderer.domElement);
+  scene = new THREE.Scene();
+  scene.background = null;
 
-    starGroup = new THREE.Group();
-scene.add(starGroup);
+  camera = new THREE.PerspectiveCamera(
+    70,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    2500
+  );
 
-crearSkyDome();
+  renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    alpha: true
+  });
 
-    raycaster = new THREE.Raycaster();
-    raycaster.params.Points.threshold = 15;
-    centerScreen = new THREE.Vector2(0, 0);
+  renderer.setClearColor(0x000000, 0);
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  renderer.setSize(window.innerWidth, window.innerHeight);
 
-    const ringGeo = new THREE.RingGeometry(35, 38, 32);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.8
-    });
-  hoverRing = new THREE.Mesh(ringGeo, ringMat);
-hoverRing.visible = false;
-scene.add(hoverRing);
-
-// Sprite 3D que reemplaza visualmente a la estrella cuando entra en el círculo
-missionStarSprite = createStarSprite('★', '#ffffff', 64);
-missionStarSprite.visible = false;
-scene.add(missionStarSprite);
-
-animar();
+  if (renderer.outputEncoding !== undefined) {
+    renderer.outputEncoding = THREE.sRGBEncoding;
   }
+
+  document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+  starGroup = new THREE.Group();
+  scene.add(starGroup);
+
+  crearSkyDome();
+
+  raycaster = new THREE.Raycaster();
+  raycaster.params.Points.threshold = 15;
+  centerScreen = new THREE.Vector2(0, 0);
+
+  const ringGeo = new THREE.RingGeometry(35, 38, 32);
+  const ringMat = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.8
+  });
+
+  hoverRing = new THREE.Mesh(ringGeo, ringMat);
+  hoverRing.visible = false;
+  scene.add(hoverRing);
+
+  // Sprite 3D que reemplaza visualmente a la estrella cuando entra en el círculo
+  missionStarSprite = createStarSprite('★', '#ffffff', 64);
+  missionStarSprite.visible = false;
+  scene.add(missionStarSprite);
+
+  animar();
+}
 
   function azAltToVector(azimuth, altitude, radius = 500) {
     const azRad = THREE.MathUtils.degToRad(azimuth);
