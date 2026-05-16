@@ -1965,21 +1965,43 @@ function crearSkyDome() {
         texture.encoding = THREE.sRGBEncoding;
       }
 
-      texture.minFilter = THREE.LinearFilter;
-      texture.magFilter = THREE.LinearFilter;
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
 
-      const geometry = new THREE.SphereGeometry(2200, 96, 96);
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.generateMipmaps = true;
+
+      if (renderer && renderer.capabilities) {
+        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      }
+
+      const geometry = new THREE.SphereGeometry(2200, 128, 96);
 
       const material = new THREE.MeshBasicMaterial({
         map: texture,
         side: THREE.BackSide,
         depthWrite: false,
-        depthTest: false
+        depthTest: false,
+        transparent: false
       });
 
       skyDome = new THREE.Mesh(geometry, material);
+
+      /*
+        IMPORTANTE:
+        Esto mueve el centro de la imagen hacia el zenit.
+        Antes el centro del bg-dome quedaba mirando al frente/horizonte.
+      */
+      skyDome.rotation.x = Math.PI / 2;
+
+      /*
+        Ajuste fino opcional:
+        Si el fondo queda mirando al lado contrario,
+        probá cambiar este valor por Math.PI.
+      */
+      skyDome.rotation.z = 0;
+
       skyDome.renderOrder = -1000;
       skyDome.frustumCulled = false;
 
