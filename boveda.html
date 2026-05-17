@@ -357,73 +357,30 @@ button:active {
 #scanner-ui.locked-preview #scanner-cross {
   opacity: 0;
 }
-
 #guide-arrow {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 54px;
-  height: 54px;
+  width: 46px;
+  height: 46px;
   z-index: 16;
   pointer-events: none;
 
-  /*
-    La posición final la maneja JS.
-    Este transform inicial es solo fallback.
-  */
   transform: translate(-50%, -50%);
   transform-origin: 50% 50%;
 
   opacity: 0;
   transition: opacity 0.16s ease;
   will-change: transform, opacity;
+
+  background-image: url("./assets/img/guide-arrow.svg");
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: contain;
+
   filter:
     drop-shadow(0 2px 4px rgba(0,0,0,0.55))
-    drop-shadow(0 0 7px rgba(255,255,255,0.18));
-}
-
-/* Punta de flecha */
-#guide-arrow::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 2px;
-  width: 0;
-  height: 0;
-
-  border-left: 11px solid transparent;
-  border-right: 11px solid transparent;
-  border-bottom: 26px solid rgba(255,255,255,0.96);
-
-  transform:
-    translateX(-50%)
-    rotate(-18deg);
-
-  transform-origin: 50% 80%;
-}
-
-/* Arco curvo tipo referencia */
-#guide-arrow::after {
-  content: "";
-  position: absolute;
-  left: 8px;
-  top: 21px;
-  width: 42px;
-  height: 30px;
-
-  border-top: 2px solid rgba(255,255,255,0.88);
-  border-left: 2px solid transparent;
-  border-right: 2px solid transparent;
-  border-radius: 50% 50% 0 0;
-
-  transform: rotate(-18deg);
-  transform-origin: 18% 50%;
-  opacity: 0.9;
-}
-
-/* Cuando está muy cerca del objetivo, se apaga más suave */
-#guide-arrow.is-near-target {
-  opacity: 0;
+    drop-shadow(0 0 7px rgba(255,255,255,0.14));
 }
 /* =========================
    SMALL TARGET PILL
@@ -1873,7 +1830,7 @@ body.manual-nav-active #canvas-container:active {
 </div>
 
 <div id="scanner-ui">
-  <div id="guide-arrow"></div>
+  <div id="guide-arrow" aria-hidden="true"></div>
   <div id="scanner-ring"></div>
   <div id="scanner-progress"></div>
   <div id="scanner-cross"></div>
@@ -2021,6 +1978,8 @@ const CAPTURE_DURATION = 2000;
 const GUIDE_ARROW_RADIUS = 82;
 const GUIDE_ARROW_FADE_START = 190;
 const GUIDE_ARROW_FADE_END = 68;
+
+const GUIDE_ARROW_ANGLE_OFFSET = 40;
 
   const uiLayer = document.getElementById('ui-layer');
   const hud = document.getElementById('target-hud');
@@ -4004,7 +3963,7 @@ function actualizarGuiaVisual() {
     const targetLook = getAzAltFromWorldPosition(target.mesh.position);
 
     const deltaAz = shortestAngleDiff(look.azimuth, targetLook.azimuth);
-    const angle = deltaAz > 0 ? 90 : -90;
+    const angle = (deltaAz > 0 ? 90 : -90) + GUIDE_ARROW_ANGLE_OFFSET;
 
     guideArrow.classList.remove('is-near-target');
     guideArrow.style.opacity = '0.92';
@@ -4015,7 +3974,7 @@ function actualizarGuiaVisual() {
     return;
   }
 
-  const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+  const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90 + GUIDE_ARROW_ANGLE_OFFSET;
 
   /*
     Opacidad según cercanía:
