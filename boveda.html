@@ -493,8 +493,8 @@ button:active {
 #star-info-card {
   position: absolute;
   top: clamp(34px, 6vh, 64px);
-  left: clamp(18px, 5vw, 64px);
-  width: min(calc(100vw - 36px), 640px);
+  left: clamp(14px, 4vw, 42px);
+  width: min(70vw, 560px);
   z-index: 24;
   opacity: 1;
   pointer-events: none;
@@ -725,10 +725,11 @@ button:active {
 
 @media (max-width: 480px) {
   #star-info-card {
-    top: 34px;
-    left: 14px;
-    width: calc(100vw - 22px);
-  }
+  top: 34px;
+  left: 12px;
+  width: 70vw;
+  min-width: 248px;
+}
 
   #star-info-card .star-card-header {
     height: 52px;
@@ -738,8 +739,8 @@ button:active {
   }
 
   #star-card-title {
-    font-size: clamp(23px, 7.7vw, 34px);
-  }
+  font-size: clamp(18px, 5.5vw, 28px);
+}
 
   #star-info-card .star-card-target {
     width: 24px;
@@ -758,17 +759,17 @@ button:active {
   }
 
   #star-info-card .star-card-body {
-    grid-template-columns: 92px 1px minmax(0, 1fr);
-    min-height: 88px;
-  }
+  grid-template-columns: 72px 1px minmax(0, 1fr);
+  min-height: 76px;
+}
 
   #star-info-card .star-card-left {
     padding: 8px 6px 8px 10px;
   }
 
   #star-info-card .star-card-name-row {
-    font-size: 13px;
-  }
+  font-size: 10px;
+}
 
   #star-info-card .star-card-play {
     border-top-width: 5px;
@@ -777,14 +778,14 @@ button:active {
   }
 
   #star-info-card .star-card-year {
-    font-size: 38px;
-  }
+  font-size: 31px;
+}
 
   #star-info-card .star-card-data {
-    padding: 9px 8px 8px 10px;
-    font-size: 8.7px;
-    line-height: 1.12;
-  }
+  padding: 8px 7px 7px 9px;
+  font-size: 7.4px;
+  line-height: 1.12;
+}
 
   #star-info-card .star-card-footer {
     height: 12px;
