@@ -589,7 +589,36 @@
       height: 100%;
       padding-bottom: 16vh;
     }
+.loading-logos {
+  position: absolute;
+  left: 50%;
+  bottom: calc(48px + var(--safe-bottom));
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(18px, 5vw, 34px);
+  transform: translateX(-50%);
+  opacity: 0.92;
+}
 
+.loading-logos img {
+  height: clamp(34px, 7vw, 54px);
+  width: auto;
+  max-width: 96px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.45));
+}
+
+@media (max-height: 680px) {
+  .loading-logos {
+    bottom: calc(30px + var(--safe-bottom));
+  }
+
+  .loading-logos img {
+    height: 32px;
+  }
+}
     .loader-stars {
       display: flex;
       gap: 18px;
@@ -789,17 +818,23 @@
       Fondo de carga: reemplazar en CSS .loading-bg
     ========================================================== -->
     <section class="screen loading-screen is-active" data-screen="loading" aria-label="Cargando experiencia">
-      <div class="loading-bg"></div>
-      <div class="loading-content">
-        <div class="loader-stars" aria-hidden="true">
-          <span class="loader-star">★</span>
-          <span class="loader-star">★</span>
-          <span class="loader-star">★</span>
-          <span class="loader-star">☆</span>
-        </div>
-        <span class="sr-only">Cargando</span>
-      </div>
-    </section>
+  <div class="loading-bg"></div>
+
+  <div class="loading-content">
+    <div class="loader-stars" aria-hidden="true">
+      <span class="loader-star">★</span>
+      <span class="loader-star">★</span>
+      <span class="loader-star">★</span>
+      <span class="loader-star">☆</span>
+    </div>
+    <span class="sr-only">Cargando</span>
+  </div>
+
+  <div class="loading-logos" aria-label="Burger King y AUF">
+    <img src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+    <img src="assets/img/logo-auf-white.svg" alt="AUF" />
+  </div>
+</section>
 
     <!-- Fondo general. Cambiar assets/img/bg-stars.jpg por el fondo final -->
     <div class="cosmic-bg" aria-hidden="true"></div>

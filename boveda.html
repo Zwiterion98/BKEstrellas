@@ -966,19 +966,16 @@ button:active {
 
 .mission-detail .reveal {
   opacity: 0;
-  transform: translateY(30px) scale(0.985);
-  filter: blur(8px);
+  transform: translateY(28px) scale(0.985);
   transition:
-    opacity 1100ms cubic-bezier(0.22, 0.61, 0.36, 1),
-    transform 1100ms cubic-bezier(0.22, 0.61, 0.36, 1),
-    filter 1100ms cubic-bezier(0.22, 0.61, 0.36, 1);
-  will-change: opacity, transform, filter;
+    opacity 1000ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 1000ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: opacity, transform;
 }
 
 .mission-detail .reveal.is-visible {
   opacity: 1;
   transform: translateY(0) scale(1);
-  filter: blur(0);
 }
 .mission-hero {
   position: relative;
@@ -1756,6 +1753,37 @@ body.manual-nav-active #canvas-container:active {
   line-height: 1.35;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+.boveda-loading-logos {
+  position: absolute;
+  left: 50%;
+  bottom: calc(48px + env(safe-area-inset-bottom, 0px));
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(18px, 5vw, 34px);
+  transform: translateX(-50%);
+  opacity: 0.92;
+  pointer-events: none;
+}
+
+.boveda-loading-logos img {
+  height: clamp(34px, 7vw, 54px);
+  width: auto;
+  max-width: 96px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.45));
+}
+
+@media (max-height: 680px) {
+  .boveda-loading-logos {
+    bottom: calc(30px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .boveda-loading-logos img {
+    height: 32px;
+  }
 }
 </style>
 </head>
@@ -3190,22 +3218,27 @@ function mostrarCargaBoveda(texto = "Preparando la bóveda celeste...") {
   uiLayer.classList.remove("oculto");
 
   uiLayer.innerHTML = `
-    <div class="boveda-loader">
-      <div class="boveda-loader-stars" aria-hidden="true">
-        <span class="is-filled">★</span>
-        <span>☆</span>
-        <span>☆</span>
-        <span>☆</span>
-      </div>
-
-      <h1 class="boveda-loader-title" aria-label="Estrellas Reales">
-        <span>Estrellas</span>
-        <span>Reales</span>
-      </h1>
-
-      <p class="boveda-loader-copy">${texto}</p>
+  <div class="boveda-loader">
+    <div class="boveda-loader-stars" aria-hidden="true">
+      <span class="is-filled">★</span>
+      <span>☆</span>
+      <span>☆</span>
+      <span>☆</span>
     </div>
-  `;
+
+    <h1 class="boveda-loader-title" aria-label="Estrellas Reales">
+      <span>Estrellas</span>
+      <span>Reales</span>
+    </h1>
+
+    <p class="boveda-loader-copy">${texto}</p>
+  </div>
+
+  <div class="boveda-loading-logos" aria-label="Burger King y AUF">
+    <img src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+    <img src="assets/img/logo-auf-white.svg" alt="AUF" />
+  </div>
+`;
 
   iniciarLoaderBoveda();
 }
