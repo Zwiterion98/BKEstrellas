@@ -299,8 +299,8 @@ button:active {
   background:
     conic-gradient(
       from -18deg,
-      rgba(255,255,255,0.98) calc(var(--progress, 0) * 1%),
-      rgba(255,255,255,0) 0
+      rgba(88,167,232,1) calc(var(--progress, 0) * 1%),
+      rgba(88,167,232,0) 0
     );
   mask: radial-gradient(
     transparent 0 49px,
@@ -312,7 +312,10 @@ button:active {
     black 50px 55px,
     transparent 56px 100%
   );
-  filter: none;
+  filter:
+    drop-shadow(0 0 6px rgba(88,167,232,0.95))
+    drop-shadow(0 0 14px rgba(88,167,232,0.72))
+    drop-shadow(0 0 26px rgba(88,167,232,0.36));
   transition: opacity 0.15s ease;
 }
 
@@ -1987,7 +1990,7 @@ let domeLastRenderTime = 0;
 let domeLastQuat = new THREE.Quaternion();
 let domeHasLastQuat = false;
 let domeFrameToggle = 0;
-const CAPTURE_DURATION = 2000;
+const CAPTURE_DURATION = 3000;
 const GUIDE_ARROW_RADIUS = 82;
 const GUIDE_ARROW_FADE_START = 190;
 const GUIDE_ARROW_FADE_END = 68;
