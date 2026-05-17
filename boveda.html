@@ -362,18 +362,69 @@ button:active {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 0;
-  height: 0;
-  margin: 0;
-  border-left: 12px solid transparent;
-  border-right: 12px solid transparent;
-  border-bottom: 24px solid rgba(255,255,255,0.96);
+  width: 54px;
+  height: 54px;
+  z-index: 16;
+  pointer-events: none;
+
+  /*
+    La posición final la maneja JS.
+    Este transform inicial es solo fallback.
+  */
   transform: translate(-50%, -50%);
   transform-origin: 50% 50%;
-  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.45));
-  will-change: transform;
+
+  opacity: 0;
+  transition: opacity 0.16s ease;
+  will-change: transform, opacity;
+  filter:
+    drop-shadow(0 2px 4px rgba(0,0,0,0.55))
+    drop-shadow(0 0 7px rgba(255,255,255,0.18));
 }
 
+/* Punta de flecha */
+#guide-arrow::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  width: 0;
+  height: 0;
+
+  border-left: 11px solid transparent;
+  border-right: 11px solid transparent;
+  border-bottom: 26px solid rgba(255,255,255,0.96);
+
+  transform:
+    translateX(-50%)
+    rotate(-18deg);
+
+  transform-origin: 50% 80%;
+}
+
+/* Arco curvo tipo referencia */
+#guide-arrow::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 21px;
+  width: 42px;
+  height: 30px;
+
+  border-top: 2px solid rgba(255,255,255,0.88);
+  border-left: 2px solid transparent;
+  border-right: 2px solid transparent;
+  border-radius: 50% 50% 0 0;
+
+  transform: rotate(-18deg);
+  transform-origin: 18% 50%;
+  opacity: 0.9;
+}
+
+/* Cuando está muy cerca del objetivo, se apaga más suave */
+#guide-arrow.is-near-target {
+  opacity: 0;
+}
 /* =========================
    SMALL TARGET PILL
 ========================= */
@@ -1967,7 +2018,9 @@ let domeLastQuat = new THREE.Quaternion();
 let domeHasLastQuat = false;
 let domeFrameToggle = 0;
 const CAPTURE_DURATION = 2000;
-
+const GUIDE_ARROW_RADIUS = 82;
+const GUIDE_ARROW_FADE_START = 190;
+const GUIDE_ARROW_FADE_END = 68;
 
   const uiLayer = document.getElementById('ui-layer');
   const hud = document.getElementById('target-hud');
@@ -2269,7 +2322,15 @@ const missionStars = [
   }
 ];
 
+function getGuideArrowOpacity(distance) {
+  if (distance <= GUIDE_ARROW_FADE_END) return 0;
+  if (distance >= GUIDE_ARROW_FADE_START) return 1;
 
+  const t = (distance - GUIDE_ARROW_FADE_END) /
+    (GUIDE_ARROW_FADE_START - GUIDE_ARROW_FADE_END);
+
+  return THREE.MathUtils.clamp(t, 0, 1);
+}
 function ajustarTextoCard() {
   const title = document.getElementById('star-card-title');
   const year = document.getElementById('star-card-year');
@@ -3920,9 +3981,10 @@ function actualizarGuiaVisual() {
   const dy = screen.y - centerY;
   const dist = Math.hypot(dx, dy);
 
-  // CLAVE:
-  // Solo puede capturar si la estrella está delante de la cámara.
-  // Esto evita que se active en el lado opuesto de la bóveda.
+  /*
+    Solo capturamos si está realmente delante de la cámara.
+    Esto evita que se active en el lado opuesto de la bóveda.
+  */
   const insideCircle = screen.isVisible && dist <= 54;
 
   scannerUi.classList.toggle('locked-preview', insideCircle);
@@ -3933,28 +3995,40 @@ function actualizarGuiaVisual() {
     missionStarSprite.position.copy(missionStarMesh.position);
   }
 
-  // Si la estrella está detrás, no dejamos que la proyección invertida
-  // mande una señal falsa de captura.
+  /*
+    Si la estrella está detrás de la cámara, no usamos la proyección
+    invertida. Mostramos una guía lateral simple para girar.
+  */
   if (!screen.inFront) {
-    guideArrow.style.opacity = '1';
-
     const look = getObserverLookFromCamera();
     const targetLook = getAzAltFromWorldPosition(target.mesh.position);
 
     const deltaAz = shortestAngleDiff(look.azimuth, targetLook.azimuth);
     const angle = deltaAz > 0 ? 90 : -90;
-    const radius = 46;
 
-    guideArrow.style.transform = `translate(-50%, -50%) rotate(${angle}deg) translateY(-${radius}px)`;
+    guideArrow.classList.remove('is-near-target');
+    guideArrow.style.opacity = '0.92';
+
+    guideArrow.style.transform =
+      `translate(-50%, -50%) rotate(${angle}deg) translateY(-${GUIDE_ARROW_RADIUS}px)`;
+
     return;
   }
 
   const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
-  const radius = 46;
 
-  guideArrow.style.opacity = insideCircle ? '0' : '1';
+  /*
+    Opacidad según cercanía:
+    lejos = 1
+    cerca = 0
+  */
+  const arrowOpacity = getGuideArrowOpacity(dist);
+
+  guideArrow.classList.toggle('is-near-target', arrowOpacity <= 0.03);
+  guideArrow.style.opacity = String(arrowOpacity);
+
   guideArrow.style.transform =
-    `translate(-50%, -56%) rotate(${angle}deg) translateY(-${radius}px)`;
+    `translate(-50%, -50%) rotate(${angle}deg) translateY(-${GUIDE_ARROW_RADIUS}px)`;
 }
 function actualizarFondoBoveda(altitude) {
   const container = document.getElementById('canvas-container');
