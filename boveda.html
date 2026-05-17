@@ -315,7 +315,7 @@ button:active {
   filter:
     drop-shadow(0 0 6px rgba(88,167,232,0.95))
     drop-shadow(0 0 14px rgba(88,167,232,0.72))
-    drop-shadow(0 0 26px rgba(88,167,232,0.36));
+    drop-shadow(0 0 32px rgba(88,167,232,0.55));
   transition: opacity 0.15s ease;
 }
 
@@ -949,27 +949,37 @@ button:active {
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  background: linear-gradient(180deg, #000 0 72%, #12384d 100%);
+  background:
+    linear-gradient(
+      180deg,
+      #000 0%,
+      #000 42%,
+      #021016 64%,
+      #12384d 100%
+    );
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
-
 .mission-detail-scroll::-webkit-scrollbar {
   display: none;
 }
 
 .mission-detail .reveal {
   opacity: 0;
-  transform: translateY(22px);
-  transition: opacity 620ms ease, transform 620ms ease;
-  will-change: opacity, transform;
+  transform: translateY(30px) scale(0.985);
+  filter: blur(8px);
+  transition:
+    opacity 1100ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 1100ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    filter 1100ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: opacity, transform, filter;
 }
 
 .mission-detail .reveal.is-visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
+  filter: blur(0);
 }
-
 .mission-hero {
   position: relative;
   width: 100%;
@@ -1107,7 +1117,7 @@ button:active {
 .mission-block {
   position: relative;
   padding: 20px 22px;
-  background: #000;
+  background: transparent;
 }
 
 .mission-block.compact {
@@ -1276,7 +1286,7 @@ button:active {
 
 .mission-quote {
   padding: 26px 22px 30px;
-  background: #12384d;
+  background: transparent;
 }
 
 .mission-quote p {
@@ -1293,9 +1303,8 @@ button:active {
 }
 
 .mission-blue {
-  background: linear-gradient(180deg, #001014 0%, #12384d 100%);
+  background: transparent;
 }
-
 .mission-spacer-lg {
   height: 170px;
   background: #000;
@@ -1303,10 +1312,9 @@ button:active {
 
 .mission-end {
   padding: 32px 22px 52px;
-  background: #12384d;
+  background: transparent;
   text-align: center;
 }
-
 .mission-back-btn {
   width: 184px;
   height: 38px;
@@ -3876,10 +3884,10 @@ function setupMissionReveal() {
     rootMargin: '0px 0px -8% 0px'
   });
 
-  scroll.querySelectorAll('.reveal').forEach((el, index) => {
-    el.style.transitionDelay = `${Math.min(index * 35, 180)}ms`;
-    missionRevealObserver.observe(el);
-  });
+ scroll.querySelectorAll('.reveal').forEach((el, index) => {
+  el.style.transitionDelay = `${Math.min(index * 90, 520)}ms`;
+  missionRevealObserver.observe(el);
+});
 }
 const missionModalClose = document.getElementById('mission-modal-close');
 
