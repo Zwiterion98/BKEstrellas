@@ -358,6 +358,8 @@ button:active {
   opacity: 0;
 }
 #guide-arrow {
+  --guide-arrow-self-rotation: -38deg;
+
   position: absolute;
   left: 50%;
   top: 50%;
@@ -372,11 +374,21 @@ button:active {
   opacity: 0;
   transition: opacity 0.16s ease;
   will-change: transform, opacity;
+}
+
+/* El SVG rota sobre su propio eje acá */
+#guide-arrow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
 
   background-image: url("./assets/img/guide-arrow.svg");
   background-repeat: no-repeat;
   background-position: center center;
   background-size: contain;
+
+  transform: rotate(var(--guide-arrow-self-rotation));
+  transform-origin: 50% 50%;
 
   filter:
     drop-shadow(0 2px 4px rgba(0,0,0,0.55))
@@ -3963,8 +3975,7 @@ function actualizarGuiaVisual() {
     const targetLook = getAzAltFromWorldPosition(target.mesh.position);
 
     const deltaAz = shortestAngleDiff(look.azimuth, targetLook.azimuth);
-    const angle = (deltaAz > 0 ? 90 : -90) + GUIDE_ARROW_ANGLE_OFFSET;
-
+    const angle = deltaAz > 0 ? 90 : -90;
     guideArrow.classList.remove('is-near-target');
     guideArrow.style.opacity = '0.92';
 
@@ -3974,8 +3985,7 @@ function actualizarGuiaVisual() {
     return;
   }
 
-  const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90 + GUIDE_ARROW_ANGLE_OFFSET;
-
+  const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
   /*
     Opacidad según cercanía:
     lejos = 1
