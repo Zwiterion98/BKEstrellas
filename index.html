@@ -547,7 +547,34 @@
       display: flex;
       justify-content: center;
     }
+/* =========================================================
+   ENTRADA ESCALONADA — PANTALLA DE PASOS
+========================================================= */
 
+.steps-screen .step-reveal {
+  opacity: 0;
+  transform: translateY(22px) scale(0.96);
+  filter: blur(3px);
+}
+
+.steps-screen.is-active .step-reveal {
+  animation: stepRevealIn 0.72s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: var(--step-delay, 0s);
+}
+
+@keyframes stepRevealIn {
+  0% {
+    opacity: 0;
+    transform: translateY(22px) scale(0.96);
+    filter: blur(3px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
     .loading-screen {
       background: #000;
     }
@@ -851,33 +878,33 @@
     <!-- =========================================================
       PANTALLA 3 / INSTRUCCIONES
     ========================================================== -->
-    <section class="screen" data-screen="steps" aria-label="Tres simples pasos">
-      <div class="steps-content">
-        <h1 class="steps-title">Tres simples pasos</h1>
+    <section class="screen steps-screen" data-screen="steps" aria-label="Tres simples pasos">
+  <div class="steps-content">
+    <h1 class="steps-title">Tres simples pasos</h1>
 
-        <article class="panel step-card">
-          <h2>Paso 1</h2>
-          <div class="step-line"></div>
-          <p>Abrí el visor de la bóveda celeste para ver las estrellas.</p>
-        </article>
+    <article class="panel step-card step-reveal" style="--step-delay: 0.10s;">
+      <h2>Paso 1</h2>
+      <div class="step-line"></div>
+      <p>Abrí el visor de la bóveda celeste para ver las estrellas.</p>
+    </article>
 
-        <article class="panel step-card">
-          <h2>Paso 2</h2>
-          <div class="step-line"></div>
-          <p>Seguí la flecha para encontrar las estrellas.</p>
-        </article>
+    <article class="panel step-card step-reveal" style="--step-delay: 0.28s;">
+      <h2>Paso 2</h2>
+      <div class="step-line"></div>
+      <p>Seguí la flecha para encontrar las estrellas.</p>
+    </article>
 
-        <article class="panel step-card">
-          <h2>Paso 3</h2>
-          <div class="step-line"></div>
-          <p>Tocá una estrella para interactuar con su contenido.</p>
-        </article>
+    <article class="panel step-card step-reveal" style="--step-delay: 0.46s;">
+      <h2>Paso 3</h2>
+      <div class="step-line"></div>
+      <p>Tocá una estrella para interactuar con su contenido.</p>
+    </article>
 
-        <div class="start-btn-wrap">
-        <button class="btn" type="button" id="openSkyBtn">Comenzar</button>
-       </div>
-      </div>
-    </section>
+    <div class="start-btn-wrap step-reveal" style="--step-delay: 0.66s;">
+      <button class="btn" type="button" id="openSkyBtn">Comenzar</button>
+    </div>
+  </div>
+</section>
 
    <!-- =========================================================
   PANTALLA 4 / ACCESO A SENSORES
@@ -937,22 +964,36 @@
       },
     };
 
-    function showScreen(screenName) {
-      const current = SCREENS[state.currentScreen];
-      const next = SCREENS[screenName];
-      if (!next || current === next) return;
+    function resetStepsAnimation(screen) {
+  if (!screen || !screen.classList.contains("steps-screen")) return;
 
-      if (current) {
-        current.classList.add("is-leaving");
-        current.classList.remove("is-active");
-      }
+  const items = screen.querySelectorAll(".step-reveal");
 
-      window.setTimeout(() => {
-        if (current) current.classList.remove("is-leaving");
-        next.classList.add("is-active");
-        state.currentScreen = screenName;
-      }, 260);
-    }
+  items.forEach((item) => {
+    item.style.animation = "none";
+    void item.offsetHeight;
+    item.style.animation = "";
+  });
+}
+
+function showScreen(screenName) {
+  const current = SCREENS[state.currentScreen];
+  const next = SCREENS[screenName];
+  if (!next || current === next) return;
+
+  if (current) {
+    current.classList.add("is-leaving");
+    current.classList.remove("is-active");
+  }
+
+  resetStepsAnimation(next);
+
+  window.setTimeout(() => {
+    if (current) current.classList.remove("is-leaving");
+    next.classList.add("is-active");
+    state.currentScreen = screenName;
+  }, 260);
+}
 
     function startStarLoader() {
       const stars = Array.from(document.querySelectorAll(".loader-star"));
