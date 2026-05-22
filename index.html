@@ -760,6 +760,174 @@
         --screen-scale: 0.68;
       }
     }
+
+    /* =========================================================
+  PANTALLAS EXTRA / ESTADOS
+========================================================= */
+
+.extra-screen {
+  background: #000;
+}
+
+.extra-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    linear-gradient(
+      180deg,
+      #000 0%,
+      #000 48%,
+      #031923 72%,
+      #123f52 100%
+    );
+}
+
+.extra-content {
+  width: min(88vw, 720px);
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(28px, 5vh, 52px);
+  text-align: center;
+  transform: scale(var(--screen-scale, 1));
+  transform-origin: center;
+}
+
+.extra-visual {
+  width: min(78vw, 460px);
+  max-height: 42svh;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 12px 22px rgba(0,0,0,0.35));
+}
+
+.extra-copy {
+  width: min(88vw, 720px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.extra-title {
+  margin: 0;
+  color: #fff;
+  font-family: "FlameBold", "FlameBoldVariable", "Arial Black", sans-serif;
+  font-size: clamp(36px, 9vw, 70px);
+  line-height: 1.04;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.extra-text {
+  width: min(86vw, 620px);
+  margin: clamp(12px, 2vh, 20px) auto 0;
+  color: rgba(255,255,255,0.88);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: clamp(17px, 4.4vw, 30px);
+  line-height: 1.22;
+  font-weight: 400;
+  text-align: center;
+}
+
+.extra-logo {
+  width: clamp(88px, 18vw, 145px);
+  height: auto;
+  margin-top: clamp(24px, 5vh, 72px);
+  object-fit: contain;
+}
+
+.desktop-screen .extra-content {
+  width: min(92vw, 1260px);
+}
+
+.desktop-layout {
+  width: min(92vw, 1260px);
+  display: grid;
+  grid-template-columns: minmax(260px, 0.82fr) minmax(420px, 1.18fr);
+  align-items: center;
+  gap: clamp(42px, 7vw, 100px);
+}
+
+.desktop-visual {
+  width: min(34vw, 420px);
+  justify-self: end;
+  transform: rotate(-8deg);
+  filter: drop-shadow(0 28px 40px rgba(0,0,0,0.38));
+}
+
+.desktop-copy {
+  text-align: left;
+  align-items: flex-start;
+}
+
+.desktop-copy .extra-title,
+.desktop-copy .extra-text {
+  text-align: left;
+  margin-left: 0;
+}
+
+.desktop-copy .extra-title {
+  font-size: clamp(48px, 5vw, 88px);
+}
+
+.desktop-copy .extra-text {
+  font-size: clamp(20px, 1.8vw, 30px);
+}
+
+.desktop-copy .extra-logo {
+  margin-top: clamp(54px, 8vh, 100px);
+  align-self: center;
+}
+
+@media (max-width: 760px) {
+  .desktop-layout {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(26px, 5vh, 44px);
+  }
+
+  .desktop-visual {
+    width: min(64vw, 300px);
+    justify-self: center;
+  }
+
+  .desktop-copy {
+    align-items: center;
+    text-align: center;
+  }
+
+  .desktop-copy .extra-title,
+  .desktop-copy .extra-text {
+    text-align: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .extra-content {
+    gap: clamp(24px, 4.2vh, 40px);
+  }
+
+  .extra-visual {
+    width: min(82vw, 390px);
+    max-height: 38svh;
+  }
+
+  .extra-title {
+    font-size: clamp(34px, 10vw, 52px);
+  }
+
+  .extra-text {
+    font-size: clamp(18px, 5.2vw, 27px);
+  }
+
+  .extra-logo {
+    width: clamp(84px, 23vw, 120px);
+  }
+}
     /* =========================================================
   PANTALLA ACCESO A SENSORES
 ========================================================= */
@@ -835,7 +1003,129 @@
     <img src="assets/img/logo-auf-white.svg" alt="AUF" />
   </div>
 </section>
+<!-- =========================================================
+  PANTALLA EXTRA / ERROR DE CARGA
+========================================================== -->
+<section class="screen extra-screen" data-screen="error" aria-label="Error al cargar">
+  <div class="extra-content">
+    <img class="extra-visual" src="assets/img/extra/a.png" alt="" />
 
+    <div class="extra-copy">
+      <h1 class="extra-title">
+        Ups...<br />
+        Parece que perdimos<br />
+        de vista las estrellas.
+      </h1>
+
+      <p class="extra-text">
+        Ocurrió un problema al cargar la experiencia.<br />
+        Revisá tu conexión e intentá nuevamente<br />
+        en unos segundos.
+      </p>
+
+      <img class="extra-logo" src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+  PANTALLA EXTRA / TODAVÍA NO COMENZÓ
+========================================================== -->
+<section class="screen extra-screen" data-screen="not-started" aria-label="Experiencia no iniciada">
+  <div class="extra-content">
+    <img class="extra-visual" src="assets/img/extra/b.png" alt="" />
+
+    <div class="extra-copy">
+      <h1 class="extra-title">
+        Las estrellas todavía<br />
+        no se alinearon.
+      </h1>
+
+      <p class="extra-text">
+        La experiencia Estrellas Reales aún no comenzó.<br />
+        Muy pronto vas a poder descubrir las cuatro estrellas<br />
+        de la Selección Uruguaya en el cielo y acceder<br />
+        a contenido exclusivo imperdible.
+      </p>
+
+      <img class="extra-logo" src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+  PANTALLA EXTRA / FINALIZADA
+========================================================== -->
+<section class="screen extra-screen" data-screen="ended" aria-label="Experiencia finalizada">
+  <div class="extra-content">
+    <img class="extra-visual" src="assets/img/extra/c.png" alt="" />
+
+    <div class="extra-copy">
+      <h1 class="extra-title">
+        La experiencia Estrellas<br />
+        Reales finalizó.
+      </h1>
+
+      <p class="extra-text">
+        Gracias por ser parte de este homenaje<br />
+        a las cuatro estrellas que marcaron<br />
+        para siempre la historia del fútbol uruguayo.
+      </p>
+
+      <img class="extra-logo" src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+  PANTALLA EXTRA / DESKTOP
+========================================================== -->
+<section class="screen extra-screen desktop-screen" data-screen="desktop" aria-label="Experiencia desde celular">
+  <div class="extra-content desktop-layout">
+    <img class="desktop-visual" src="assets/img/extra/e.png" alt="" />
+
+    <div class="extra-copy desktop-copy">
+      <h1 class="extra-title">
+        Esta experiencia se vive<br />
+        desde el celular.
+      </h1>
+
+      <p class="extra-text">
+        Estrellas Reales utiliza movimiento, ubicación y cámara<br />
+        para ayudarte a encontrar las estrellas en el cielo.<br />
+        Escaneá el QR desde tu dispositivo móvil y viví la experiencia completa.
+      </p>
+
+      <img class="extra-logo" src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+  PANTALLA EXTRA / PRODUCTO REQUERIDO
+========================================================== -->
+<section class="screen extra-screen" data-screen="product" aria-label="Producto requerido">
+  <div class="extra-content">
+    <img class="extra-visual" src="assets/img/extra/d.png" alt="" />
+
+    <div class="extra-copy">
+      <h1 class="extra-title">
+        Necesitás un producto<br />
+        Estrellas Reales para<br />
+        desbloquear la experiencia.
+      </h1>
+
+      <p class="extra-text">
+        Comprá cualquiera de los combos Estrellas Reales<br />
+        de Burger King, escaneá el QR del pack y accedé<br />
+        a la experiencia interactiva para descubrir<br />
+        las cuatro estrellas de la Selección Uruguaya en el cielo.
+      </p>
+
+      <img class="extra-logo" src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+    </div>
+  </div>
+</section>
     <!-- Fondo general. Cambiar assets/img/bg-stars.jpg por el fondo final -->
     <div class="cosmic-bg" aria-hidden="true"></div>
 
@@ -974,20 +1264,31 @@
       La pantalla de carga queda activa hasta que esto termine.
     ========================================================= */
 
-    const ASSETS_TO_PRELOAD = [
-      "assets/img/bg-stars.jpg",
-      "assets/img/logo-burger-king-white.svg",
-      "assets/img/logo-auf-white.svg",
-      // "assets/img/otro-fondo.png",
-    ];
+const ASSETS_TO_PRELOAD = [
+  "assets/img/bg-stars.jpg",
+  "assets/img/logo-burger-king-white.svg",
+  "assets/img/logo-auf-white.svg",
+
+  "assets/img/extra/a.png",
+  "assets/img/extra/b.png",
+  "assets/img/extra/c.png",
+  "assets/img/extra/d.png",
+  "assets/img/extra/e.png",
+];
 
     const SCREENS = {
-      loading: document.querySelector('[data-screen="loading"]'),
-      register: document.querySelector('[data-screen="register"]'),
-      story: document.querySelector('[data-screen="story"]'),
-      steps: document.querySelector('[data-screen="steps"]'),
-      experience: document.querySelector('[data-screen="experience"]'),
-    };
+  loading: document.querySelector('[data-screen="loading"]'),
+  error: document.querySelector('[data-screen="error"]'),
+  notStarted: document.querySelector('[data-screen="not-started"]'),
+  ended: document.querySelector('[data-screen="ended"]'),
+  desktop: document.querySelector('[data-screen="desktop"]'),
+  product: document.querySelector('[data-screen="product"]'),
+
+  register: document.querySelector('[data-screen="register"]'),
+  story: document.querySelector('[data-screen="story"]'),
+  steps: document.querySelector('[data-screen="steps"]'),
+  sensorGate: document.querySelector('[data-screen="sensor-gate"]'),
+};
 
     const state = {
       currentScreen: "loading",
@@ -1247,17 +1548,35 @@ if (openSkyBtn) {
         lastTouchEnd = now;
       }, { passive: false });
     }
+function getEntryScreenFromParams() {
+  const params = new URLSearchParams(window.location.search);
 
+  if (params.get("desktop") === "1") return "desktop";
+  if (params.get("error") === "1") return "error";
+  if (params.get("not_started") === "1") return "notStarted";
+  if (params.get("ended") === "1") return "ended";
+  if (params.get("product") === "1") return "product";
+
+  return null;
+}
     async function init() {
-      lockIOSViewportQuirks();
-      setupNavigation();
-      startStarLoader();
+  lockIOSViewportQuirks();
+  setupNavigation();
+  startStarLoader();
 
-      await preloadAssets();
+  await preloadAssets();
 
-      stopStarLoader();
-      showScreen("register");
-    }
+  stopStarLoader();
+
+  const entryScreen = getEntryScreenFromParams();
+
+  if (entryScreen) {
+    showScreen(entryScreen);
+    return;
+  }
+
+  showScreen("register");
+}
 
     window.addEventListener("DOMContentLoaded", init);
   </script>
