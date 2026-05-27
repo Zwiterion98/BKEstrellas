@@ -1396,9 +1396,18 @@ body.mission-modal-open {
 .poster-title-wrap {
   flex: 0 0 auto;
   margin-top: clamp(8px, 2vh, 22px);
-  margin-bottom: clamp(22px, 4vh, 42px);
+  margin-bottom: clamp(18px, 3.2vh, 34px);
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 260ms ease,
+    transform 260ms ease;
 }
 
+.poster-title-wrap.is-changing {
+  opacity: 0;
+  transform: translateY(8px);
+}
 .poster-kicker {
   font-family: "FlameBold", "FlameBoldVariable", "Arial Black", sans-serif;
   font-size: clamp(26px, 7vw, 54px);
@@ -1410,22 +1419,12 @@ body.mission-modal-open {
 .poster-title {
   margin: 0;
   font-family: "FlameBold", "FlameBoldVariable", "Arial Black", sans-serif;
-  font-size: clamp(88px, 26vw, 190px);
+  font-size: clamp(74px, 22vw, 160px);
   line-height: 0.78;
   letter-spacing: -0.04em;
   text-transform: uppercase;
 }
 
-.poster-carousel {
-  position: relative;
-  width: 100%;
-  height: min(47vh, 500px);
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: visible;
-}
 
 .poster-stage {
   position: relative;
@@ -1434,13 +1433,24 @@ body.mission-modal-open {
   overflow: visible;
 }
 
+.poster-carousel {
+  position: relative;
+  width: 100%;
+  height: min(40vh, 420px);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
 .poster-card {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: min(56vw, 360px);
-  height: min(45vh, 490px);
-  border-radius: clamp(18px, 5vw, 34px);
+  width: min(48vw, 310px);
+  height: min(38vh, 420px);
+  border-radius: clamp(16px, 4vw, 30px);
   overflow: hidden;
   border: 1px solid rgba(98, 184, 233, 0.75);
   box-shadow:
@@ -1583,14 +1593,14 @@ body.mission-modal-open {
     margin-bottom: 26px;
   }
 
-  .poster-carousel {
-    height: 43vh;
-  }
+.poster-carousel {
+  height: 37vh;
+}
 
-  .poster-card {
-    width: 56vw;
-    height: 41vh;
-  }
+.poster-card {
+  width: 50vw;
+  height: 35vh;
+}
 
   .poster-card.is-prev {
     transform: translate(calc(-50% - 43vw), -50%) scale(0.82);
@@ -1615,13 +1625,13 @@ body.mission-modal-open {
     font-size: clamp(76px, 22vw, 140px);
   }
 
-  .poster-carousel {
-    height: 39vh;
-  }
+.poster-carousel {
+  height: 34vh;
+}
 
-  .poster-card {
-    height: 37vh;
-  }
+.poster-card {
+  height: 32vh;
+}
 
   .poster-copy {
     margin-top: 26px;
@@ -3373,9 +3383,9 @@ function openPosterScreen(startYear = '1950') {
   if (!screen) return;
 
   const foundIndex = POSTER_ITEMS.findIndex((item) => item.year === String(startYear));
-  posterIndex = foundIndex >= 0 ? foundIndex : 0;
+ posterIndex = foundIndex >= 0 ? foundIndex : 0;
 
-  renderPosterCarousel();
+setPosterIndex(posterIndex, false);
 
   screen.classList.remove('hidden');
   document.body.classList.add('poster-screen-open');
@@ -3389,9 +3399,29 @@ function closePosterScreen() {
   document.body.classList.remove('poster-screen-open');
 }
 
+function setPosterIndex(newIndex, animateTitle = true) {
+  const titleWrap = document.querySelector('.poster-title-wrap');
+
+  posterIndex = getPosterWrappedIndex(newIndex);
+
+  if (!animateTitle || !titleWrap) {
+    renderPosterCarousel();
+    return;
+  }
+
+  titleWrap.classList.add('is-changing');
+
+  window.setTimeout(() => {
+    renderPosterCarousel();
+
+    requestAnimationFrame(() => {
+      titleWrap.classList.remove('is-changing');
+    });
+  }, 220);
+}
+
 function movePosterCarousel(direction) {
-  posterIndex = getPosterWrappedIndex(posterIndex + direction);
-  renderPosterCarousel();
+  setPosterIndex(posterIndex + direction, true);
 }
 
 function downloadCurrentPoster() {

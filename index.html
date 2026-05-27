@@ -406,7 +406,20 @@
   cursor: pointer;
   font-weight: 700;
 }
-
+.terms-link {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
     .terms input {
       position: absolute;
       opacity: 0;
@@ -835,12 +848,26 @@
 }
 
 .extra-logo {
-  width: clamp(72px, 18vw, 110px);
+  position: absolute;
+  left: 50%;
+  bottom: calc(34px + var(--safe-bottom));
+  width: clamp(54px, 14vw, 82px);
   height: auto;
-  margin-top: clamp(22px, 4.5vh, 54px);
+  margin: 0;
   object-fit: contain;
+  transform: translateX(-50%);
+  opacity: 0.96;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.45));
+}
+.extra-copy {
+  padding-bottom: 78px;
 }
 
+@media (max-height: 720px) {
+  .extra-copy {
+    padding-bottom: 58px;
+  }
+}
 /* Desktop / QR desde computadora */
 .desktop-screen .extra-content {
   width: min(92vw, 1260px);
@@ -938,9 +965,9 @@
   }
 
   .extra-logo {
-    width: clamp(68px, 20vw, 94px);
-    margin-top: clamp(22px, 4.2vh, 42px);
-  }
+  width: clamp(50px, 15vw, 70px);
+  bottom: calc(26px + var(--safe-bottom));
+}
 }
 
 @media (max-height: 720px) {
@@ -953,8 +980,9 @@
   }
 
   .extra-logo {
-    margin-top: 18px;
-  }
+  bottom: calc(20px + var(--safe-bottom));
+  width: clamp(46px, 13vw, 64px);
+}
 }
 
 @media (max-height: 640px) {
@@ -1033,6 +1061,81 @@
 @media (max-width: 560px) and (max-height: 680px) {
   .extra-content {
     transform: scale(0.78);
+  }
+}
+
+/* =========================================================
+  PANTALLA TÉRMINOS Y CONDICIONES
+========================================================= */
+
+.terms-screen {
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.terms-panel {
+  width: min(86vw, 540px);
+  max-height: 78svh;
+  padding: clamp(24px, 4vh, 38px) clamp(20px, 5vw, 34px);
+  border-radius: clamp(24px, 6vw, 42px);
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.terms-title {
+  margin: 0 0 18px;
+  font-family: "FlameBold", "FlameBoldVariable", sans-serif;
+  font-size: clamp(28px, 7vw, 48px);
+  line-height: 0.96;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.terms-scroll {
+  max-height: 45svh;
+  overflow-y: auto;
+  padding-right: 8px;
+  color: rgba(255,255,255,0.88);
+  font-size: clamp(12px, 3vw, 16px);
+  line-height: 1.35;
+  font-weight: 500;
+  -webkit-overflow-scrolling: touch;
+}
+
+.terms-scroll p {
+  margin: 0 0 14px;
+}
+
+.terms-actions {
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.terms-back-btn {
+  border: 0;
+  background: transparent;
+  color: rgba(255,255,255,0.8);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+@media (max-height: 680px) {
+  .terms-panel {
+    max-height: 84svh;
+    padding-top: 22px;
+    padding-bottom: 22px;
+  }
+
+  .terms-scroll {
+    max-height: 43svh;
   }
 }
   </style>
@@ -1219,10 +1322,15 @@
           </label>
 
           <label class="terms">
-            <input id="termsInput" name="terms" type="checkbox" required />
-            <span class="fake-check" aria-hidden="true"></span>
-            <span>He leído y acepto los términos y condiciones</span>
-          </label>
+  <input id="termsInput" name="terms" type="checkbox" required />
+  <span class="fake-check" aria-hidden="true"></span>
+  <span>
+    He leído y acepto los
+    <button class="terms-link" type="button" id="openTermsBtn">
+      términos y condiciones
+    </button>
+  </span>
+</label>
 
           <div class="register-btn-wrap">
             <button class="btn" type="submit">Enviar</button>
@@ -1230,7 +1338,50 @@
         </form>
       </div>
     </section>
+<!-- =========================================================
+  PANTALLA / TÉRMINOS Y CONDICIONES
+========================================================== -->
+<section class="screen terms-screen" data-screen="terms" aria-label="Términos y condiciones">
+  <article class="panel terms-panel">
+    <h1 class="terms-title">Términos y condiciones</h1>
 
+    <div class="terms-scroll">
+      <p>
+        La experiencia Estrellas Reales es una activación interactiva de Burger King Uruguay
+        vinculada a las cuatro estrellas de la Selección Uruguaya de Fútbol.
+      </p>
+
+      <p>
+        Para participar, el usuario deberá registrarse con sus datos y aceptar estos términos.
+        La experiencia puede requerir acceso a ubicación y sensores de movimiento del dispositivo.
+      </p>
+
+      <p>
+        Los datos ingresados serán utilizados únicamente con fines vinculados a la participación,
+        validación y funcionamiento de la experiencia, de acuerdo con la normativa aplicable.
+      </p>
+
+      <p>
+        El correcto funcionamiento puede depender del dispositivo, navegador, conexión a internet,
+        permisos otorgados y disponibilidad de sensores.
+      </p>
+
+      <p>
+        Burger King Uruguay podrá modificar, suspender o finalizar la experiencia por motivos
+        técnicos, operativos o de fuerza mayor.
+      </p>
+
+      <p>
+        Al continuar, declarás haber leído y aceptado estos términos y condiciones.
+      </p>
+    </div>
+
+    <div class="terms-actions">
+      <button class="btn" type="button" id="acceptTermsBtn">Aceptar</button>
+      <button class="terms-back-btn" type="button" id="backFromTermsBtn">Volver</button>
+    </div>
+  </article>
+</section>
     <!-- =========================================================
       PANTALLA 2 / HISTORIA
     ========================================================== -->
@@ -1339,6 +1490,7 @@ const ASSETS_TO_PRELOAD = [
   product: document.querySelector('[data-screen="product"]'),
 
   register: document.querySelector('[data-screen="register"]'),
+  terms: document.querySelector('[data-screen="terms"]'),
   story: document.querySelector('[data-screen="story"]'),
   steps: document.querySelector('[data-screen="steps"]'),
   sensorGate: document.querySelector('[data-screen="sensor-gate"]'),
@@ -1551,12 +1703,35 @@ async function prepararYEntrarBoveda() {
 if (openSkyBtn) {
   openSkyBtn.addEventListener("click", prepararYEntrarBoveda);
 }
+const openTermsBtn = document.getElementById("openTermsBtn");
+const acceptTermsBtn = document.getElementById("acceptTermsBtn");
+const backFromTermsBtn = document.getElementById("backFromTermsBtn");
+const termsInput = document.getElementById("termsInput");
 
+if (openTermsBtn) {
+  openTermsBtn.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    showScreen("terms");
+  });
+}
+
+if (backFromTermsBtn) {
+  backFromTermsBtn.addEventListener("click", () => {
+    showScreen("register");
+  });
+}
+
+if (acceptTermsBtn) {
+  acceptTermsBtn.addEventListener("click", () => {
+    if (termsInput) termsInput.checked = true;
+    showScreen("register");
+  });
+}
       const form = document.getElementById("registerForm");
       const nameInput = document.getElementById("nameInput");
       const emailInput = document.getElementById("emailInput");
-      const termsInput = document.getElementById("termsInput");
-
+      
       form.addEventListener("submit", (event) => {
         event.preventDefault();
 
