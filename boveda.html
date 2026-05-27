@@ -1979,8 +1979,18 @@ body.manual-nav-active #canvas-container:active {
   letter-spacing: 0.02em;
 }
 #mission-modal-continue.is-downloadable-content {
-  width: min(78vw, 360px);
-  letter-spacing: 0.18em;
+  width: min(78vw, 310px);
+  min-width: 238px;
+  min-height: 38px;
+  padding: 0 18px;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+
+  font-size: clamp(8.5px, 2.45vw, 11px);
+  line-height: 1;
+  letter-spacing: 0.14em;
 }
 @media (max-width: 480px) {
   .mode-feedback-card {
@@ -2456,6 +2466,7 @@ const missionStars = [
     title: 'COLOMBES 1924',
     code: 'SCGA',
     year: '1924',
+     visualAzOffset: -18,
     raText: '08h 18m 35.33s',
     decText: '−26° 14\' 53.6"',
     gmagText: '9.14',
@@ -2512,6 +2523,7 @@ const missionStars = [
     title: 'ÁMSTERDAM 1928',
     code: 'SCGA',
     year: '1928',
+    visualAzOffset: 0,
     raText: '08h 19m 11.27s',
     decText: '−23° 01\' 29.5"',
     gmagText: '9.47',
@@ -2575,6 +2587,7 @@ const missionStars = [
     title: 'URUGUAY 1930',
     code: 'SCGA',
     year: '1930',
+    visualAzOffset: 18,
     raText: '08h 19m 18.27s',
     decText: '−23° 47\' 49"',
     gmagText: '7.00',
@@ -2647,6 +2660,7 @@ const missionStars = [
   title: 'MARACANAZO 1950',
   code: 'SCGA',
   year: '1950',
+  visualAzOffset: 34,
   raText: '08h 17m 42.89s',
   decText: '−69° 07\' 44.2"',
   gmagText: '8.46',
@@ -2745,6 +2759,12 @@ const missionStars = [
   }
 }
 ];
+
+function getMissionVisualAzOffset(id) {
+  const mission = missionStars.find(item => item.id === id);
+  return mission?.visualAzOffset || 0;
+}
+
 const POSTER_ITEMS = [
   {
     year: '1924',
@@ -3604,10 +3624,14 @@ return sprite;
     });
 
     todasLasEstrellas.forEach(estrella => {
-      const horizonte = Astronomy.Horizon(fechaActual, observador, estrella.ra, estrella.dec, 'normal');
-      const pos = azAltToVector(horizonte.azimuth, horizonte.altitude, 800);
-      posicionesEstrellas[estrella.id] = pos;
+  const horizonte = Astronomy.Horizon(fechaActual, observador, estrella.ra, estrella.dec, 'normal');
 
+  const visualAzimuth = normalizeDegrees(
+    horizonte.azimuth + getMissionVisualAzOffset(estrella.id)
+  );
+
+  const pos = azAltToVector(visualAzimuth, horizonte.altitude, 800);
+  posicionesEstrellas[estrella.id] = pos;
      const tam = estrella.extra ? Math.max(1.2, 4.2 - ((estrella.mag ?? 4) * 0.55)) : 5;
 
 const mesh = new THREE.Mesh(
@@ -3748,8 +3772,12 @@ function mostrarInfoEstrella() {
           horizonte = Astronomy.Horizon(nuevaFecha, observador, astro.ra, astro.dec, 'normal');
         }
 
+        const visualAzimuth = astro.tipoRef === 'estrella'
+          ? normalizeDegrees(horizonte.azimuth + getMissionVisualAzOffset(astro.id))
+          : horizonte.azimuth;
+
         const nuevaPos = azAltToVector(
-          horizonte.azimuth,
+          visualAzimuth,
           horizonte.altitude,
           astro.tipoRef === 'planeta' ? 500 : 800
         );
@@ -4319,7 +4347,7 @@ const continueBtn = document.getElementById('mission-modal-continue');
 
 if (continueBtn) {
   if (mission.id === 'scga1950') {
-    continueBtn.textContent = 'CONTENIDO DESCARGABLE';
+continueBtn.innerHTML = 'CONTENIDO&nbsp;DESCARGABLE';
     continueBtn.classList.add('is-downloadable-content');
   } else {
     continueBtn.textContent = 'VOLVER';
