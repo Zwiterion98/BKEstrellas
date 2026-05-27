@@ -869,7 +869,17 @@ button:active {
   color: rgba(255,255,255,0.42);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 10px;
+  line-height: 1.35;
   letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+#sys-info.is-stacked {
+  white-space: normal;
+}
+
+#sys-info.is-stacked span {
+  display: block;
 }
 
 #orientation-panel {
@@ -3899,6 +3909,39 @@ function detenerLoaderBoveda() {
     bovedaLoaderInterval = null;
   }
 }
+function updateSysInfoText() {
+  const sysInfo = document.getElementById("sys-info");
+  if (!sysInfo) return;
+
+  sysInfo.innerHTML = `
+    <span>LAT:${usuarioLat.toFixed(2)}</span>
+    <span class="sys-separator"> // </span>
+    <span>LON:${usuarioLon.toFixed(2)}</span>
+  `;
+
+  fitSysInfoLayout();
+}
+
+function fitSysInfoLayout() {
+  const sysInfo = document.getElementById("sys-info");
+  const panel = document.getElementById("orientation-panel");
+
+  if (!sysInfo || !panel) return;
+
+  sysInfo.classList.remove("is-stacked");
+
+  requestAnimationFrame(() => {
+    const sysRect = sysInfo.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+
+    const overlapsHorizontally = sysRect.right + 12 > panelRect.left;
+    const similarHeight = Math.abs(sysRect.top - panelRect.top) < 80;
+
+    if (overlapsHorizontally && similarHeight) {
+      sysInfo.classList.add("is-stacked");
+    }
+  });
+}
   async function iniciarApp(options = {}) {
   const params = new URLSearchParams(window.location.search);
   const vieneDesdeIndex = options.fromIndex || params.get("start") === "1";
@@ -3937,9 +3980,7 @@ function detenerLoaderBoveda() {
     usuarioLat = lat;
     usuarioLon = lon;
 
-    document.getElementById("sys-info").innerText =
-      `LAT:${usuarioLat.toFixed(2)} // LON:${usuarioLon.toFixed(2)}`;
-
+    updateSysInfoText();
     document.getElementById("sys-info").classList.remove("oculto");
 
     generarCieloReal();
@@ -4943,6 +4984,10 @@ window.addEventListener('resize', () => {
   }
 
   actualizarConectorInfoCard();
+  window.addEventListener('resize', fitSysInfoLayout);
+window.addEventListener('orientationchange', () => {
+  setTimeout(fitSysInfoLayout, 250);
+});
 });
 const missionModalContinue = document.getElementById('mission-modal-continue');
 
