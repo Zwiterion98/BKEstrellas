@@ -1330,7 +1330,304 @@ button:active {
 body.mission-modal-open {
   overflow: hidden;
 }
+/* =========================
+   POSTER DOWNLOAD SCREEN
+========================= */
 
+.poster-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+}
+
+.poster-screen.hidden {
+  display: none;
+}
+
+.poster-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    linear-gradient(
+      180deg,
+      #000 0%,
+      #000 45%,
+      #031923 73%,
+      #123f52 100%
+    );
+}
+
+.poster-bg::after {
+  content: "";
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: -10%;
+  height: 34%;
+  background:
+    radial-gradient(
+      ellipse at 50% 100%,
+      rgba(98, 184, 233, 0.42) 0%,
+      rgba(18, 63, 82, 0.32) 32%,
+      rgba(18, 63, 82, 0) 72%
+    );
+  pointer-events: none;
+}
+
+.poster-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  padding:
+    calc(28px + env(safe-area-inset-top, 0px))
+    0
+    calc(28px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.poster-title-wrap {
+  flex: 0 0 auto;
+  margin-top: clamp(8px, 2vh, 22px);
+  margin-bottom: clamp(22px, 4vh, 42px);
+}
+
+.poster-kicker {
+  font-family: "FlameBold", "FlameBoldVariable", "Arial Black", sans-serif;
+  font-size: clamp(26px, 7vw, 54px);
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.poster-title {
+  margin: 0;
+  font-family: "FlameBold", "FlameBoldVariable", "Arial Black", sans-serif;
+  font-size: clamp(88px, 26vw, 190px);
+  line-height: 0.78;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+}
+
+.poster-carousel {
+  position: relative;
+  width: 100%;
+  height: min(47vh, 500px);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.poster-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.poster-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(56vw, 360px);
+  height: min(45vh, 490px);
+  border-radius: clamp(18px, 5vw, 34px);
+  overflow: hidden;
+  border: 1px solid rgba(98, 184, 233, 0.75);
+  box-shadow:
+    0 0 20px rgba(98, 184, 233, 0.22),
+    0 24px 45px rgba(0,0,0,0.54);
+  background: rgba(0,0,0,0.38);
+  transform: translate(-50%, -50%) scale(0.76);
+  opacity: 0;
+  transition:
+    transform 520ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 520ms ease,
+    filter 520ms ease;
+  pointer-events: none;
+}
+
+.poster-card img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.poster-card.is-active {
+  z-index: 4;
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  filter: brightness(1);
+}
+
+.poster-card.is-prev {
+  z-index: 2;
+  opacity: 0.55;
+  transform: translate(calc(-50% - 42vw), -50%) scale(0.82);
+  filter: brightness(0.42) saturate(0.8);
+}
+
+.poster-card.is-next {
+  z-index: 2;
+  opacity: 0.55;
+  transform: translate(calc(-50% + 42vw), -50%) scale(0.82);
+  filter: brightness(0.42) saturate(0.8);
+}
+
+.poster-card.is-far-prev {
+  z-index: 1;
+  opacity: 0.18;
+  transform: translate(calc(-50% - 74vw), -50%) scale(0.72);
+  filter: brightness(0.25) saturate(0.65);
+}
+
+.poster-card.is-far-next {
+  z-index: 1;
+  opacity: 0.18;
+  transform: translate(calc(-50% + 74vw), -50%) scale(0.72);
+  filter: brightness(0.25) saturate(0.65);
+}
+
+.poster-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 8;
+  width: 44px;
+  height: 74px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 62px;
+  line-height: 1;
+  font-family: Arial, sans-serif;
+  display: grid;
+  place-items: center;
+  transform: translateY(-50%);
+  cursor: pointer;
+  opacity: 0.98;
+}
+
+.poster-arrow-left {
+  left: 10px;
+}
+
+.poster-arrow-right {
+  right: 10px;
+}
+
+.poster-download-btn {
+  width: min(70vw, 390px);
+  min-height: 58px;
+  margin-top: clamp(28px, 4vh, 46px);
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #72c4f1 0%, #5daedf 100%);
+  color: #fff;
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: clamp(13px, 3.4vw, 20px);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  box-shadow:
+    0 10px 18px rgba(0,0,0,0.42),
+    0 0 18px rgba(99,184,233,0.28);
+  cursor: pointer;
+}
+
+.poster-download-btn:active {
+  transform: scale(0.98);
+}
+
+.poster-download-icon {
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(255,255,255,0.82);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 17px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.poster-copy {
+  width: min(84vw, 760px);
+  margin: clamp(34px, 6vh, 66px) auto 0;
+  color: rgba(255,255,255,0.88);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: clamp(20px, 5.2vw, 34px);
+  line-height: 1.22;
+  font-weight: 500;
+}
+
+@media (max-width: 480px) {
+  .poster-content {
+    padding-top: calc(30px + env(safe-area-inset-top, 0px));
+  }
+
+  .poster-title-wrap {
+    margin-bottom: 26px;
+  }
+
+  .poster-carousel {
+    height: 43vh;
+  }
+
+  .poster-card {
+    width: 56vw;
+    height: 41vh;
+  }
+
+  .poster-card.is-prev {
+    transform: translate(calc(-50% - 43vw), -50%) scale(0.82);
+  }
+
+  .poster-card.is-next {
+    transform: translate(calc(-50% + 43vw), -50%) scale(0.82);
+  }
+
+  .poster-download-btn {
+    margin-top: 28px;
+    min-height: 52px;
+  }
+
+  .poster-copy {
+    margin-top: 36px;
+  }
+}
+
+@media (max-height: 720px) {
+  .poster-title {
+    font-size: clamp(76px, 22vw, 140px);
+  }
+
+  .poster-carousel {
+    height: 39vh;
+  }
+
+  .poster-card {
+    height: 37vh;
+  }
+
+  .poster-copy {
+    margin-top: 26px;
+    font-size: clamp(17px, 4.5vw, 25px);
+  }
+}
 /* =========================
    RESPONSIVE
 ========================= */
@@ -1948,7 +2245,38 @@ body.manual-nav-active #canvas-container:active {
     <p class="boveda-loader-copy">Preparando la bóveda celeste...</p>
   </div>
 </div>
+<section id="poster-screen" class="poster-screen hidden" aria-label="Contenido descargable">
+  <div class="poster-bg"></div>
 
+  <div class="poster-content">
+    <div class="poster-title-wrap">
+      <div class="poster-kicker">★ ESTRELLA ★</div>
+      <h1 id="poster-title" class="poster-title">1930</h1>
+    </div>
+
+    <div class="poster-carousel" id="poster-carousel">
+      <button class="poster-arrow poster-arrow-left" id="poster-prev" type="button" aria-label="Póster anterior">
+        ‹
+      </button>
+
+      <div class="poster-stage" id="poster-stage"></div>
+
+      <button class="poster-arrow poster-arrow-right" id="poster-next" type="button" aria-label="Póster siguiente">
+        ›
+      </button>
+    </div>
+
+    <button class="poster-download-btn" id="poster-download-btn" type="button">
+      <span>DESCARGAR PÓSTER</span>
+      <span class="poster-download-icon">↓</span>
+    </button>
+
+    <p class="poster-copy">
+      Descargá los pósters de las Estrellas Reales,<br />
+      y compartilos etiquetando a @BurgerKingUy.
+    </p>
+  </div>
+</section>
 <script>
 let scene, camera, renderer, starGroup;
 let backgroundDome = null;
@@ -2404,7 +2732,32 @@ const missionStars = [
   }
 }
 ];
+const POSTER_ITEMS = [
+  {
+    year: '1924',
+    phone: 'assets/img/posters/phone-1924.png',
+    download: 'assets/img/posters/POSTER_1924.png'
+  },
+  {
+    year: '1928',
+    phone: 'assets/img/posters/phone-1928.png',
+    download: 'assets/img/posters/POSTER_1928.png'
+  },
+  {
+    year: '1930',
+    phone: 'assets/img/posters/phone-1930.png',
+    download: 'assets/img/posters/POSTER_1930.png'
+  },
+  {
+    year: '1950',
+    phone: 'assets/img/posters/phone-1950.png',
+    download: 'assets/img/posters/POSTER_1950.png'
+  }
+];
 
+let posterIndex = 3;
+let posterTouchStartX = 0;
+let posterTouchEndX = 0;
 function getGuideArrowOpacity(distance) {
   if (distance <= GUIDE_ARROW_FADE_END) return 0;
   if (distance >= GUIDE_ARROW_FADE_START) return 1;
@@ -2965,6 +3318,134 @@ function setupManualDragControls() {
   container.addEventListener('pointerup', endDrag);
   container.addEventListener('pointercancel', endDrag);
   container.addEventListener('pointerleave', endDrag);
+}
+function preloadPosterAssets() {
+  POSTER_ITEMS.forEach((item) => {
+    [item.phone, item.download].forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+  });
+}
+
+function getPosterWrappedIndex(index) {
+  return (index + POSTER_ITEMS.length) % POSTER_ITEMS.length;
+}
+
+function getPosterPositionClass(index, currentIndex) {
+  const total = POSTER_ITEMS.length;
+  const diff = (index - currentIndex + total) % total;
+
+  if (diff === 0) return 'is-active';
+  if (diff === 1) return 'is-next';
+  if (diff === total - 1) return 'is-prev';
+  if (diff === 2) return 'is-far-next';
+  return 'is-far-prev';
+}
+
+function renderPosterCarousel() {
+  const stage = document.getElementById('poster-stage');
+  const title = document.getElementById('poster-title');
+
+  if (!stage || !title) return;
+
+  const activeItem = POSTER_ITEMS[getPosterWrappedIndex(posterIndex)];
+  title.textContent = activeItem.year;
+
+  stage.innerHTML = '';
+
+  POSTER_ITEMS.forEach((item, index) => {
+    const card = document.createElement('div');
+    card.className = `poster-card ${getPosterPositionClass(index, posterIndex)}`;
+    card.dataset.year = item.year;
+
+    const img = document.createElement('img');
+    img.src = item.phone;
+    img.alt = `Póster Estrella ${item.year}`;
+
+    card.appendChild(img);
+    stage.appendChild(card);
+  });
+}
+
+function openPosterScreen(startYear = '1950') {
+  const screen = document.getElementById('poster-screen');
+  if (!screen) return;
+
+  const foundIndex = POSTER_ITEMS.findIndex((item) => item.year === String(startYear));
+  posterIndex = foundIndex >= 0 ? foundIndex : 0;
+
+  renderPosterCarousel();
+
+  screen.classList.remove('hidden');
+  document.body.classList.add('poster-screen-open');
+}
+
+function closePosterScreen() {
+  const screen = document.getElementById('poster-screen');
+  if (!screen) return;
+
+  screen.classList.add('hidden');
+  document.body.classList.remove('poster-screen-open');
+}
+
+function movePosterCarousel(direction) {
+  posterIndex = getPosterWrappedIndex(posterIndex + direction);
+  renderPosterCarousel();
+}
+
+function downloadCurrentPoster() {
+  const item = POSTER_ITEMS[getPosterWrappedIndex(posterIndex)];
+  if (!item) return;
+
+  const link = document.createElement('a');
+  link.href = item.download;
+  link.download = `Estrella_Real_${item.year}.png`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+function setupPosterScreen() {
+  const prev = document.getElementById('poster-prev');
+  const next = document.getElementById('poster-next');
+  const download = document.getElementById('poster-download-btn');
+  const carousel = document.getElementById('poster-carousel');
+
+  if (prev) {
+    prev.addEventListener('click', () => movePosterCarousel(-1));
+  }
+
+  if (next) {
+    next.addEventListener('click', () => movePosterCarousel(1));
+  }
+
+  if (download) {
+    download.addEventListener('click', downloadCurrentPoster);
+  }
+
+  if (carousel) {
+    carousel.addEventListener('touchstart', (event) => {
+      posterTouchStartX = event.touches[0].clientX;
+      posterTouchEndX = posterTouchStartX;
+    }, { passive: true });
+
+    carousel.addEventListener('touchmove', (event) => {
+      posterTouchEndX = event.touches[0].clientX;
+    }, { passive: true });
+
+    carousel.addEventListener('touchend', () => {
+      const delta = posterTouchEndX - posterTouchStartX;
+
+      if (Math.abs(delta) < 42) return;
+
+      if (delta < 0) {
+        movePosterCarousel(1);
+      } else {
+        movePosterCarousel(-1);
+      }
+    });
+  }
 }
   function init3D() {
   scene = new THREE.Scene();
@@ -3801,7 +4282,17 @@ async function abrirModalMision(mission) {
   await preloadMissionImages(mission);
 
   renderMissionDetail(mission);
+const continueBtn = document.getElementById('mission-modal-continue');
 
+if (continueBtn) {
+  if (mission.id === 'scga1950') {
+    continueBtn.textContent = 'CONTENIDO DESCARGABLE';
+    continueBtn.classList.add('is-downloadable-content');
+  } else {
+    continueBtn.textContent = 'VOLVER';
+    continueBtn.classList.remove('is-downloadable-content');
+  }
+}
   modal.classList.remove('hidden');
   document.body.classList.add('mission-modal-open');
 
@@ -4000,6 +4491,19 @@ if (missionModalClose) {
   missionModalClose.addEventListener('click', avanzarASiguienteMision);
 }
 function avanzarASiguienteMision() {
+const mission = getCurrentMission();
+
+if (mission && mission.id === 'scga1950') {
+  const modal = document.getElementById('mission-modal');
+
+  if (modal) {
+    modal.classList.add('hidden');
+    document.body.classList.remove('mission-modal-open');
+  }
+
+  openPosterScreen('1950');
+  return;
+}
   cerrarModalMision();
 
   currentMissionIndex = Math.min(currentMissionIndex + 1, missionStars.length);
@@ -4345,8 +4849,9 @@ if (missionModalContinue) {
 }
 setupSkyControls();
 preloadAllMissionImages();
+preloadPosterAssets();
+setupPosterScreen();
 init3D();
-
 const params = new URLSearchParams(window.location.search);
 
 if (params.get("start") === "1") {
