@@ -1023,7 +1023,17 @@ button:active {
   position: relative;
   padding: 16px 16px 0;
   background: #000;
-  border-bottom: 1px solid rgba(247,244,238,.18);
+  border-bottom: none;
+}
+
+.mission-heading::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: rgba(247,244,238,.34);
 }
 
 .mission-heading-row {
@@ -1102,13 +1112,15 @@ button:active {
 }
 
 .mission-down-mark {
+  position: relative;
+  z-index: 2;
   width: 0;
   height: 0;
   margin: 12px 0 0 4px;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
-  border-bottom: 7px solid #fff;
-  transform: rotate(180deg);
+  border-top: 7px solid #fff;
+  transform: none;
 }
 
 .mission-block {
@@ -1172,6 +1184,10 @@ button:active {
   left: 0;
   width: 1px;
   background: rgba(247,244,238,.44);
+}
+
+.mission-copy-free {
+  margin-top: 18px;
 }
 
 .mission-vector {
@@ -1243,8 +1259,8 @@ button:active {
     var(--img-bg, #222);
 }
 
-.mission-img.tall {
-  aspect-ratio: 1.25 / 1;
+.mission-img.portrait {
+  aspect-ratio: 4 / 5;
 }
 
 .mission-img img,
@@ -1769,7 +1785,11 @@ body.mission-modal-open {
   .mission-vector-item {
     font-size: 12px;
   }
-
+.mission-vector-item br {
+  display: block;
+  content: "";
+  margin-top: 10px;
+}
   .mission-quote p {
     font-size: 19px;
   }
@@ -2477,14 +2497,15 @@ const missionStars = [
       hero: 'assets/img/missions/scga1924.png',
       sections: [
         {
-          type: 'intro',
-          headline: 'Un homenaje a los campeones de Colombes 1924.',
-          paragraphs: [
-            'En 1924, cuando la Selección Uruguaya viajó a Europa, no llevaba cámaras, ni transmisión en vivo, ni multitudes siguiéndola minuto a minuto.',
-            'Llevaba otra cosa: un fútbol desconocido, una convicción silenciosa y el peso invisible de un país chico que nadie miraba.',
-            'Del otro lado del mundo, en el Stade Olympique Yves-du-Manoir, empezó a escribirse algo que primero fue sorpresa, después asombro… y finalmente leyenda.'
-          ]
-        },
+  type: 'intro',
+  lineUntil: 2,
+  headline: 'Un homenaje a los campeones de Colombes 1924.',
+  paragraphs: [
+    'En 1924, cuando la Selección Uruguaya viajó a Europa, no llevaba cámaras, ni transmisión en vivo, ni multitudes siguiéndola minuto a minuto.',
+    'Llevaba otra cosa: un fútbol desconocido, una convicción silenciosa y el peso invisible de un país chico que nadie miraba.',
+    'Del otro lado del mundo, en el Stade Olympique Yves-du-Manoir, empezó a escribirse algo que primero fue sorpresa, después asombro… <strong>y finalmente leyenda.</strong>'
+  ]
+},
         { type: 'image', src: 'assets/img/missions/img1924.png', bg: '#584536' },
         {
           type: 'vector',
@@ -2550,15 +2571,14 @@ const missionStars = [
         },
         { type: 'image', src: 'assets/img/missions/img1928.png', bg: '#7f714f' },
         {
-          type: 'vector',
-          items: [
-            'Y el recorrido no hizo más que reafirmarlo. Uruguay avanzó en el torneo sin perder nunca su identidad: precisión, inteligencia, control. Superó a Alemania con un contundente 4 a 1, y en semifinales dejó atrás a Italia por 3 a 2 en un partido intenso, donde el talento volvió a inclinar la balanza.',
-            '<strong>Ya no quedaban dudas: no era el recuerdo de 1924… era la continuidad de una supremacía.</strong>'
-          ]
-        },
-        { type: 'spacer' },
-        { type: 'image', src: 'assets/img/missions/img1928-2.png', bg: '#3e3a33' },
-        {
+  type: 'vector',
+  items: [
+    'Y el recorrido no hizo más que reafirmarlo. Uruguay avanzó en el torneo sin perder nunca su identidad: precisión, inteligencia, control.<br /><br />Superó a Alemania con un contundente 4 a 1, y en semifinales dejó atrás a Italia por 3 a 2 en un partido intenso, donde el talento volvió a inclinar la balanza.',
+    '<strong>Ya no quedaban dudas: no era el recuerdo de 1924… era la continuidad de una supremacía.</strong>'
+  ]
+},
+{ type: 'image', portrait: true, src: 'assets/img/missions/img1928-2.png', bg: '#3e3a33' },
+{
           type: 'vector',
           headline: 'Hasta que llegó el momento definitivo: la final contra Argentina.',
           items: [
@@ -4424,22 +4444,43 @@ function renderMissionDetail(mission) {
 
 function createMissionSection(section) {
   if (section.type === 'intro') {
-    const el = document.createElement('section');
-    el.className = 'mission-block compact reveal';
+  const el = document.createElement('section');
+  el.className = 'mission-block compact reveal';
 
-    el.innerHTML = `
-      <h2 class="mission-headline">${section.headline || ''}</h2>
-      <div class="mission-copy-line">
-        ${(section.paragraphs || []).map(p => `<p class="mission-copy">${p}</p>`).join('')}
-      </div>
-    `;
+  const paragraphs = section.paragraphs || [];
+  const lineUntil = Number.isFinite(section.lineUntil)
+    ? section.lineUntil
+    : paragraphs.length;
 
-    return el;
-  }
+  const linedParagraphs = paragraphs.slice(0, lineUntil);
+  const freeParagraphs = paragraphs.slice(lineUntil);
+
+  el.innerHTML = `
+    <h2 class="mission-headline">${section.headline || ''}</h2>
+
+    ${
+      linedParagraphs.length
+        ? `<div class="mission-copy-line">
+            ${linedParagraphs.map(p => `<p class="mission-copy">${p}</p>`).join('')}
+          </div>`
+        : ''
+    }
+
+    ${
+      freeParagraphs.length
+        ? `<div class="mission-copy-free">
+            ${freeParagraphs.map(p => `<p class="mission-copy">${p}</p>`).join('')}
+          </div>`
+        : ''
+    }
+  `;
+
+  return el;
+}
 
   if (section.type === 'image') {
   const el = document.createElement('div');
-  el.className = `mission-img${section.tall ? ' tall' : ''} reveal`;
+  el.className = `mission-img${section.tall ? ' tall' : ''}${section.portrait ? ' portrait' : ''} reveal`;
   el.style.setProperty('--img-bg', section.bg || '#222');
 
   const img = document.createElement('img');
