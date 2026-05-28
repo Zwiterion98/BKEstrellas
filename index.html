@@ -2,809 +2,1878 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>SkyView Ultimate: brújula por dirección</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Estrellas Reales</title>
+
   <style>
+    /* =========================================================
+      FUENTES
+      Colocá estos archivos en /assets/fonts/
+      - FlameSans-Regular.otf
+      - 1.Flame-Bold 2 3 2.otf
+      - Flame-Bold-Variable 2.ttf
+      - HostGrotesk-VariableFont_wght.ttf
+    ========================================================= */
+
+    @font-face {
+      font-family: "FlameSans";
+      src: url("assets/fonts/FlameSans-Regular.otf") format("opentype");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: "FlameBold";
+      src: url("assets/fonts/1.Flame-Bold 2 3 2.otf") format("opentype");
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: "FlameBoldVariable";
+      src: url("assets/fonts/Flame-Bold-Variable 2.ttf") format("truetype");
+      font-weight: 400 900;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: "HostGrotesk";
+      src: url("assets/fonts/HostGrotesk-VariableFont_wght.ttf") format("truetype");
+      font-weight: 300 900;
+      font-style: normal;
+      font-display: swap;
+    }
+
     :root {
-      --bg-dark: #0a0a0c;
-      --accent: #ffffff;
-      --text-muted: #888888;
-      --panel: rgba(0,0,0,0.48);
+      --blue: #63b8e9;
+      --blue-soft: rgba(99, 184, 233, 0.45);
+      --white: #ffffff;
+      --panel: rgba(13, 42, 58, 0.42);
+      --panel-strong: rgba(11, 37, 51, 0.88);
+      --input-line: rgba(255, 255, 255, 0.72);
+      --shadow: 0 24px 55px rgba(0, 0, 0, 0.35);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      min-height: 100%;
+      background: #000;
+      color: var(--white);
+      font-family: "HostGrotesk", "FlameSans", Arial, sans-serif;
+      overflow: hidden;
+      overscroll-behavior: none;
+      -webkit-text-size-adjust: 100%;
     }
 
     body {
-      margin: 0;
-      overflow: hidden;
-      background: var(--bg-dark);
-      color: var(--accent);
-      font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+      min-height: 100svh;
+      touch-action: manipulation;
     }
 
-    #canvas-container {
+    button,
+    input,
+    label {
+      font: inherit;
+    }
+
+    button,
+    input[type="button"],
+    input[type="submit"] {
+      appearance: none;
+      -webkit-appearance: none;
+      border-radius: 0;
+    }
+
+    .app {
+      position: relative;
+      width: 100vw;
+      height: 100svh;
+      min-height: 100svh;
+      overflow: hidden;
+      background: #000;
+      isolation: isolate;
+    }
+
+    /* =========================================================
+      FONDOS
+      Reemplazá estas URLs por tus imágenes finales.
+      Recomendación mobile: 1080x1920 o 1440x2560.
+    ========================================================= */
+
+    .cosmic-bg {
       position: absolute;
       inset: 0;
+      z-index: -3;
+      background:
+        linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.2)),
+        url("assets/img/bg-stars.jpg") center center / cover no-repeat;
+      transform: scale(1.04);
+    }
+
+    .cosmic-bg::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 35%, rgba(99,184,233,0.16), transparent 38%),
+        linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.34));
+      pointer-events: none;
+    }
+
+    /* =========================================================
+      LATERALES (líneas tipo zoom)
+      asset: assets/img/lateral.svg
+    ========================================================= */
+
+    .laterals {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .lateral {
+      position: absolute;
+      top: clamp(118px, 20vh, 190px);
+      bottom: clamp(52px, 9vh, 86px);
+      width: clamp(22px, 5vw, 42px);
+      background: url("assets/img/lateral.svg") center / 100% 100% no-repeat;
+      opacity: 0.82;
+    }
+
+    .lateral.left {
+      left: 8px;
+      transform: scaleX(1);
+    }
+
+    .lateral.right {
+      right: 8px;
+      transform: scaleX(-1);
+    }
+
+    @media (max-width: 560px) {
+      .lateral {
+        top: clamp(132px, 22vh, 190px);
+        bottom: clamp(46px, 7vh, 74px);
+        width: 34px;
+        opacity: 0.72;
+      }
+
+      .lateral.left {
+        left: 6px;
+      }
+
+      .lateral.right {
+        right: 6px;
+      }
+    }
+
+    .loading-bg {
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      background: linear-gradient(to bottom, #000 0%, #000 42%, #001016 58%, #123f52 100%);
+    }
+
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: calc(14px + var(--safe-top)) 22px calc(14px + var(--safe-bottom));
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateY(14px) scale(0.985);
+      transition: opacity 420ms ease, transform 420ms ease, visibility 0ms linear 420ms;
+      overflow: hidden;
+    }
+
+    .screen.is-active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+      transition: opacity 480ms ease, transform 480ms ease, visibility 0ms;
+    }
+
+    .screen.is-leaving {
+      opacity: 0;
+      transform: translateY(-10px) scale(0.99);
+    }
+
+    .content {
+      width: min(100%, 520px);
+      margin: 0 auto;
+    }
+
+.panel {
+  position: relative;
+  width: 100%;
+  background: rgba(13, 42, 58, 0.36);
+  border: 1.5px solid rgba(99, 184, 233, 0.72);
+  border-radius: clamp(34px, 9vw, 92px);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+
+  backdrop-filter: blur(1px) saturate(0.08);
+  -webkit-backdrop-filter: blur(1px) saturate(0.08);
+}
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+ 
+  opacity: 0.06;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+    .panel > * {
+      position: relative;
       z-index: 1;
     }
 
-    #ui-layer {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      background: var(--bg-dark);
-      z-index: 20;
-      transition: opacity 0.4s ease;
+    .btn {
+  width: min(100%, 230px);
+  min-height: 36px;
+  border: 0;
+  border-radius: 11px;
+  background: linear-gradient(180deg, #72c4f1 0%, #5daedf 100%);
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-weight: 700;
+  font-size: clamp(11px, 2.8vw, 14px);
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 160ms ease, filter 160ms ease, opacity 160ms ease;
+
+  box-shadow:
+    0 10px 8px rgba(0, 0, 0, 0.8),
+    0 4px 10px rgba(99, 184, 233, 0.22);
+
+  filter:
+    drop-shadow(0 8px 12px rgba(0, 0, 0, 0.28))
+    drop-shadow(0 0 10px rgba(99, 184, 233, 0.14));
+}
+
+.btn:active {
+  transform: scale(0.975);
+  filter:
+    drop-shadow(0 5px 8px rgba(0, 0, 0, 0.22))
+    drop-shadow(0 0 6px rgba(99, 184, 233, 0.10));
+}
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
 
-    .title-flat {
-      font-size: 24px;
-      font-weight: 600;
-      letter-spacing: -0.5px;
-      margin-bottom: 8px;
-      text-transform: uppercase;
-    }
+    .logos {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(12px, 2.6vw, 20px);
+  margin-top: clamp(26px, 6vh, 46px);
+  margin-bottom: clamp(18px, 3vh, 28px);
+}
 
-    .subtitle-flat {
-      font-size: 14px;
-      color: var(--text-muted);
-      margin-bottom: 32px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
+    .logo {
+  height: clamp(38px, 7vh, 62px);
+  max-width: 96px;
+  width: auto;
+  object-fit: contain;
+}
 
-    button {
-      background: var(--accent);
-      color: var(--bg-dark);
-      border: none;
-      padding: 16px 32px;
-      font-size: 14px;
-      font-weight: 600;
-      border-radius: 4px;
-      cursor: pointer;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      transition: transform 0.1s;
-    }
-
-    button:active {
-      transform: scale(0.98);
-    }
-
-    .crosshair {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 24px;
-      height: 24px;
-      z-index: 5;
-      pointer-events: none;
-    }
-
-    .crosshair::before,
-    .crosshair::after {
-      content: '';
-      position: absolute;
-      background: rgba(255,255,255,0.4);
-    }
-
-    .crosshair::before {
-      top: 11px;
-      left: -8px;
-      width: 40px;
-      height: 2px;
-    }
-
-    .crosshair::after {
-      top: -8px;
-      left: 11px;
-      width: 2px;
-      height: 40px;
-    }
-
-    #target-hud {
-      position: absolute;
-      top: 20%;
-      left: 50%;
-      transform: translateX(-50%);
-      text-align: center;
-      z-index: 10;
-      opacity: 0;
-      transition: opacity 0.2s ease;
-      pointer-events: none;
-    }
-
-    .pill {
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.2);
-      padding: 8px 24px;
-      border-radius: 50px;
+    /* Logo placeholders: sacá estas clases cuando uses PNG/SVG reales */
+    .logo-placeholder {
+      min-width: 100px;
+      height: 90px;
+      display: grid;
+      place-items: center;
+      font-family: "FlameBold", "HostGrotesk", sans-serif;
       font-size: 22px;
-      font-weight: 600;
-      letter-spacing: 1px;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      line-height: 0.9;
+      text-align: center;
+      color: white;
+      border: 1px solid rgba(255,255,255,0.25);
     }
 
-    .target-type {
-      display: block;
-      font-size: 11px;
-      text-transform: uppercase;
-      color: #bbbbbb;
-      margin-top: 6px;
-      letter-spacing: 2px;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-    }
-
-    #compass-container {
-  position: fixed;
-  bottom: 22px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(92vw, 520px);
-  height: 40px;
-  overflow: hidden;
-  z-index: 30;
-  pointer-events: none;
-  mask-image: linear-gradient(to right, transparent 0%, black 16%, black 84%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 16%, black 84%, transparent 100%);
-}
-
-#compass-strip {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  white-space: nowrap;
-  will-change: transform;
-}
-
-#compass-strip span {
-  display: inline-block;
-  width: 64px;
+    .hero-title {
+  margin: 0 0 clamp(26px, 4.8vh, 42px);
   text-align: center;
-  font-size: 18px;
+  line-height: 0.88;
+  text-transform: uppercase;
+}
+
+    .hero-title .top {
+  display: block;
+  font-family: "FlameBold", "FlameBoldVariable", sans-serif;
+  font-size: clamp(40px, 11vw, 74px);
+  color: white;
+  letter-spacing: 0.02em;
+  text-shadow: 0 3px 12px rgba(0,0,0,0.4);
+}
+
+.hero-title .bottom {
+  display: block;
+  margin-top: 2px;
+  font-family: "FlameBold", "FlameBoldVariable", sans-serif;
+  font-size: clamp(58px, 20vw, 116px);
+  color: transparent;
+  -webkit-text-stroke: clamp(2px, 0.8vw, 3.5px) var(--blue);
+  text-stroke: clamp(2px, 0.8vw, 3.5px) var(--blue);
+  text-shadow: 0 3px 12px rgba(0,0,0,0.4);
+}
+
+    .register-content {
+  width: 100%;
+  height: 100%;
+  align-self: stretch;
+  padding-top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-3.5vh) scale(var(--screen-scale, 1));
+  transform-origin: center;
+}
+
+    .register-panel {
+  width: min(64vw, 350px);
+  min-width: 255px;
+  padding: clamp(24px, 3.8vh, 34px) clamp(22px, 5vw, 36px);
+  border-radius: clamp(24px, 5.8vw, 42px);
+}
+
+    .intro-copy {
+  margin: 0 0 clamp(24px, 3.3vh, 32px);
+  font-size: clamp(11px, 2.8vw, 15px);
+  line-height: 1.18;
+  font-weight: 200;
+}
+
+    .field {
+      display: block;
+      margin-bottom: clamp(13px, 2.3vh, 19px);
+    }
+
+    .field input {
+  width: 100%;
+  border: 0;
+  border-bottom: 1.5px solid var(--input-line);
+  border-radius: 0;
+  background: transparent;
+  color: white;
+  padding: 7px 0 6px;
+  font-size: clamp(11px, 2.7vw, 14px);
+  font-weight: 700;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+    .field input::placeholder {
+      color: white;
+      opacity: 0.95;
+    }
+
+    .terms {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 clamp(18px, 2.8vh, 24px);
+  color: rgba(255,255,255,0.9);
+  font-size: clamp(7px, 1.9vw, 10px);
+  line-height: 1.2;
+  cursor: pointer;
+  font-weight: 700;
+}
+.terms-link {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: #fff;
+  font: inherit;
   font-weight: 800;
-  color: rgba(255,255,255,0.92);
-  text-shadow: 0 2px 4px rgba(0,0,0,0.85);
-  letter-spacing: 1px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
 }
-
-#compass-pointer {
-  position: fixed;
-  bottom: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: var(--accent);
-  font-size: 14px;
-  z-index: 31;
-  text-shadow: 0 2px 4px rgba(0,0,0,1);
-  pointer-events: none;
-}
-
-    #horizon-shadow {
+    .terms input {
       position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100vw;
-      height: 35vh;
-      background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 30%, rgba(0,0,0,0) 100%);
-      z-index: 2;
-      pointer-events: none;
       opacity: 0;
-      transition: opacity 0.1s linear;
+      pointer-events: none;
     }
 
-    #sys-info {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      font-size: 10px;
-      color: var(--text-muted);
-      z-index: 5;
-      font-family: monospace;
-      letter-spacing: 1px;
+    .fake-check {
+      width: 9px;
+      height: 9px;
+      flex: 0 0 9px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,0.35);
+      background: rgba(0,0,0,0.24);
     }
 
-    #orientation-panel {
-      position: absolute;
-      top: 18px;
-      right: 18px;
-      z-index: 12;
-      min-width: 220px;
-      background: var(--panel);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 12px;
-      padding: 12px 14px;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      font-family: monospace;
-      font-size: 12px;
-      line-height: 1.55;
-      color: #e8e8e8;
+    .fake-check::after {
+      content: "✓";
+      color: white;
+      font-size: 9px;
+      line-height: 1;
+      opacity: 0;
+      transform: scale(0.7);
+      transition: opacity 140ms ease, transform 140ms ease;
     }
 
-    #orientation-panel .title {
-      font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
-      font-size: 11px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: #bcbcbc;
-      margin-bottom: 6px;
+    .terms input:checked + .fake-check::after {
+      opacity: 1;
+      transform: scale(1);
     }
 
-    #orientation-panel .row {
+    .register-btn-wrap {
       display: flex;
-      justify-content: space-between;
-      gap: 12px;
+      justify-content: center;
     }
 
-    #orientation-panel .label {
-      color: #9b9b9b;
+    .story-screen {
+      padding-left: 32px;
+      padding-right: 32px;
     }
 
-    #orientation-panel .value {
-      color: #fff;
-      font-weight: 600;
+    .story-panel {
+      width: min(82vw, 560px);
+      padding: clamp(24px, 4vh, 42px) clamp(22px, 5.4vw, 48px);
+      text-align: center;
+      transform: scale(var(--screen-scale, 1));
+      transform-origin: center;
     }
 
-    .oculto {
-      opacity: 0;
-      pointer-events: none;
+    .stars-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: clamp(20px, 3.5vh, 34px);
+      color: white;
+      font-size: clamp(20px, 4.5vw, 34px);
+      line-height: 1;
     }
+
+    .stars-row::before,
+    .stars-row::after {
+      content: "";
+      width: 25%;
+      height: 1px;
+      background: rgba(255,255,255,0.72);
+    }
+
+    .story-text {
+      font-size: clamp(12px, 2.8vw, 18px);
+      line-height: 1.18;
+      letter-spacing: -0.015em;
+    }
+
+    .story-text p {
+      margin: 0 0 clamp(16px, 2.7vh, 28px);
+    }
+
+    .story-text strong {
+      font-weight: 800;
+    }
+
+    .story-divider {
+      width: 100%;
+      height: 1px;
+      background: rgba(255,255,255,0.66);
+      margin: clamp(24px, 4vh, 42px) 0 clamp(22px, 3.5vh, 34px);
+    }
+
+    .steps-content {
+      width: min(82vw, 620px);
+      text-align: center;
+      transform: scale(var(--screen-scale, 1));
+      transform-origin: center;
+    }
+
+    .steps-title {
+      margin: 0 0 clamp(20px, 3.4vh, 32px);
+      font-family: "HostGrotesk", Arial, sans-serif;
+      font-weight: 800;
+      font-size: clamp(24px, 5.3vw, 38px);
+      line-height: 1;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .step-card {
+      padding: clamp(15px, 2.6vh, 24px) clamp(18px, 3.5vw, 32px);
+      margin-bottom: clamp(12px, 2.2vh, 18px);
+      border-radius: clamp(20px, 4.2vw, 32px);
+      text-align: center;
+    }
+
+    .step-card h2 {
+      margin: 0;
+      font-size: clamp(18px, 4vw, 28px);
+      line-height: 1;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .step-line {
+      height: 2px;
+      width: 100%;
+      margin: clamp(16px, 2.5vh, 24px) 0;
+      background: var(--blue);
+      opacity: 0.9;
+    }
+
+    .step-card p {
+      margin: 0;
+      font-size: clamp(12px, 3vw, 18px);
+      line-height: 1.3;
+    }
+
+    .start-btn-wrap {
+      margin-top: clamp(16px, 3vh, 28px);
+      display: flex;
+      justify-content: center;
+    }
+/* =========================================================
+   ENTRADA ESCALONADA — PANTALLA DE PASOS
+========================================================= */
+
+.steps-screen .step-reveal {
+  opacity: 0;
+  transform: translateY(22px) scale(0.96);
+  filter: blur(3px);
+}
+
+.steps-screen.is-active .step-reveal {
+  animation: stepRevealIn 0.72s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: var(--step-delay, 0s);
+}
+
+@keyframes stepRevealIn {
+  0% {
+    opacity: 0;
+    transform: translateY(22px) scale(0.96);
+    filter: blur(3px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+    .loading-screen {
+      background: #000;
+    }
+
+    .loading-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      padding-bottom: 16vh;
+    }
+.loading-logos {
+  position: absolute;
+  left: 50%;
+  bottom: calc(48px + var(--safe-bottom));
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(18px, 5vw, 34px);
+  transform: translateX(-50%);
+  opacity: 0.92;
+}
+
+.loading-logos img {
+  height: clamp(34px, 7vw, 54px);
+  width: auto;
+  max-width: 96px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.45));
+}
+
+@media (max-height: 680px) {
+  .loading-logos {
+    bottom: calc(30px + var(--safe-bottom));
+  }
+
+  .loading-logos img {
+    height: 32px;
+  }
+}
+    .loader-stars {
+      display: flex;
+      gap: 18px;
+      font-size: clamp(40px, 9vw, 64px);
+      line-height: 1;
+      color: transparent;
+      -webkit-text-stroke: 1.6px white;
+      text-stroke: 1.6px white;
+    }
+
+    .loader-star {
+      display: inline-block;
+      transform-origin: center;
+      transition: color 140ms ease, transform 140ms ease, opacity 140ms ease;
+      animation: starPulse 1100ms infinite;
+    }
+
+    .loader-star.is-filled {
+      color: white;
+      -webkit-text-stroke: 0 white;
+      text-stroke: 0 white;
+      transform: scale(1.08);
+    }
+
+    @keyframes starPulse {
+      0%, 100% { opacity: 0.82; }
+      50% { opacity: 1; }
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 560px) {
+      .screen {
+        padding-left: 18px;
+        padding-right: 18px;
+      }
+
+      
+
+      .logos {
+        gap: 22px;
+        margin-bottom: 42px;
+      }
+
+      .hero-title {
+        margin-bottom: clamp(60px, 5vh, 130px);
+      }
+
+      .register-panel {
+        padding: 34px 28px 40px;
+      }
+
+      .intro-copy {
+        margin-bottom: 46px;
+      }
+
+      .field {
+        margin-bottom: 32px;
+      }
+
+      .terms {
+        margin-bottom: 40px;
+      }
+
+      .btn {
+        min-height: 40px;
+        border-radius: 12px;
+      }
+
+      .story-panel {
+        padding: 42px 24px;
+        border-radius: 42px;
+      }
+
+      .stars-row {
+        gap: 8px;
+        margin-bottom: 42px;
+      }
+
+      .stars-row::before,
+      .stars-row::after {
+        width: 22%;
+      }
+
+      .story-text p {
+        margin-bottom: 24px;
+      }
+
+      .story-divider {
+        margin: 38px 0 30px;
+      }
+
+      .steps-title {
+        margin-bottom: 38px;
+      }
+
+      .step-card {
+        margin-bottom: 24px;
+      }
+
+      .step-line {
+        margin: 24px 0;
+      }
+
+      .start-btn-wrap {
+        margin-top: 22px;
+      }
+    }
+
+    @media (max-height: 760px) {
+      :root {
+        --screen-scale: 0.88;
+      }
+
+      .screen {
+        overflow: hidden;
+        place-items: center;
+      }
+    }
+
+    @media (max-height: 680px) {
+      :root {
+        --screen-scale: 0.78;
+      }
+    }
+
+    @media (max-height: 600px) {
+      :root {
+        --screen-scale: 0.68;
+      }
+    }
+
+   /* =========================================================
+  PANTALLAS EXTRA / ESTADOS
+========================================================= */
+
+.extra-screen {
+  background: #000;
+}
+
+.extra-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    linear-gradient(
+      180deg,
+      #000 0%,
+      #000 48%,
+      #031923 74%,
+      #123f52 100%
+    );
+}
+
+.extra-content {
+  width: min(88vw, 620px);
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(18px, 3.8vh, 38px);
+  text-align: center;
+  transform: scale(var(--screen-scale, 1));
+  transform-origin: center;
+}
+
+.extra-visual {
+  width: min(68vw, 330px);
+  max-height: 34svh;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 12px 22px rgba(0,0,0,0.35));
+}
+
+.extra-copy {
+  width: min(88vw, 560px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.extra-title {
+  margin: 0;
+  color: #fff;
+  font-family: "FlameBold", "FlameBoldVariable", "Arial Black", sans-serif;
+  font-size: clamp(28px, 7.4vw, 52px);
+  line-height: 1.08;
+  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: -0.01em;
+}
+
+.extra-text {
+  width: min(86vw, 500px);
+  margin: clamp(10px, 1.8vh, 16px) auto 0;
+  color: rgba(255,255,255,0.88);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: clamp(15px, 4.1vw, 23px);
+  line-height: 1.24;
+  font-weight: 400;
+  text-align: center;
+}
+
+.extra-logo {
+  position: absolute;
+  left: 50%;
+  bottom: calc(34px + var(--safe-bottom));
+  width: clamp(54px, 14vw, 82px);
+  height: auto;
+  margin: 0;
+  object-fit: contain;
+  transform: translateX(-50%);
+  opacity: 0.96;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.45));
+}
+.extra-copy {
+  padding-bottom: 78px;
+}
+
+@media (max-height: 720px) {
+  .extra-copy {
+    padding-bottom: 58px;
+  }
+}
+/* Desktop / QR desde computadora */
+.desktop-screen .extra-content {
+  width: min(92vw, 1260px);
+}
+
+.desktop-layout {
+  width: min(92vw, 1260px);
+  display: grid;
+  grid-template-columns: minmax(240px, 0.82fr) minmax(420px, 1.18fr);
+  align-items: center;
+  gap: clamp(42px, 7vw, 100px);
+}
+
+.desktop-visual {
+  width: min(32vw, 420px);
+  max-height: 68vh;
+  justify-self: end;
+  transform: rotate(-8deg);
+  filter: drop-shadow(0 28px 40px rgba(0,0,0,0.38));
+}
+
+.desktop-copy {
+  text-align: left;
+  align-items: flex-start;
+}
+
+.desktop-copy .extra-title,
+.desktop-copy .extra-text {
+  text-align: left;
+  margin-left: 0;
+}
+
+.desktop-copy .extra-title {
+  font-size: clamp(46px, 4.6vw, 82px);
+  line-height: 1.05;
+}
+
+.desktop-copy .extra-text {
+  width: min(50vw, 720px);
+  font-size: clamp(19px, 1.65vw, 28px);
+  line-height: 1.24;
+}
+
+.desktop-copy .extra-logo {
+  margin-top: clamp(48px, 8vh, 92px);
+  align-self: center;
+}
+
+@media (max-width: 760px) {
+  .desktop-layout {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(22px, 4.5vh, 38px);
+  }
+
+  .desktop-visual {
+    width: min(58vw, 260px);
+    max-height: 34svh;
+    justify-self: center;
+  }
+
+  .desktop-copy {
+    align-items: center;
+    text-align: center;
+  }
+
+  .desktop-copy .extra-title,
+  .desktop-copy .extra-text {
+    text-align: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .extra-content {
+    width: 100%;
+    gap: clamp(18px, 3.4vh, 30px);
+    justify-content: center;
+    padding-top: 2svh;
+  }
+
+  .extra-visual {
+    width: min(64vw, 260px);
+    max-height: 31svh;
+  }
+
+  .extra-title {
+    font-size: clamp(25px, 8.1vw, 38px);
+    line-height: 1.1;
+  }
+
+  .extra-text {
+    width: min(86vw, 340px);
+    font-size: clamp(14px, 4.25vw, 18px);
+    line-height: 1.25;
+  }
+
+  .extra-logo {
+  width: clamp(50px, 15vw, 70px);
+  bottom: calc(26px + var(--safe-bottom));
+}
+}
+
+@media (max-height: 720px) {
+  .extra-content {
+    gap: 18px;
+  }
+
+  .extra-visual {
+    max-height: 27svh;
+  }
+
+  .extra-logo {
+  bottom: calc(20px + var(--safe-bottom));
+  width: clamp(46px, 13vw, 64px);
+}
+}
+
+@media (max-height: 640px) {
+  .extra-visual {
+    max-height: 23svh;
+  }
+
+  .extra-title {
+    font-size: clamp(23px, 7vw, 34px);
+  }
+
+  .extra-text {
+    font-size: clamp(13px, 3.7vw, 16px);
+  }
+}
+    /* =========================================================
+  PANTALLA ACCESO A SENSORES
+========================================================= */
+
+.sensor-gate-screen {
+  background: #000;
+}
+
+.sensor-gate-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(circle at 50% 34%, rgba(99,184,233,0.18), transparent 38%),
+    linear-gradient(to bottom, #000 0%, #000 44%, #001016 64%, #123f52 100%);
+}
+
+.sensor-gate-content {
+  width: min(100%, 420px);
+  min-height: 68svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(22px, 4vh, 34px);
+  text-align: center;
+  transform: scale(var(--screen-scale, 1));
+  transform-origin: center;
+}
+
+.sensor-gate-stars {
+  margin-bottom: clamp(4px, 1vh, 10px);
+  font-size: clamp(32px, 7vw, 54px);
+}
+
+.sensor-gate-title {
+  margin: 0;
+}
+
+.sensor-gate-copy {
+  width: min(82vw, 320px);
+  margin: 0;
+  color: rgba(255,255,255,0.82);
+  font-size: clamp(12px, 3vw, 16px);
+  line-height: 1.28;
+  font-weight: 500;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.55);
+}
+@media (max-width: 560px) and (max-height: 780px) {
+  .extra-screen {
+    padding-top: calc(4px + var(--safe-top));
+    padding-bottom: calc(8px + var(--safe-bottom));
+  }
+
+  .extra-content {
+    transform: scale(0.88);
+  }
+}
+
+@media (max-width: 560px) and (max-height: 680px) {
+  .extra-content {
+    transform: scale(0.78);
+  }
+}
+
+/* =========================================================
+  PANTALLA TÉRMINOS Y CONDICIONES
+========================================================= */
+
+.terms-screen {
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.terms-panel {
+  width: min(86vw, 540px);
+  max-height: 78svh;
+  padding: clamp(24px, 4vh, 38px) clamp(20px, 5vw, 34px);
+  border-radius: clamp(24px, 6vw, 42px);
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.terms-title {
+  margin: 0 0 18px;
+  font-family: "FlameBold", "FlameBoldVariable", sans-serif;
+  font-size: clamp(28px, 7vw, 48px);
+  line-height: 0.96;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.terms-scroll {
+  max-height: 45svh;
+  overflow-y: auto;
+  padding-right: 8px;
+  color: rgba(255,255,255,0.88);
+  font-size: clamp(12px, 3vw, 16px);
+  line-height: 1.35;
+  font-weight: 500;
+  -webkit-overflow-scrolling: touch;
+}
+
+.terms-scroll p {
+  margin: 0 0 14px;
+}
+
+.terms-actions {
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.terms-back-btn {
+  border: 0;
+  background: transparent;
+  color: rgba(255,255,255,0.8);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+@media (max-height: 680px) {
+  .terms-panel {
+    max-height: 84svh;
+    padding-top: 22px;
+    padding-bottom: 22px;
+  }
+
+  .terms-scroll {
+    max-height: 43svh;
+  }
+}
   </style>
 </head>
 <body>
+  <main class="app" id="app">
+    <!-- =========================================================
+      PANTALLA DE CARGA
+      Fondo de carga: reemplazar en CSS .loading-bg
+    ========================================================== -->
+    <section class="screen loading-screen is-active" data-screen="loading" aria-label="Cargando experiencia">
+  <div class="loading-bg"></div>
 
-  <div class="crosshair" id="mira" style="display: none;"></div>
-
-  <div id="target-hud">
-    <div class="pill" id="target-name">--</div>
-    <span class="target-type" id="target-desc">--</span>
+  <div class="loading-content">
+    <div class="loader-stars" aria-hidden="true">
+      <span class="loader-star">★</span>
+      <span class="loader-star">★</span>
+      <span class="loader-star">★</span>
+      <span class="loader-star">☆</span>
+    </div>
+    <span class="sr-only">Cargando</span>
   </div>
 
-  <div id="horizon-shadow"></div>
-
-  <div id="compass-container" class="oculto">
-  <div id="compass-strip">
-    <span>N</span><span>NE</span><span>E</span><span>SE</span><span>S</span><span>SO</span><span>O</span><span>NO</span>
-    <span>N</span><span>NE</span><span>E</span><span>SE</span><span>S</span><span>SO</span><span>O</span><span>NO</span>
-    <span>N</span><span>NE</span><span>E</span><span>SE</span><span>S</span><span>SO</span><span>O</span><span>NO</span>
+  <div class="loading-logos" aria-label="Burger King y AUF">
+    <img src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+    <img src="assets/img/logo-auf-white.svg" alt="AUF" />
   </div>
-</div>
-<div id="compass-pointer" class="oculto">▲</div>
+</section>
+<!-- =========================================================
+  PANTALLA EXTRA / ERROR DE CARGA
+========================================================== -->
+<section class="screen extra-screen" data-screen="error" aria-label="Error al cargar">
+  <div class="extra-content">
+    <img class="extra-visual" src="assets/img/extra/a.png" alt="" />
 
-  <div id="orientation-panel" class="oculto">
-    <div class="title">Vista del observador</div>
-    <div class="row"><span class="label">dirección</span><span class="value" id="look-direction">--</span></div>
-    <div class="row"><span class="label">azimut</span><span class="value" id="look-azimuth">--</span></div>
-    <div class="row"><span class="label">altura</span><span class="value" id="look-altitude">--</span></div>
-    <div class="row"><span class="label">norte ref</span><span class="value" id="northref-val">--</span></div>
+    <div class="extra-copy">
+      <h1 class="extra-title">
+        Ups...<br />
+        Parece que perdimos<br />
+        de vista las estrellas.
+      </h1>
+
+      <p class="extra-text">
+        Ocurrió un problema al cargar la experiencia.
+        Revisá tu conexión e intentá nuevamente
+        en unos segundos.
+      </p>
+
+      <img class="extra-logo" src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+    </div>
   </div>
+</section>
+<!-- =========================================================
+  PANTALLA EXTRA / TODAVÍA NO COMENZÓ
+========================================================== -->
+<section class="screen extra-screen" data-screen="not-started" aria-label="Experiencia no iniciada">
+  <div class="extra-content">
+    <img class="extra-visual" src="assets/img/extra/b.png" alt="" />
 
-  <div id="canvas-container"></div>
-  <div id="sys-info" class="oculto">SYS.OFF</div>
+    <div class="extra-copy">
+      <h1 class="extra-title">
+        Las estrellas todavía<br />
+        no se alinearon.
+      </h1>
 
-  <div id="ui-layer">
-    <div class="title-flat">OBSERVATORIO</div>
-    <div class="subtitle-flat">Alineación Espacial</div>
-    <button onclick="iniciarApp()">Iniciar Enlace</button>
+      <p class="extra-text">
+        La experiencia Estrellas Reales aún no comenzó.
+        Muy pronto vas a poder descubrir las cuatro estrellas
+        de la Selección Uruguaya en el cielo y acceder
+        a contenido exclusivo imperdible.
+      </p>
+
+      <img class="extra-logo" src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+    </div>
   </div>
+</section>
+<!-- =========================================================
+  PANTALLA EXTRA / FINALIZADA
+========================================================== -->
+<section class="screen extra-screen" data-screen="ended" aria-label="Experiencia finalizada">
+  <div class="extra-content">
+    <img class="extra-visual" src="assets/img/extra/c.png" alt="" />
 
-<script>
-  let scene, camera, renderer, starGroup;
-  let raycaster, centerScreen;
-  let hoverRing;
-  let objetosInteractivos = [];
-  let objetoEnfocado = null;
-  let astrosDinamicos = [];
+    <div class="extra-copy">
+      <h1 class="extra-title">
+        La experiencia Estrellas<br />
+        Reales finalizó.
+      </h1>
 
-  const uiLayer = document.getElementById('ui-layer');
-  const hud = document.getElementById('target-hud');
-  const hudName = document.getElementById('target-name');
-  const hudDesc = document.getElementById('target-desc');
-  const compassStrip = document.getElementById('compass-strip');
-  const horizonShadow = document.getElementById('horizon-shadow');
+      <p class="extra-text">
+        Gracias por ser parte de este homenaje
+        a las cuatro estrellas que marcaron
+        para siempre la historia del fútbol uruguayo.
+      </p>
 
-  const lookDirectionVal = document.getElementById('look-direction');
-  const lookAzimuthVal = document.getElementById('look-azimuth');
-  const lookAltitudeVal = document.getElementById('look-altitude');
-  const northRefVal = document.getElementById('northref-val');
+      <img class="extra-logo" src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+    </div>
+  </div>
+</section>
+<!-- =========================================================
+  PANTALLA EXTRA / DESKTOP
+========================================================== -->
+<section class="screen extra-screen desktop-screen" data-screen="desktop" aria-label="Experiencia desde celular">
+  <div class="extra-content desktop-layout">
+    <img class="desktop-visual" src="assets/img/extra/e.png" alt="" />
 
-  const COMPASS_STEP = 64;              // ancho de cada letra
-const COMPASS_CYCLE_WIDTH = 8 * 64;   // 8 direcciones = 512px
-let compassAzimuthVisual = null;      // azimut visual suavizado
+    <div class="extra-copy desktop-copy">
+      <h1 class="extra-title">
+        Esta experiencia se vive 
+        desde el celular.
+      </h1>
 
- let usuarioLat = 0, usuarioLon = 0;
-let brujulaDetectada = false;
-let headingOffset = 0;
-let currentAlpha = 0, currentBeta = 0, currentGamma = 0;
+      <p class="extra-text">
+        Estrellas Reales utiliza movimiento, ubicación y cámara
+        para ayudarte a encontrar las estrellas en el cielo.<br />
+        Escaneá el QR desde tu dispositivo móvil y viví la experiencia completa.
+      </p>
 
-// filtro anti-salto para iPhone
-let headingEstable = null;
-const TILT_GUARD_DEG = 38;
-const HEADING_JUMP_DEG = 110;
-const LOW_SPIN_THRESHOLD = 90;
-const BUILD_LABEL = '2026-04-30 22:00 UTC';
+      <img class="extra-logo" src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+    </div>
+  </div>
+</section>
+<!-- =========================================================
+  PANTALLA EXTRA / PRODUCTO REQUERIDO
+========================================================== -->
+<section class="screen extra-screen" data-screen="product" aria-label="Producto requerido">
+  <div class="extra-content">
+    <img class="extra-visual" src="assets/img/extra/d.png" alt="" />
 
-// Sigue existiendo como dato de diagnóstico
-let northCalibration = null;
+    <div class="extra-copy">
+      <h1 class="extra-title">
+        Necesitás un producto
+        Estrellas Reales para
+        desbloquear la experiencia.
+      </h1>
 
-  const planetas = ['Sun', 'Moon', 'Venus', 'Mars', 'Jupiter', 'Saturn'];
+      <p class="extra-text">
+        Comprá cualquiera de los combos Estrellas Reales
+        de Burger King, escaneá el QR del pack y accedé
+        a la experiencia interactiva para descubrir
+        las cuatro estrellas de la Selección Uruguaya en el cielo.
+      </p>
 
-  const estrellas = [
-    { id: 'scga1924', n: "SCGA 1924 (Puppis)", ra: 8.3098, dec: -26.2482 },
-    { id: 'scga1928', n: "SCGA 1928 (Puppis)", ra: 8.3198, dec: -23.0249 },
-    { id: 'scga1930', n: "SCGA 1930 (Puppis)", ra: 8.3217, dec: -23.7969 },
-    { id: 'scga1950', n: "SCGA 1950 (Volans)", ra: 8.2952, dec: -69.1289 },
-
-    { id: 'sirius', n: "Sirio", ra: 6.75, dec: -16.71 },
-    { id: 'canopus', n: "Canopus", ra: 6.39, dec: -52.69 },
-    { id: 'arcturus', n: "Arturo", ra: 14.26, dec: 19.18 },
-    { id: 'rigelkent', n: "Alfa Centauri", ra: 14.66, dec: -60.83 },
-    { id: 'vega', n: "Vega", ra: 18.61, dec: 38.78 },
-    { id: 'capella', n: "Capella", ra: 5.28, dec: 45.99 },
-    { id: 'rigel', n: "Rigel", ra: 5.24, dec: -8.2 },
-    { id: 'procyon', n: "Procyon", ra: 7.65, dec: 5.22 },
-    { id: 'achernar', n: "Achernar", ra: 1.63, dec: -57.24 },
-    { id: 'betelgeuse', n: "Betelgeuse", ra: 5.91, dec: 7.4 },
-    { id: 'hadar', n: "Beta Centauri", ra: 14.06, dec: -60.37 },
-    { id: 'altair', n: "Altair", ra: 19.84, dec: 8.86 },
-    { id: 'aldebaran', n: "Aldebarán", ra: 4.59, dec: 16.50 },
-    { id: 'spica', n: "Spica", ra: 13.41, dec: -11.16 },
-    { id: 'antares', n: "Antares", ra: 16.49, dec: -26.43 },
-    { id: 'pollux', n: "Pólux", ra: 7.75, dec: 28.02 },
-    { id: 'fomalhaut', n: "Fomalhaut", ra: 22.96, dec: -29.62 },
-    { id: 'deneb', n: "Deneb", ra: 20.69, dec: 45.28 },
-
-    { id: 'acrux', n: "Acrux", ra: 12.44, dec: -63.09 },
-    { id: 'mimosa', n: "Mimosa", ra: 12.78, dec: -59.68 },
-    { id: 'gacrux', n: "Gacrux", ra: 12.51, dec: -57.11 },
-    { id: 'imai', n: "Imai", ra: 12.25, dec: -58.74 },
-    { id: 'bellatrix', n: "Bellatrix", ra: 5.41, dec: 6.34 },
-    { id: 'alnilam', n: "Alnilam", ra: 5.6, dec: -1.2 },
-    { id: 'alnitak', n: "Alnitak", ra: 5.67, dec: -1.94 },
-    { id: 'mintaka', n: "Mintaka", ra: 5.53, dec: -0.29 },
-    { id: 'saiph', n: "Saiph", ra: 5.79, dec: -9.66 },
-
-    { id: 'polaris', n: "Estrella Polar", ra: 2.53, dec: 89.26 }
-  ];
+      <img class="extra-logo" src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+    </div>
+  </div>
+</section>
+    <!-- Fondo general. Cambiar assets/img/bg-stars.jpg por el fondo final -->
+    <div class="cosmic-bg" aria-hidden="true"></div>
 
 
-  function seededRandom(seed) {
-    const x = Math.sin(seed) * 10000;
-    return x - Math.floor(x);
+    <!-- =========================================================
+      PANTALLA 1 / REGISTRO
+      Logos: reemplazar placeholders por imágenes reales.
+    ========================================================== -->
+    <section class="screen register-screen" data-screen="register" aria-label="Registro">
+      <!-- LÍNEAS LATERALES: solo pantalla de registro -->
+      <div class="laterals" aria-hidden="true">
+        <div class="lateral left"></div>
+        <div class="lateral right"></div>
+      </div>
+      <div class="content register-content">
+        <div class="logos" aria-label="Burger King y AUF">
+          <img class="logo" src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+          <img class="logo" src="assets/img/logo-auf-white.svg" alt="AUF" />
+        </div>
+
+        <h1 class="hero-title" aria-label="Estrellas Reales">
+          <span class="top">Estrellas</span>
+          <span class="bottom">Reales</span>
+        </h1>
+
+        <form class="panel register-panel" id="registerForm" novalidate>
+          <p class="intro-copy">Registrate y descubrí las cuatro estrellas de la Selección Uruguaya de Fútbol que ahora están en el cielo.</p>
+
+          <label class="field">
+            <span class="sr-only">Nombre</span>
+            <input id="nameInput" name="name" type="text" placeholder="Nombre" autocomplete="name" required />
+          </label>
+
+          <label class="field">
+            <span class="sr-only">Mail</span>
+            <input id="emailInput" name="email" type="email" placeholder="Mail" autocomplete="email" inputmode="email" required />
+          </label>
+
+          <label class="terms">
+  <input id="termsInput" name="terms" type="checkbox" required />
+  <span class="fake-check" aria-hidden="true"></span>
+  <span>
+    He leído y acepto los
+    <button class="terms-link" type="button" id="openTermsBtn">
+      términos y condiciones
+    </button>
+  </span>
+</label>
+
+          <div class="register-btn-wrap">
+            <button class="btn" type="submit">Enviar</button>
+          </div>
+        </form>
+      </div>
+    </section>
+<!-- =========================================================
+  PANTALLA / TÉRMINOS Y CONDICIONES
+========================================================== -->
+<section class="screen terms-screen" data-screen="terms" aria-label="Términos y condiciones">
+  <article class="panel terms-panel">
+    <h1 class="terms-title">Términos y condiciones</h1>
+
+    <div class="terms-scroll">
+      <p><strong>1. Acceso y funcionamiento</strong></p>
+
+<p>
+  El acceso a la Experiencia se realiza mediante el escaneo del código QR incluido en los productos participantes de la campaña “Estrellas Reales”.
+</p>
+
+<p>
+  Para utilizar correctamente la Experiencia, el usuario podrá necesitar habilitar determinados permisos de su dispositivo móvil, incluyendo acceso a cámara, ubicación, brújula, sensores de movimiento y/o funcionalidades vinculadas a realidad aumentada o geolocalización astronómica.
+</p>
+
+<p>
+  La correcta visualización y funcionamiento de la Experiencia podrá variar según:
+</p>
+
+<p>
+  • el modelo de dispositivo<br />
+  • sistema operativo<br />
+  • versión de software<br />
+  • navegador utilizado<br />
+  • calidad de conexión a internet<br />
+  • condiciones de iluminación<br />
+  • disponibilidad de sensores del dispositivo, entre otros.
+</p>
+
+<p>
+  Burger King Uruguay no garantiza compatibilidad total con todos los dispositivos móviles ni funcionamiento ininterrumpido de la plataforma.
+</p>
+
+<p><strong>2. Uso de la experiencia</strong></p>
+
+<p>
+  La Experiencia tiene carácter exclusivamente recreativo y simbólico. Las representaciones visuales, ubicaciones astronómicas y contenidos asociados forman parte de una propuesta creativa y cultural vinculada a la campaña.
+</p>
+
+<p>
+  El usuario se compromete a utilizar la plataforma de forma adecuada, absteniéndose de realizar acciones que puedan afectar el funcionamiento, seguridad o disponibilidad de la Experiencia.
+</p>
+
+<p>
+  Asimismo, el usuario se compromete a no modificar de forma alguna el sistema de la aplicación y, consecuentemente, no utilizar versiones modificadas de la Aplicación con el fin de obtener acceso no autorizado a cualquier contenido y/o servicio de la misma.
+</p>
+
+<p>
+  No interferir ni interrumpir el acceso o utilización de la Aplicación, o redes conectadas a ésta o incumplir los requisitos, procedimientos y regulaciones de la política de conexión de redes.
+</p>
+
+<p><strong>3. Disponibilidad</strong></p>
+
+<p>
+  Burger King Uruguay podrá modificar, suspender o discontinuar total o parcialmente la Experiencia en cualquier momento, sin necesidad de previo aviso, por razones técnicas, operativas, comerciales o de fuerza mayor.
+</p>
+
+<p><strong>4. Propiedad intelectual</strong></p>
+
+<p>
+  Todas las marcas, nombres comerciales o signos distintivos de cualquier clase que eventualmente aparezcan en esta Aplicación son propiedad de sus respectivos titulares, sin que pueda entenderse que el uso o acceso a la misma atribuye al usuario derecho alguno sobre las citadas marcas, nombres comerciales o signos distintivos de cualquier clase.
+</p>
+
+<p>
+  Todos los elementos antes mencionados se encuentran protegidos por la normativa aplicable y vigente de propiedad intelectual.
+</p>
+
+<p>
+  Queda prohibida su reproducción, distribución o utilización comercial no autorizada.
+</p>
+
+<p><strong>5. Limitación de responsabilidad</strong></p>
+
+<p>
+  Burger King Uruguay no será responsable por:
+</p>
+
+<p>
+  • fallas técnicas,<br />
+  • interrupciones del servicio,<br />
+  • errores de conectividad,<br />
+  • incompatibilidades de dispositivos,<br />
+  • imprecisiones derivadas de sensores del dispositivo móvil,<br />
+  • ni por daños directos o indirectos derivados del uso o imposibilidad de uso de la Experiencia.
+</p>
+
+<p>
+  Asimismo, Burger King Uruguay recomienda utilizar la Experiencia de forma segura y responsable, evitando su uso en situaciones que puedan representar riesgos para el usuario o terceros.
+</p>
+
+<p><strong>6. Aceptación</strong></p>
+
+<p>
+  El acceso y utilización de la Experiencia implica la aceptación plena de los presentes Términos y Condiciones.
+</p>
+
+<p>
+  Si el usuario no estuviera de acuerdo con los aspectos contenidos en el presente documento, se recomienda la no utilización de la Aplicación.
+</p>
+    </div>
+
+    <div class="terms-actions">
+      <button class="btn" type="button" id="acceptTermsBtn">Aceptar</button>
+      <button class="terms-back-btn" type="button" id="backFromTermsBtn">Volver</button>
+    </div>
+  </article>
+</section>
+    <!-- =========================================================
+      PANTALLA 2 / HISTORIA
+    ========================================================== -->
+    <section class="screen story-screen" data-screen="story" aria-label="Historia">
+      <article class="panel story-panel">
+        <div class="stars-row" aria-hidden="true">★★★★</div>
+
+        <div class="story-text">
+          <p><strong>Uruguay tiene cuatro mundiales:<br />1924, 1928, 1930 y 1950.</strong></p>
+          <p>Cuatro estrellas que no solo marcaron nuestra historia, sino la del fútbol mundial.</p>
+          <p><strong>Son títulos reconocidos por FIFA.</strong></p>
+          <p>Y no solo representan una forma de jugar. Constituyen la identidad de todo un país.</p>
+          <p><strong>La historia no puede reescribirse.</strong></p>
+          <p>Sin embargo, hay quienes en los últimos años han querido ponerla en duda.</p>
+          <p><strong>Un homenaje que llega al cielo.</strong></p>
+          <p>De la mano de Burger King, para ponerle fin a este debate, de una vez y para siempre.</p>
+        </div>
+
+        <div class="story-divider"></div>
+        <button class="btn" type="button" data-next="steps">Continuar</button>
+      </article>
+    </section>
+
+    <!-- =========================================================
+      PANTALLA 3 / INSTRUCCIONES
+    ========================================================== -->
+    <section class="screen steps-screen" data-screen="steps" aria-label="Tres simples pasos">
+  <div class="steps-content">
+    <h1 class="steps-title">Tres simples pasos</h1>
+
+    <article class="panel step-card step-reveal" style="--step-delay: 0.10s;">
+      <h2>Paso 1</h2>
+      <div class="step-line"></div>
+      <p>Abrí el visor de la bóveda celeste para ver las estrellas.</p>
+    </article>
+
+    <article class="panel step-card step-reveal" style="--step-delay: 0.28s;">
+      <h2>Paso 2</h2>
+      <div class="step-line"></div>
+      <p>Seguí la flecha para encontrar las estrellas.</p>
+    </article>
+
+    <article class="panel step-card step-reveal" style="--step-delay: 0.46s;">
+      <h2>Paso 3</h2>
+      <div class="step-line"></div>
+      <p>Tocá una estrella para interactuar con su contenido.</p>
+    </article>
+
+    <div class="start-btn-wrap step-reveal" style="--step-delay: 0.66s;">
+      <button class="btn" type="button" id="openSkyBtn">Comenzar</button>
+    </div>
+  </div>
+</section>
+
+   <!-- =========================================================
+  PANTALLA 4 / ACCESO A SENSORES
+========================================================== -->
+<section class="screen sensor-gate-screen" data-screen="sensor-gate" aria-label="Acceso a sensores">
+  <div class="sensor-gate-content">
+    <div class="loader-stars sensor-gate-stars" aria-hidden="true">
+      <span class="loader-star is-filled">★</span>
+      <span class="loader-star is-filled">★</span>
+      <span class="loader-star is-filled">★</span>
+      <span class="loader-star">☆</span>
+    </div>
+
+    <h1 class="hero-title sensor-gate-title" aria-label="Estrellas Reales">
+      <span class="top">Estrellas</span>
+      <span class="bottom">Reales</span>
+    </h1>
+
+    <p class="sensor-gate-copy">
+      Para abrir el visor celeste, necesitamos activar los sensores de movimiento y ubicación de tu celular.
+    </p>
+
+   
+  </div>
+</section>
+  </main>
+
+  <script>
+    /* =========================================================
+      CONFIGURACIÓN DE ASSETS A PRECARGAR
+      Agregá acá todos los fondos, logos, texturas, imágenes, JSON, etc.
+      La pantalla de carga queda activa hasta que esto termine.
+    ========================================================= */
+
+const ASSETS_TO_PRELOAD = [
+  "assets/img/bg-stars.jpg",
+  "assets/img/logo-burger-king-white.svg",
+  "assets/img/logo-auf-white.svg",
+
+  "assets/img/extra/a.png",
+  "assets/img/extra/b.png",
+  "assets/img/extra/c.png",
+  "assets/img/extra/d.png",
+  "assets/img/extra/e.png",
+];
+
+    const SCREENS = {
+  loading: document.querySelector('[data-screen="loading"]'),
+  error: document.querySelector('[data-screen="error"]'),
+  notStarted: document.querySelector('[data-screen="not-started"]'),
+  ended: document.querySelector('[data-screen="ended"]'),
+  desktop: document.querySelector('[data-screen="desktop"]'),
+  product: document.querySelector('[data-screen="product"]'),
+
+  register: document.querySelector('[data-screen="register"]'),
+  terms: document.querySelector('[data-screen="terms"]'),
+  story: document.querySelector('[data-screen="story"]'),
+  steps: document.querySelector('[data-screen="steps"]'),
+  sensorGate: document.querySelector('[data-screen="sensor-gate"]'),
+};
+
+    const state = {
+      currentScreen: "loading",
+      loaderInterval: null,
+      loaderStep: 0,
+      user: {
+        name: "",
+        email: "",
+      },
+    };
+
+    function resetStepsAnimation(screen) {
+  if (!screen || !screen.classList.contains("steps-screen")) return;
+
+  const items = screen.querySelectorAll(".step-reveal");
+
+  items.forEach((item) => {
+    item.style.animation = "none";
+    void item.offsetHeight;
+    item.style.animation = "";
+  });
+}
+
+function showScreen(screenName) {
+  const current = SCREENS[state.currentScreen];
+  const next = SCREENS[screenName];
+  if (!next || current === next) return;
+
+  if (current) {
+    current.classList.add("is-leaving");
+    current.classList.remove("is-active");
   }
 
-  function generarEstrellasExtra(cantidad = 520) {
-    const extra = [];
-    for (let i = 0; i < cantidad; i++) {
-      const r1 = seededRandom(i * 1.137 + 11.7);
-      const r2 = seededRandom(i * 1.913 + 27.1);
-      const r3 = seededRandom(i * 2.271 + 41.9);
+  resetStepsAnimation(next);
 
-      extra.push({
-        id: `extra_${i + 1}`,
-        n: `Star ${String(i + 1).padStart(3, '0')}`,
-        ra: r1 * 24,
-        dec: Math.asin((r2 * 2) - 1) * 180 / Math.PI,
-        mag: 1.5 + r3 * 4.5,
-        extra: true
+  window.setTimeout(() => {
+    if (current) current.classList.remove("is-leaving");
+    next.classList.add("is-active");
+    state.currentScreen = screenName;
+  }, 260);
+}
+
+    function startStarLoader() {
+      const stars = Array.from(document.querySelectorAll(".loader-star"));
+
+      state.loaderInterval = window.setInterval(() => {
+        state.loaderStep = (state.loaderStep % 4) + 1;
+
+        stars.forEach((star, index) => {
+          star.classList.toggle("is-filled", index < state.loaderStep);
+          star.textContent = index < state.loaderStep ? "★" : "☆";
+        });
+      }, 280);
+    }
+
+    function stopStarLoader() {
+      if (state.loaderInterval) {
+        window.clearInterval(state.loaderInterval);
+        state.loaderInterval = null;
+      }
+    }
+
+    function preloadImage(src) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve({ src, ok: true });
+        img.onerror = () => resolve({ src, ok: false });
+        img.src = src;
       });
     }
-    return extra;
-  }
 
-  const estrellasExtra = generarEstrellasExtra(520);
-  const todasLasEstrellas = [...estrellas, ...estrellasExtra];
+    async function preloadAssets() {
+      const imagePromises = ASSETS_TO_PRELOAD.map(preloadImage);
 
-  const constelaciones = [
-    ['betelgeuse', 'bellatrix'], ['bellatrix', 'rigel'], ['rigel', 'saiph'], ['saiph', 'betelgeuse'],
-    ['mintaka', 'alnilam'], ['alnilam', 'alnitak'],
-    ['gacrux', 'acrux'], ['mimosa', 'imai']
-  ];
+      const fontPromise = document.fonts && document.fonts.ready
+        ? document.fonts.ready.catch(() => null)
+        : Promise.resolve(null);
 
-  function init3D() {
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 2500);
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.getElementById('canvas-container').appendChild(renderer.domElement);
+      const minLoadingTime = new Promise((resolve) => window.setTimeout(resolve, 1200));
 
-    starGroup = new THREE.Group();
-    scene.add(starGroup);
-
-    raycaster = new THREE.Raycaster();
-    raycaster.params.Points.threshold = 15;
-    centerScreen = new THREE.Vector2(0, 0);
-
-    const ringGeo = new THREE.RingGeometry(35, 38, 32);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.8
-    });
-    hoverRing = new THREE.Mesh(ringGeo, ringMat);
-    hoverRing.visible = false;
-    scene.add(hoverRing);
-
-    animar();
-  }
-
-  function azAltToVector(azimuth, altitude, radius = 500) {
-    const azRad = THREE.MathUtils.degToRad(azimuth);
-    const altRad = THREE.MathUtils.degToRad(altitude);
-    return new THREE.Vector3(
-      radius * Math.cos(altRad) * Math.sin(azRad),
-      radius * Math.sin(altRad),
-      -radius * Math.cos(altRad) * Math.cos(azRad)
-    );
-  }
-
-  function generarCieloReal() {
-    const fechaActual = new Date();
-    const observador = new Astronomy.Observer(usuarioLat, usuarioLon, 0);
-    const posicionesEstrellas = {};
-
-    planetas.forEach(cuerpo => {
-      const equ_2000 = Astronomy.Equator(cuerpo, fechaActual, observador, true, true);
-      const horizonte = Astronomy.Horizon(fechaActual, observador, equ_2000.ra, equ_2000.dec, 'normal');
-      const pos = azAltToVector(horizonte.azimuth, horizonte.altitude, 500);
-
-      const size = (cuerpo === 'Sun' || cuerpo === 'Moon') ? 16 : 8;
-      const mesh = new THREE.Mesh(
-        new THREE.SphereGeometry(size, 32, 32),
-        new THREE.MeshBasicMaterial({ color: cuerpo === 'Sun' ? 0xffdd44 : 0xeeeeee })
-      );
-      mesh.position.copy(pos);
-      mesh.userData = {
-        nombre: cuerpo === 'Sun' ? 'Sol' : cuerpo === 'Moon' ? 'Luna' : cuerpo,
-        tipo: 'Sistema Solar'
-      };
-
-      starGroup.add(mesh);
-      objetosInteractivos.push(mesh);
-      astrosDinamicos.push({ mesh: mesh, tipoRef: 'planeta', id: cuerpo });
-    });
-
-    todasLasEstrellas.forEach(estrella => {
-      const horizonte = Astronomy.Horizon(fechaActual, observador, estrella.ra, estrella.dec, 'normal');
-      const pos = azAltToVector(horizonte.azimuth, horizonte.altitude, 800);
-      posicionesEstrellas[estrella.id] = pos;
-
-      const tam = estrella.extra ? Math.max(1.2, 4.2 - ((estrella.mag ?? 4) * 0.55)) : 5;
-      const mesh = new THREE.Mesh(
-        new THREE.SphereGeometry(tam, estrella.extra ? 8 : 16, estrella.extra ? 8 : 16),
-        new THREE.MeshBasicMaterial({ color: 0xffffff })
-      );
-      mesh.position.copy(pos);
-      mesh.userData = {
-        nombre: estrella.n,
-        tipo: estrella.extra
-          ? 'Estrella de fondo'
-          : (estrella.id.includes('scga') ? 'Catálogo Córdoba' : 'Estrella Principal')
-      };
-
-      starGroup.add(mesh);
-      if (!estrella.extra) {
-        objetosInteractivos.push(mesh);
-      }
-      astrosDinamicos.push({ mesh: mesh, tipoRef: 'estrella', ra: estrella.ra, dec: estrella.dec, id: estrella.id, extra: !!estrella.extra, mag: estrella.mag ?? null });
-    });
-
-    const lineMaterial = new THREE.LineBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.2
-    });
-
-    constelaciones.forEach(par => {
-      if (posicionesEstrellas[par[0]] && posicionesEstrellas[par[1]]) {
-        const puntos = [posicionesEstrellas[par[0]], posicionesEstrellas[par[1]]];
-        const lineGeo = new THREE.BufferGeometry().setFromPoints(puntos);
-        const linea = new THREE.Line(lineGeo, lineMaterial);
-
-        starGroup.add(linea);
-        astrosDinamicos.push({ mesh: linea, tipoRef: 'linea', p1: par[0], p2: par[1] });
-      }
-    });
-
-    const dustGeo = new THREE.BufferGeometry();
-    const dustVerts = [];
-    for (let i = 0; i < 1500; i++) {
-      const rPos = azAltToVector(Math.random() * 360, (Math.random() * 180) - 90, 1000);
-      dustVerts.push(rPos.x, rPos.y, rPos.z);
+      await Promise.all([
+        Promise.all(imagePromises),
+        fontPromise,
+        minLoadingTime,
+      ]);
     }
-    dustGeo.setAttribute('position', new THREE.Float32BufferAttribute(dustVerts, 3));
-    starGroup.add(new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: 0x555555, size: 2 })));
+function setIndexLoadingText(title = "Cargando", subtitle = "Preparando experiencia") {
+  const loadingScreen = SCREENS.loading;
+  if (!loadingScreen) return;
 
-    setInterval(actualizarTiempoYPosiciones, 60000);
+  const titleEl = loadingScreen.querySelector(".hero-title");
+  const subtitleEl = loadingScreen.querySelector(".loading-copy, .subtitle, p");
+
+  if (titleEl) {
+    titleEl.innerHTML = `
+      <span class="top">Estrellas</span>
+      <span class="bottom">Reales</span>
+    `;
   }
 
-  function actualizarTiempoYPosiciones() {
-    const nuevaFecha = new Date();
-    const observador = new Astronomy.Observer(usuarioLat, usuarioLon, 0);
-    const posicionesActualizadas = {};
+  if (subtitleEl) {
+    subtitleEl.textContent = subtitle;
+  }
+}
 
-    astrosDinamicos.forEach(astro => {
-      if (astro.tipoRef === 'planeta' || astro.tipoRef === 'estrella') {
-        let horizonte;
-        if (astro.tipoRef === 'planeta') {
-          const equ_2000 = Astronomy.Equator(astro.id, nuevaFecha, observador, true, true);
-          horizonte = Astronomy.Horizon(nuevaFecha, observador, equ_2000.ra, equ_2000.dec, 'normal');
-        } else {
-          horizonte = Astronomy.Horizon(nuevaFecha, observador, astro.ra, astro.dec, 'normal');
+function requestMotionPermissionFromIndex() {
+  return new Promise(async (resolve) => {
+    if (
+      typeof DeviceOrientationEvent !== "undefined" &&
+      typeof DeviceOrientationEvent.requestPermission === "function"
+    ) {
+      try {
+        const permission = await DeviceOrientationEvent.requestPermission();
+        resolve(permission === "granted");
+      } catch (error) {
+        resolve(false);
+      }
+
+      return;
+    }
+
+    // Android / desktop normalmente no necesita requestPermission explícito.
+    resolve(true);
+  });
+}
+
+function requestGpsFromIndex() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve({
+        ok: false,
+        lat: null,
+        lon: null,
+      });
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        resolve({
+          ok: true,
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+        });
+      },
+      () => {
+        resolve({
+          ok: false,
+          lat: null,
+          lon: null,
+        });
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 9000,
+        maximumAge: 60000,
+      }
+    );
+  });
+}
+
+async function prepararYEntrarBoveda() {
+  const openSkyBtn = document.getElementById("openSkyBtn");
+  if (openSkyBtn) openSkyBtn.disabled = true;
+
+  sessionStorage.removeItem("er_lat");
+  sessionStorage.removeItem("er_lon");
+  sessionStorage.removeItem("er_manual_mode");
+  sessionStorage.removeItem("er_permissions_from_index");
+
+  setIndexLoadingText("Estrellas Reales", "Preparando la bóveda celeste...");
+  showScreen("loading");
+  startStarLoader();
+
+  const motionGranted = await requestMotionPermissionFromIndex();
+
+  const gps = await requestGpsFromIndex();
+
+  if (gps.ok) {
+    sessionStorage.setItem("er_lat", String(gps.lat));
+    sessionStorage.setItem("er_lon", String(gps.lon));
+  }
+
+  /*
+    Si sensores o GPS fallan, entramos igual,
+    pero dejamos listo el modo manual en la bóveda.
+  */
+  if (!motionGranted || !gps.ok) {
+    sessionStorage.setItem("er_manual_mode", "1");
+  } else {
+    sessionStorage.setItem("er_manual_mode", "0");
+  }
+
+  sessionStorage.setItem("er_permissions_from_index", "1");
+
+  window.location.href = "./boveda.html?start=1";
+}
+    function setupNavigation() {
+      document.querySelectorAll("[data-next]").forEach((button) => {
+      button.addEventListener("click", () => {
+    showScreen(button.dataset.next);
+      });
+    });
+   const openSkyBtn = document.getElementById("openSkyBtn");
+
+if (openSkyBtn) {
+  openSkyBtn.addEventListener("click", prepararYEntrarBoveda);
+}
+const openTermsBtn = document.getElementById("openTermsBtn");
+const acceptTermsBtn = document.getElementById("acceptTermsBtn");
+const backFromTermsBtn = document.getElementById("backFromTermsBtn");
+const termsInput = document.getElementById("termsInput");
+
+if (openTermsBtn) {
+  openTermsBtn.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    showScreen("terms");
+  });
+}
+
+if (backFromTermsBtn) {
+  backFromTermsBtn.addEventListener("click", () => {
+    showScreen("register");
+  });
+}
+
+if (acceptTermsBtn) {
+  acceptTermsBtn.addEventListener("click", () => {
+    if (termsInput) termsInput.checked = true;
+    showScreen("register");
+  });
+}
+      const form = document.getElementById("registerForm");
+      const nameInput = document.getElementById("nameInput");
+      const emailInput = document.getElementById("emailInput");
+      
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+
+        const name = nameInput.value.trim();
+        const email = emailInput.value.trim();
+        const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+        if (!name) {
+          nameInput.focus();
+          return;
         }
 
-        const nuevaPos = azAltToVector(
-          horizonte.azimuth,
-          horizonte.altitude,
-          astro.tipoRef === 'planeta' ? 500 : 800
-        );
+        if (!email || !emailIsValid) {
+          emailInput.focus();
+          return;
+        }
 
-        astro.mesh.position.copy(nuevaPos);
-        if (astro.id) posicionesActualizadas[astro.id] = nuevaPos;
-      }
-    });
+        if (!termsInput.checked) {
+          termsInput.focus();
+          return;
+        }
 
-    astrosDinamicos.forEach(astro => {
-      if (astro.tipoRef === 'linea' && posicionesActualizadas[astro.p1] && posicionesActualizadas[astro.p2]) {
-        const positions = astro.mesh.geometry.attributes.position.array;
-        positions[0] = posicionesActualizadas[astro.p1].x;
-        positions[1] = posicionesActualizadas[astro.p1].y;
-        positions[2] = posicionesActualizadas[astro.p1].z;
-        positions[3] = posicionesActualizadas[astro.p2].x;
-        positions[4] = posicionesActualizadas[astro.p2].y;
-        positions[5] = posicionesActualizadas[astro.p2].z;
-        astro.mesh.geometry.attributes.position.needsUpdate = true;
-      }
-    });
-  }
+        state.user.name = name;
+        state.user.email = email;
 
-  function procesarSensores(e) {
-    if (e.alpha === null) return;
+        // =====================================================
+        // ACÁ PODÉS ENVIAR EL REGISTRO AL BACKEND
+        // fetch("/api/register", { method: "POST", body: JSON.stringify(state.user) })
+        // =====================================================
 
-    currentAlpha = e.alpha;
-    currentBeta = e.beta ?? 0;
-    currentGamma = e.gamma ?? 0;
-
-    let absoluteHeading = null;
-
-    if (typeof e.webkitCompassHeading === 'number') {
-      absoluteHeading = e.webkitCompassHeading;
-      brujulaDetectada = true;
-    } else if (e.absolute === true && typeof e.alpha === 'number') {
-      absoluteHeading = (360 - e.alpha + 360) % 360;
-      brujulaDetectada = true;
+        showScreen("story");
+      });
     }
 
-    if (absoluteHeading !== null) {
-      headingOffset = absoluteHeading;
+    function lockIOSViewportQuirks() {
+      // Ayuda a evitar zoom involuntario y comportamientos raros de Safari iOS.
+      document.addEventListener("gesturestart", (event) => event.preventDefault(), { passive: false });
 
-      if (northCalibration === null) {
-        northCalibration = absoluteHeading;
-      }
+      let lastTouchEnd = 0;
+      document.addEventListener("touchend", (event) => {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) event.preventDefault();
+        lastTouchEnd = now;
+      }, { passive: false });
     }
-  }
+function getEntryScreenFromParams() {
+  const params = new URLSearchParams(window.location.search);
 
-  async function iniciarApp() {
-    document.querySelector('.title-flat').innerText = "AUTORIZANDO...";
+  if (params.get("desktop") === "1") return "desktop";
+  if (params.get("error") === "1") return "error";
+  if (params.get("not_started") === "1") return "notStarted";
+  if (params.get("ended") === "1") return "ended";
+  if (params.get("product") === "1") return "product";
 
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-      try {
-        const permisoSensores = await DeviceOrientationEvent.requestPermission();
-        if (permisoSensores !== 'granted') return alert("Permiso de sensores denegado.");
-      } catch (e) {
-        return alert("Interactúa con la pantalla primero.");
-      }
-    }
-
-    document.querySelector('.title-flat').innerText = "BUSCANDO GPS...";
-
-    navigator.geolocation.getCurrentPosition((pos) => {
-      usuarioLat = pos.coords.latitude;
-      usuarioLon = pos.coords.longitude;
-
-      document.getElementById('sys-info').innerText = `LAT:${usuarioLat.toFixed(2)} // LON:${usuarioLon.toFixed(2)}`;
-      document.getElementById('sys-info').classList.remove('oculto');
-
-      generarCieloReal();
-
-      northCalibration = null;
-
-      if ('ondeviceorientationabsolute' in window) {
-        window.addEventListener('deviceorientationabsolute', procesarSensores);
-      } else {
-        window.addEventListener('deviceorientation', procesarSensores);
-      }
-
-      setTimeout(() => {
-        uiLayer.classList.add('oculto');
-        document.getElementById('mira').style.display = 'block';
-        document.getElementById('compass-container').classList.remove('oculto');
-        document.getElementById('compass-pointer').classList.remove('oculto');
-        document.getElementById('orientation-panel').classList.remove('oculto');
-      }, 500);
-
-    }, () => alert("Error de GPS."));
-  }
-
-  function azimuthToDirection(azimuth) {
-    const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
-    return dirs[Math.round((((azimuth % 360) + 360) % 360) / 45) % 8];
-  }
-function shortestAngleDiff(from, to) {
-  let diff = to - from;
-  while (diff > 180) diff -= 360;
-  while (diff < -180) diff += 360;
-  return diff;
+  return null;
 }
-  function directionToIndex(dir) {
-    return ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'].indexOf(dir);
+    async function init() {
+  lockIOSViewportQuirks();
+  setupNavigation();
+  startStarLoader();
+
+  await preloadAssets();
+
+  stopStarLoader();
+
+  const entryScreen = getEntryScreenFromParams();
+
+  if (entryScreen) {
+    showScreen(entryScreen);
+    return;
   }
 
-  function getObserverLookFromCamera() {
-    const dir = new THREE.Vector3();
-    camera.getWorldDirection(dir);
-
-    let azimuth = THREE.MathUtils.radToDeg(Math.atan2(dir.x, -dir.z));
-    azimuth = (azimuth + 360) % 360;
-
-    const altitude = THREE.MathUtils.radToDeg(Math.asin(dir.y));
-
-    return {
-      azimuth,
-      altitude,
-      direction: azimuthToDirection(azimuth)
-    };
-  }
-
-  function actualizarPanelOrientaciones() {
-  const look = getObserverLookFromCamera();
-
-  lookDirectionVal.textContent = look.direction;
-  lookAzimuthVal.textContent = `${look.azimuth.toFixed(1)}°`;
-  lookAltitudeVal.textContent = `${look.altitude.toFixed(1)}°`;
-  northRefVal.textContent = northCalibration != null ? `${northCalibration.toFixed(1)}°` : '--';
-
-  // =========================
-  // BRÚJULA INFERIOR FLUIDA
-  // =========================
-
-  if (compassAzimuthVisual === null) {
-    compassAzimuthVisual = look.azimuth;
-  }
-
-  // suavizado angular
-  const diff = shortestAngleDiff(compassAzimuthVisual, look.azimuth);
-  compassAzimuthVisual += diff * 0.14;
-  compassAzimuthVisual = (compassAzimuthVisual + 360) % 360;
-
-  // Conversión de azimut a píxeles:
-  // 45° = 64px
-  const pxPerDegree = COMPASS_STEP / 45;
-
-  // Usamos la segunda vuelta (la del medio) para que siempre haya margen
-  // + COMPASS_STEP/2 centra la letra exactamente en la flecha
-  const x = -(
-    COMPASS_CYCLE_WIDTH +               // segunda vuelta
-    (compassAzimuthVisual * pxPerDegree) +
-    (COMPASS_STEP / 2)                  // centra la letra en la flecha
-  );
-
-  if (compassStrip) {
-    compassStrip.style.transform = `translateX(${x}px)`;
-  }
+  showScreen("register");
 }
 
-  function actualizarCamaraYUI() {
-  if (!brujulaDetectada) return;
-
-  const alphaRad = brujulaDetectada
-    ? THREE.MathUtils.degToRad(360 - headingOffset)
-    : THREE.MathUtils.degToRad(currentAlpha);
-
-  const betaRad = THREE.MathUtils.degToRad(currentBeta || 0);
-  const gammaRad = THREE.MathUtils.degToRad(currentGamma || 0);
-  const screenRot = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
-
-  // Quaternion crudo del dispositivo
-  const qDispositivo = new THREE.Quaternion().setFromEuler(
-    new THREE.Euler(betaRad, alphaRad, -gammaRad, 'YXZ')
-  );
-
-  qDispositivo.multiply(
-    new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5))
-  );
-
-  qDispositivo.multiply(
-    new THREE.Quaternion().setFromAxisAngle(
-      new THREE.Vector3(0, 0, 1),
-      -screenRot
-    )
-  );
-
-  // En vez de copiar el roll completo a la cámara,
-  // sacamos solo la DIRECCIÓN hacia donde apunta.
-  const forward = new THREE.Vector3(0, 0, -1)
-    .applyQuaternion(qDispositivo)
-    .normalize();
-
-  // Convertimos esa dirección a azimut/altura
-  let azimuth = THREE.MathUtils.radToDeg(Math.atan2(forward.x, -forward.z));
-  azimuth = (azimuth + 360) % 360;
-
-  const altitude = THREE.MathUtils.radToDeg(Math.asin(forward.y));
-
-  // Reconstruimos una dirección limpia sin roll
-  const targetDir = azAltToVector(azimuth, altitude, 10);
-
-  camera.position.set(0, 0, 0);
-  camera.up.set(0, 1, 0);
-  camera.lookAt(targetDir);
-
-  // sombra horizonte
-  if (forward.y < 0.1) {
-    let opacidadSombra = 1.0 - ((forward.y + 0.2) / 0.3);
-    if (opacidadSombra > 1) opacidadSombra = 1;
-    if (opacidadSombra < 0) opacidadSombra = 0;
-    horizonShadow.style.opacity = opacidadSombra;
-  } else {
-    horizonShadow.style.opacity = 0;
-  }
-
-  actualizarPanelOrientaciones();
-}
-
-  function verificarIntersecciones() {
-    raycaster.setFromCamera(centerScreen, camera);
-    const colisiones = raycaster.intersectObjects(objetosInteractivos);
-
-    if (colisiones.length > 0) {
-      const objetivo = colisiones[0].object;
-
-      if (objetoEnfocado !== objetivo) {
-        if (objetoEnfocado) objetoEnfocado.scale.set(1, 1, 1);
-        objetoEnfocado = objetivo;
-        objetoEnfocado.scale.set(1.5, 1.5, 1.5);
-      }
-
-      hoverRing.position.copy(objetivo.position);
-      hoverRing.lookAt(camera.position);
-      hoverRing.visible = true;
-
-      hudName.innerText = objetivo.userData.nombre;
-      hudDesc.innerText = objetivo.userData.tipo;
-      hud.style.opacity = 1;
-    } else {
-      if (objetoEnfocado) {
-        objetoEnfocado.scale.set(1, 1, 1);
-        objetoEnfocado = null;
-      }
-      hoverRing.visible = false;
-      hud.style.opacity = 0;
-    }
-  }
-
-  function animar() {
-    requestAnimationFrame(animar);
-    actualizarCamaraYUI();
-    verificarIntersecciones();
-    renderer.render(scene, camera);
-  }
-
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
-
-  init3D();
-</script>
+    window.addEventListener("DOMContentLoaded", init);
+  </script>
 </body>
 </html>
