@@ -7,6 +7,13 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Estrellas Reales</title>
 
+  <!--
+    API base URL. Default (commented out / absent) = same origin (production).
+    For local dev with the API on another origin, uncomment and set the domain:
+    <meta name="er-api-base" content="http://localhost:8000" />
+  -->
+  <script src="assets/js/er-api.js"></script>
+
   <style>
     /* =========================================================
       FUENTES
@@ -369,6 +376,18 @@
   line-height: 1.18;
   font-weight: 200;
 }
+
+    .register-error {
+      margin: 0 0 clamp(12px, 2vh, 18px);
+      color: #ffd2d2;
+      font-size: clamp(11px, 2.6vw, 14px);
+      line-height: 1.25;
+      font-weight: 300;
+    }
+
+    .register-error[hidden] {
+      display: none;
+    }
 
     .field {
       display: block;
@@ -1332,6 +1351,8 @@
   </span>
 </label>
 
+          <p class="register-error" id="registerError" role="alert" hidden></p>
+
           <div class="register-btn-wrap">
             <button class="btn" type="submit">Enviar</button>
           </div>
@@ -1601,6 +1622,8 @@ function showScreen(screenName) {
     next.classList.add("is-active");
     state.currentScreen = screenName;
   }, 260);
+
+  ER.api.track(ER.EVENTS.page_view, { screen: screenName });
 }
 
     function startStarLoader() {
@@ -1726,6 +1749,8 @@ async function prepararYEntrarBoveda() {
   const openSkyBtn = document.getElementById("openSkyBtn");
   if (openSkyBtn) openSkyBtn.disabled = true;
 
+  ER.api.track(ER.EVENTS.start_experience);
+
   sessionStorage.removeItem("er_lat");
   sessionStorage.removeItem("er_lon");
   sessionStorage.removeItem("er_manual_mode");
@@ -1756,7 +1781,11 @@ async function prepararYEntrarBoveda() {
 
   sessionStorage.setItem("er_permissions_from_index", "1");
 
-  window.location.href = "./boveda.html?start=1";
+  // Carry the (fake) token forward so the bóveda can rewrite its address bar back
+  // to the canonical /play?token=<fake> share link (see keepUrlUnderPlay in boveda.html).
+  const token = new URLSearchParams(window.location.search).get("token");
+  const dest = "./boveda.html?start=1" + (token ? "&t=" + encodeURIComponent(token) : "");
+  window.location.href = dest;
 }
     function setupNavigation() {
       document.querySelectorAll("[data-next]").forEach((button) => {
@@ -1778,6 +1807,7 @@ if (openTermsBtn) {
   openTermsBtn.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
+    ER.api.track(ER.EVENTS.view_terms);
     showScreen("terms");
   });
 }
@@ -1797,8 +1827,22 @@ if (acceptTermsBtn) {
       const form = document.getElementById("registerForm");
       const nameInput = document.getElementById("nameInput");
       const emailInput = document.getElementById("emailInput");
-      
-      form.addEventListener("submit", (event) => {
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const registerError = document.getElementById("registerError");
+
+      function showRegisterError(message) {
+        if (!registerError) return;
+        registerError.textContent = message;
+        registerError.hidden = false;
+      }
+
+      function clearRegisterError() {
+        if (!registerError) return;
+        registerError.textContent = "";
+        registerError.hidden = true;
+      }
+
+      form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
         const name = nameInput.value.trim();
@@ -1823,12 +1867,27 @@ if (acceptTermsBtn) {
         state.user.name = name;
         state.user.email = email;
 
-        // =====================================================
-        // ACÁ PODÉS ENVIAR EL REGISTRO AL BACKEND
-        // fetch("/api/register", { method: "POST", body: JSON.stringify(state.user) })
-        // =====================================================
+        clearRegisterError();
+        if (submitBtn) submitBtn.disabled = true;
 
-        showScreen("story");
+        try {
+          await ER.api.register(email);
+          showScreen("story");
+        } catch (error) {
+          if (error && error.status === 409) {
+            // Backend returns 409 when the email is already tied to another session.
+            showRegisterError(
+              "Ese email ya está registrado. Probá con otro para participar."
+            );
+          } else {
+            showRegisterError(
+              "No pudimos completar tu registro. Verificá tu conexión e intentá de nuevo."
+            );
+          }
+          emailInput.focus();
+        } finally {
+          if (submitBtn) submitBtn.disabled = false;
+        }
       });
     }
 
@@ -1854,6 +1913,16 @@ function getEntryScreenFromParams() {
 
   return null;
 }
+
+function isDesktopDevice() {
+  // Desktop = not a mobile/tablet UA AND no coarse-pointer touch input.
+  // Phones and touch tablets keep the full experience; only true
+  // desktops/laptops are sent to the "use your phone" screen.
+  const mobileUA = /Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const coarseTouch = window.matchMedia("(pointer: coarse)").matches &&
+                      (navigator.maxTouchPoints > 0 || "ontouchstart" in window);
+  return !mobileUA && !coarseTouch;
+}
     async function init() {
   lockIOSViewportQuirks();
   setupNavigation();
@@ -1870,7 +1939,22 @@ function getEntryScreenFromParams() {
     return;
   }
 
-  showScreen("register");
+  // Desktop visitors can't use motion/location/camera — point them to mobile.
+  // (?desktop=1 above still forces this screen manually.)
+  if (isDesktopDevice()) {
+    showScreen("desktop");
+    return;
+  }
+
+  // Route from real session state. If /me is unreachable, fall back to register.
+  const me = await ER.api.me().catch(() => null);
+
+  if (me?.email) {
+    state.user.email = me.email;
+    showScreen("steps"); // already registered → resume at "Comenzar"
+  } else {
+    showScreen("register");
+  }
 }
 
     window.addEventListener("DOMContentLoaded", init);
