@@ -1157,6 +1157,199 @@
     max-height: 43svh;
   }
 }
+/* =========================================================
+   FIX IPHONE / SAFARI: PANTALLAS INDEX SCROLLEABLES
+========================================================= */
+
+:root {
+  --app-height: 100dvh;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+.app {
+  height: var(--app-height);
+  min-height: var(--app-height);
+  overflow: hidden;
+}
+
+/* Todas las pantallas pueden scrollear si el contenido no entra */
+.screen {
+  height: var(--app-height);
+  min-height: var(--app-height);
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  scrollbar-width: none;
+  padding-bottom: calc(24px + var(--safe-bottom));
+}
+
+.screen::-webkit-scrollbar {
+  display: none;
+}
+
+/* La pantalla de carga no necesita scroll */
+.loading-screen {
+  overflow: hidden !important;
+  touch-action: manipulation;
+}
+
+.loading-content {
+  height: 100%;
+}
+
+/* Evita que el contenido quede centrado y cortado cuando es más alto que la pantalla */
+.register-screen,
+.story-screen,
+.steps-screen,
+.sensor-gate-screen,
+.terms-screen,
+.extra-screen {
+  place-items: start center !important;
+}
+
+/* Si entra, queda centrado. Si no entra, arranca arriba y permite scroll */
+.register-screen .content,
+.story-screen .story-panel,
+.steps-screen .steps-content,
+.sensor-gate-screen .sensor-gate-content,
+.terms-screen .terms-panel,
+.extra-screen .extra-content {
+  flex-shrink: 0;
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+/* Registro: sacamos el translateY que en iPhone chico ayuda a cortar contenido */
+.register-content {
+  height: auto;
+  min-height: calc(var(--app-height) - 28px - var(--safe-top) - var(--safe-bottom));
+  align-self: auto;
+  padding-top: clamp(18px, 4svh, 38px);
+  padding-bottom: clamp(32px, 6svh, 68px);
+  justify-content: center;
+  transform: scale(var(--screen-scale, 1));
+}
+
+/* Ajuste específico para celulares con poca altura */
+@media (max-width: 560px) and (max-height: 760px) {
+  .register-content {
+    min-height: auto;
+    justify-content: flex-start;
+    padding-top: calc(16px + var(--safe-top));
+    padding-bottom: calc(54px + var(--safe-bottom));
+    transform: none;
+  }
+
+  .logos {
+    margin-top: 0;
+    margin-bottom: 18px;
+    gap: 18px;
+  }
+
+  .logo {
+    height: 34px;
+    max-width: 78px;
+  }
+
+  .hero-title {
+    margin-bottom: 24px;
+  }
+
+  .hero-title .top {
+    font-size: clamp(32px, 9vw, 44px);
+  }
+
+  .hero-title .bottom {
+    font-size: clamp(50px, 15vw, 78px);
+  }
+
+  .register-panel {
+    width: min(82vw, 350px);
+    min-width: 250px;
+    padding: 24px 22px 28px;
+  }
+
+  .intro-copy {
+    margin-bottom: 22px;
+  }
+
+  .field {
+    margin-bottom: 18px;
+  }
+
+  .terms {
+    margin-bottom: 22px;
+  }
+
+  .btn {
+    min-height: 38px;
+  }
+
+  .story-panel {
+    margin-top: 20px;
+    margin-bottom: 34px;
+  }
+
+  .steps-content {
+    margin-top: 20px;
+    margin-bottom: 38px;
+  }
+
+  .sensor-gate-content {
+    min-height: auto;
+    margin-top: 24px;
+    margin-bottom: 42px;
+  }
+}
+
+@media (max-width: 560px) and (max-height: 640px) {
+  .register-content {
+    padding-top: calc(12px + var(--safe-top));
+    padding-bottom: calc(46px + var(--safe-bottom));
+  }
+
+  .logos {
+    margin-bottom: 12px;
+  }
+
+  .logo {
+    height: 30px;
+  }
+
+  .hero-title {
+    margin-bottom: 18px;
+  }
+
+  .hero-title .top {
+    font-size: 30px;
+  }
+
+  .hero-title .bottom {
+    font-size: 48px;
+  }
+
+  .register-panel {
+    padding: 20px 20px 24px;
+  }
+
+  .intro-copy {
+    margin-bottom: 18px;
+  }
+
+  .field {
+    margin-bottom: 14px;
+  }
+
+  .terms {
+    margin-bottom: 16px;
+  }
+}
   </style>
 </head>
 <body>
@@ -1592,7 +1785,20 @@ const ASSETS_TO_PRELOAD = [
         email: "",
       },
     };
+function setRealViewportHeight() {
+  document.documentElement.style.setProperty(
+    "--app-height",
+    `${window.innerHeight}px`
+  );
+}
 
+setRealViewportHeight();
+
+window.addEventListener("resize", setRealViewportHeight);
+
+window.addEventListener("orientationchange", () => {
+  setTimeout(setRealViewportHeight, 250);
+});
     function resetStepsAnimation(screen) {
   if (!screen || !screen.classList.contains("steps-screen")) return;
 
