@@ -1750,7 +1750,9 @@ body {
     ========================================================= */
 
 const ASSETS_TO_PRELOAD = [
+  // INDEX
   "assets/img/bg-stars.jpg",
+  "assets/img/lateral.svg",
   "assets/img/logo-burger-king-white.svg",
   "assets/img/logo-auf-white.svg",
 
@@ -1759,6 +1761,52 @@ const ASSETS_TO_PRELOAD = [
   "assets/img/extra/c.png",
   "assets/img/extra/d.png",
   "assets/img/extra/e.png",
+
+  // BÓVEDA BASE
+  "assets/img/guide-arrow.svg",
+
+  // MISIONES - HERO
+  "assets/img/missions/scga1924.png",
+  "assets/img/missions/scga1928.png",
+  "assets/img/missions/scga1930.png",
+  "assets/img/missions/scga1950.png",
+
+  // 1924
+  "assets/img/missions/img1924.png",
+  "assets/img/missions/img1924-2.png",
+  "assets/img/missions/img1924-3.png",
+  "assets/img/missions/img1924-4.png",
+
+  // 1928
+  "assets/img/missions/img1928.png",
+  "assets/img/missions/img1928-2.png",
+  "assets/img/missions/img1928-3.png",
+
+  // 1930
+  "assets/img/missions/img1930.png",
+  "assets/img/missions/img1930-2.png",
+  "assets/img/missions/img1930-3.png",
+  "assets/img/missions/img1930-4.png",
+  "assets/img/missions/img1930-5.png",
+
+  // 1950
+  "assets/img/missions/img1950.png",
+  "assets/img/missions/img1950-2.png",
+  "assets/img/missions/img1950-3.png",
+  "assets/img/missions/img1950-4.png",
+  "assets/img/missions/img1950-5.png",
+
+  // POSTERS PHONE
+  "assets/img/posters/phone-1924.png",
+  "assets/img/posters/phone-1928.png",
+  "assets/img/posters/phone-1930.png",
+  "assets/img/posters/phone-1950.png",
+
+  // POSTERS DOWNLOAD
+  "assets/img/posters/POSTER_1924.png",
+  "assets/img/posters/POSTER_1928.png",
+  "assets/img/posters/POSTER_1930.png",
+  "assets/img/posters/POSTER_1950.png",
 ];
 
     const SCREENS = {
@@ -1852,30 +1900,63 @@ function showScreen(screenName) {
       }
     }
 
-    function preloadImage(src) {
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => resolve({ src, ok: true });
-        img.onerror = () => resolve({ src, ok: false });
-        img.src = src;
-      });
-    }
+function preloadImage(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    let done = false;
 
-    async function preloadAssets() {
-      const imagePromises = ASSETS_TO_PRELOAD.map(preloadImage);
+    const finish = (ok) => {
+      if (done) return;
+      done = true;
+      resolve({ src, ok });
+    };
 
-      const fontPromise = document.fonts && document.fonts.ready
-        ? document.fonts.ready.catch(() => null)
-        : Promise.resolve(null);
+    img.onload = () => finish(true);
+    img.onerror = () => finish(false);
 
-      const minLoadingTime = new Promise((resolve) => window.setTimeout(resolve, 1200));
+    // Evita que el splash quede colgado infinito si un asset no responde.
+    window.setTimeout(() => finish(false), 18000);
 
-      await Promise.all([
-        Promise.all(imagePromises),
-        fontPromise,
-        minLoadingTime,
-      ]);
-    }
+    img.src = src;
+  });
+}
+
+    async function preloadFontAssets() {
+  if (!document.fonts) return;
+
+  const fontLoads = [
+    document.fonts.load("400 14px FlameSans"),
+    document.fonts.load("700 40px FlameBold"),
+    document.fonts.load("700 40px FlameBoldVariable"),
+    document.fonts.load("700 14px HostGrotesk"),
+  ];
+
+  await Promise.all(fontLoads.map((promise) => promise.catch(() => null)));
+  await document.fonts.ready.catch(() => null);
+}
+
+async function preloadAssets() {
+  const imagePromise = Promise.all(
+    ASSETS_TO_PRELOAD.map(preloadImage)
+  );
+
+  const fontPromise = preloadFontAssets();
+
+  // Esto cachea también el HTML de bóveda para que la navegación sea más rápida.
+  const bovedaPromise = fetch("./boveda.html", { cache: "force-cache" })
+    .catch(() => null);
+
+  const minLoadingTime = new Promise((resolve) => {
+    window.setTimeout(resolve, 1600);
+  });
+
+  await Promise.all([
+    imagePromise,
+    fontPromise,
+    bovedaPromise,
+    minLoadingTime,
+  ]);
+}
 function setIndexLoadingText(title = "Cargando", subtitle = "Preparando experiencia") {
   const loadingScreen = SCREENS.loading;
   if (!loadingScreen) return;

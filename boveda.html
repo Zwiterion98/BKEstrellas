@@ -2157,6 +2157,10 @@ body.manual-nav-active #canvas-container:active {
     height: 32px;
   }
 }
+/* Ocultar temporalmente switch de fondo */
+#sky-controls .sky-switch:first-child {
+  display: none !important;
+}
 </style>
 </head>
 <body>
@@ -3312,11 +3316,11 @@ function preloadMissionImages(mission) {
 }
 
 function preloadAllMissionImages() {
-  if (!Array.isArray(missionStars)) return;
+  if (!Array.isArray(missionStars)) return Promise.resolve([]);
 
-  missionStars.forEach((mission) => {
-    preloadMissionImages(mission);
-  });
+  return Promise.all(
+    missionStars.map((mission) => preloadMissionImages(mission))
+  );
 }
 function setManualNavigationEnabled(enabled, showFeedback = true) {
   const previousValue = manualNavigationEnabled;
@@ -3405,14 +3409,34 @@ function setupManualDragControls() {
   container.addEventListener('pointerleave', endDrag);
 }
 function preloadPosterAssets() {
-  POSTER_ITEMS.forEach((item) => {
-    [item.phone, item.download].forEach((src) => {
-      const img = new Image();
-      img.src = src;
-    });
-  });
-}
+  const sources = [];
 
+  POSTER_ITEMS.forEach((item) => {
+    sources.push(item.phone);
+    sources.push(item.download);
+  });
+
+  return Promise.all(sources.map(preloadImage));
+}
+let bovedaAssetsPreloadPromise = null;
+
+function preloadBovedaAssets() {
+  if (bovedaAssetsPreloadPromise) return bovedaAssetsPreloadPromise;
+
+  const baseAssets = [
+    "assets/img/logo-burger-king-white.svg",
+    "assets/img/logo-auf-white.svg",
+    "assets/img/guide-arrow.svg",
+  ];
+
+  bovedaAssetsPreloadPromise = Promise.all([
+    Promise.all(baseAssets.map(preloadImage)),
+    preloadAllMissionImages(),
+    preloadPosterAssets(),
+  ]).catch(() => null);
+
+  return bovedaAssetsPreloadPromise;
+}
 function getPosterWrappedIndex(index) {
   return (index + POSTER_ITEMS.length) % POSTER_ITEMS.length;
 }
@@ -4010,7 +4034,7 @@ function fitSysInfoLayout() {
   const storedLat = parseFloat(sessionStorage.getItem("er_lat"));
   const storedLon = parseFloat(sessionStorage.getItem("er_lon"));
 
-  const usarPosicion = (lat, lon) => {
+  const usarPosicion = async (lat, lon) => {
     usuarioLat = lat;
     usuarioLon = lon;
 
@@ -4035,18 +4059,21 @@ function fitSysInfoLayout() {
       setManualNavigationEnabled(true, false);
     }
 
-    setTimeout(() => {
-      detenerLoaderBoveda();
+    await Promise.all([
+  preloadBovedaAssets(),
+  new Promise((resolve) => setTimeout(resolve, 900)),
+]);
 
-      uiLayer.classList.add("oculto");
+detenerLoaderBoveda();
 
-      document.getElementById("compass-container").classList.remove("oculto");
-      document.getElementById("compass-pointer").classList.remove("oculto");
-      document.getElementById("orientation-panel").classList.remove("oculto");
+uiLayer.classList.add("oculto");
 
-      const skyControls = document.getElementById("sky-controls");
-      if (skyControls) skyControls.classList.remove("oculto");
-    }, 700);
+document.getElementById("compass-container").classList.remove("oculto");
+document.getElementById("compass-pointer").classList.remove("oculto");
+document.getElementById("orientation-panel").classList.remove("oculto");
+
+const skyControls = document.getElementById("sky-controls");
+if (skyControls) skyControls.classList.remove("oculto");
   };
 
   if (Number.isFinite(storedLat) && Number.isFinite(storedLon)) {
@@ -5033,8 +5060,7 @@ if (missionModalContinue) {
 ER.api.track(ER.EVENTS.page_view, { page: 'boveda' });
 
 setupSkyControls();
-preloadAllMissionImages();
-preloadPosterAssets();
+preloadBovedaAssets();
 setupPosterScreen();
 init3D();
 const params = new URLSearchParams(window.location.search);
