@@ -1269,24 +1269,44 @@ button:active {
 }
 
 .mission-img {
+  position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: var(--img-ratio, 16 / 9);
   overflow: hidden;
-  background:
-    linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.01)),
-    var(--img-bg, #222);
+  background: #000;
+}
+
+.mission-img.tall {
+  aspect-ratio: var(--img-ratio, 1.25 / 1);
 }
 
 .mission-img.portrait {
-  aspect-ratio: 4 / 5;
+  aspect-ratio: var(--img-ratio, 4 / 5);
 }
 
-.mission-img img,
+.mission-img img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+
+  object-fit: cover;
+  object-position: var(--img-position, center center);
+
+  transform: scale(var(--img-scale, 1.035));
+  transform-origin: var(--img-origin, center center);
+
+  margin: 0;
+  padding: 0;
+}
+
 .mission-mini-map img {
   width: 100%;
   height: 100%;
   display: block;
   object-fit: cover;
+  object-position: center center;
 }
 
 .mission-inline-grid {
@@ -4585,8 +4605,17 @@ function createMissionSection(section) {
 
   if (section.type === 'image') {
   const el = document.createElement('div');
+
   el.className = `mission-img${section.tall ? ' tall' : ''}${section.portrait ? ' portrait' : ''} reveal`;
-  el.style.setProperty('--img-bg', section.bg || '#222');
+
+  el.style.setProperty('--img-bg', section.bg || '#000');
+  el.style.setProperty('--img-position', section.position || 'center center');
+  el.style.setProperty('--img-scale', section.scale || '1.035');
+  el.style.setProperty('--img-origin', section.origin || 'center center');
+
+  if (section.ratio) {
+    el.style.setProperty('--img-ratio', section.ratio);
+  }
 
   const img = document.createElement('img');
   const preloaded = preloadedMissionImages.get(section.src);
