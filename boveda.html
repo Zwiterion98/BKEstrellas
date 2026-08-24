@@ -5,12 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>SkyView Ultimate: brújula por dirección</title>
 
-  <!--
-    API base URL. Default (commented out / absent) = same origin (production).
-    For local dev with the API on another origin, uncomment and set the domain:
-    <meta name="er-api-base" content="http://localhost:8000" />
-  -->
-  <script src="assets/js/er-api.js"></script>
+  <!-- Versión independiente: no usa backend, sesión, token ni analítica. -->
+  <script src="assets/js/er-api-offline.js"></script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
@@ -5099,16 +5095,7 @@ if (params.get("start") === "1") {
   iniciarApp({ fromIndex: true });
 }
 
-// Keep the shareable URL under /play: rewrite the address bar to the canonical
-// /play?token=<fake> link (carried from index as ?t) without reloading. The routing
-// above has already consumed ?start synchronously, so dropping the query here is safe.
-// On reload/share the browser hits /play, which the backend serves as index.html.
-(function keepUrlUnderPlay() {
-  const t = params.get("t");
-  if (t) {
-    history.replaceState(history.state, "", "/play?token=" + encodeURIComponent(t));
-  }
-})();
+// En GitHub Pages se conserva boveda.html?start=1 en la URL.
 </script>
 </body>
 </html>

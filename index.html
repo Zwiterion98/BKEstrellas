@@ -7,12 +7,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Estrellas Reales</title>
 
-  <!--
-    API base URL. Default (commented out / absent) = same origin (production).
-    For local dev with the API on another origin, uncomment and set the domain:
-    <meta name="er-api-base" content="http://localhost:8000" />
-  -->
-  <script src="assets/js/er-api.js"></script>
+  <!-- Versión independiente: no usa backend, sesión, token ni analítica. -->
+  <script src="assets/js/er-api-offline.js"></script>
 
   <style>
     /* =========================================================
@@ -1852,16 +1848,16 @@ body {
 
           <label class="field">
             <span class="sr-only">Nombre</span>
-            <input id="nameInput" name="name" type="text" placeholder="Nombre" autocomplete="name" required />
+            <input id="nameInput" name="name" type="text" placeholder="Nombre" autocomplete="name" />
           </label>
 
           <label class="field">
             <span class="sr-only">Mail</span>
-            <input id="emailInput" name="email" type="email" placeholder="Mail" autocomplete="email" inputmode="email" required />
+            <input id="emailInput" name="email" type="text" placeholder="Mail" autocomplete="email" inputmode="email" />
           </label>
 
           <label class="terms">
-  <input id="termsInput" name="terms" type="checkbox" required />
+  <input id="termsInput" name="terms" type="checkbox" />
   <span class="fake-check" aria-hidden="true"></span>
   <span>
     He leído y acepto los
@@ -2454,10 +2450,8 @@ async function prepararYEntrarBoveda() {
 
   sessionStorage.setItem("er_permissions_from_index", "1");
 
-  // Carry the (fake) token forward so the bóveda can rewrite its address bar back
-  // to the canonical /play?token=<fake> share link (see keepUrlUnderPlay in boveda.html).
-  const token = new URLSearchParams(window.location.search).get("token");
-  const dest = "./boveda.html?start=1" + (token ? "&t=" + encodeURIComponent(token) : "");
+  // Navegación directa para GitHub Pages, sin token ni ruta /play.
+  const dest = "./boveda.html?start=1";
   window.location.href = dest;
 }
     function setupNavigation() {
@@ -2500,67 +2494,14 @@ if (acceptTermsBtn) {
       const form = document.getElementById("registerForm");
       const nameInput = document.getElementById("nameInput");
       const emailInput = document.getElementById("emailInput");
-      const submitBtn = form.querySelector('button[type="submit"]');
-      const registerError = document.getElementById("registerError");
 
-      function showRegisterError(message) {
-        if (!registerError) return;
-        registerError.textContent = message;
-        registerError.hidden = false;
-      }
-
-      function clearRegisterError() {
-        if (!registerError) return;
-        registerError.textContent = "";
-        registerError.hidden = true;
-      }
-
-      form.addEventListener("submit", async (event) => {
+      form.addEventListener("submit", (event) => {
         event.preventDefault();
 
-        const name = nameInput.value.trim();
-        const email = emailInput.value.trim();
-        const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
-        if (!name) {
-          nameInput.focus();
-          return;
-        }
-
-        if (!email || !emailIsValid) {
-          emailInput.focus();
-          return;
-        }
-
-        if (!termsInput.checked) {
-          termsInput.focus();
-          return;
-        }
-
-        state.user.name = name;
-        state.user.email = email;
-
-        clearRegisterError();
-        if (submitBtn) submitBtn.disabled = true;
-
-        try {
-          await ER.api.register(email);
-          showScreen("story");
-        } catch (error) {
-          if (error && error.status === 409) {
-            // Backend returns 409 when the email is already tied to another session.
-            showRegisterError(
-              "Ese email ya está registrado. Probá con otro para participar."
-            );
-          } else {
-            showRegisterError(
-              "No pudimos completar tu registro. Verificá tu conexión e intentá de nuevo."
-            );
-          }
-          emailInput.focus();
-        } finally {
-          if (submitBtn) submitBtn.disabled = false;
-        }
+        // Modo offline: todos los campos son opcionales y se avanza sin validar.
+        state.user.name = nameInput ? nameInput.value.trim() : "";
+        state.user.email = emailInput ? emailInput.value.trim() : "";
+        showScreen("story");
       });
     }
 
@@ -2575,27 +2516,6 @@ if (acceptTermsBtn) {
         lastTouchEnd = now;
       }, { passive: false });
     }
-function getEntryScreenFromParams() {
-  const params = new URLSearchParams(window.location.search);
-
-  if (params.get("desktop") === "1") return "desktop";
-  if (params.get("error") === "1") return "error";
-  if (params.get("not_started") === "1") return "notStarted";
-  if (params.get("ended") === "1") return "ended";
-  if (params.get("product") === "1") return "product";
-
-  return null;
-}
-
-function isDesktopDevice() {
-  // Desktop = not a mobile/tablet UA AND no coarse-pointer touch input.
-  // Phones and touch tablets keep the full experience; only true
-  // desktops/laptops are sent to the "use your phone" screen.
-  const mobileUA = /Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  const coarseTouch = window.matchMedia("(pointer: coarse)").matches &&
-                      (navigator.maxTouchPoints > 0 || "ontouchstart" in window);
-  return !mobileUA && !coarseTouch;
-}
     async function init() {
   lockIOSViewportQuirks();
   setupNavigation();
@@ -2605,29 +2525,8 @@ function isDesktopDevice() {
 
   stopStarLoader();
 
-  const entryScreen = getEntryScreenFromParams();
-
-  if (entryScreen) {
-    showScreen(entryScreen);
-    return;
-  }
-
-  // Desktop visitors can't use motion/location/camera — point them to mobile.
-  // (?desktop=1 above still forces this screen manually.)
-  if (isDesktopDevice()) {
-    showScreen("desktop");
-    return;
-  }
-
-  // Route from real session state. If /me is unreachable, fall back to register.
-  const me = await ER.api.me().catch(() => null);
-
-    if (me?.email) {
-    state.user.email = me.email;
-    showScreen("catalog"); // ya registrado → ve la pantalla previa a instrucciones
-  } else {
-    showScreen("register");
-  }
+  // GitHub Pages: entrada directa sin token, sesión ni validaciones.
+  showScreen("register");
 }
 
     window.addEventListener("DOMContentLoaded", init);

@@ -1,6 +1,7 @@
 # Versión sin backend
 
-Abrir `index-offline.html` desde un servidor estático. Esta variante:
+Abrir `index.html` desde un servidor estático. Esta es ahora la entrada
+predeterminada para GitHub Pages y:
 
 - no consulta `/play`, `/me`, `/register`, `/event` ni `/submit`;
 - no requiere token, sesión ni conexión al backend;
@@ -14,7 +15,7 @@ Ejemplo local:
 python -m http.server 5500
 ```
 
-Luego abrir `http://localhost:5500/index-offline.html`.
+Luego abrir `http://localhost:5500/`.
 
-Los archivos de producción (`index.html`, `boveda.html` y `assets/js/er-api.js`)
-no fueron modificados.
+La versión anterior conectada al backend está preservada en el ZIP de `backups/`
+y en el historial de Git. `assets/js/er-api.js` permanece sin modificaciones.
