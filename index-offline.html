@@ -1,0 +1,2535 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Estrellas Reales</title>
+
+  <!-- Versión independiente: no usa backend, sesión, token ni analítica. -->
+  <script src="assets/js/er-api-offline.js"></script>
+
+  <style>
+    /* =========================================================
+      FUENTES
+      Colocá estos archivos en /assets/fonts/
+      - FlameSans-Regular.otf
+      - 1.Flame-Bold 2 3 2.otf
+      - Flame-Bold-Variable 2.ttf
+      - HostGrotesk-VariableFont_wght.ttf
+    ========================================================= */
+
+    @font-face {
+      font-family: "FlameSans";
+      src: url("assets/fonts/FlameSans-Regular.otf") format("opentype");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: "FlameBold";
+      src: url("assets/fonts/1.Flame-Bold 2 3 2.otf") format("opentype");
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: "FlameBoldVariable";
+      src: url("assets/fonts/Flame-Bold-Variable 2.ttf") format("truetype");
+      font-weight: 400 900;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: "HostGrotesk";
+      src: url("assets/fonts/HostGrotesk-VariableFont_wght.ttf") format("truetype");
+      font-weight: 300 900;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root {
+      --blue: #63b8e9;
+      --blue-soft: rgba(99, 184, 233, 0.45);
+      --white: #ffffff;
+      --panel: rgba(13, 42, 58, 0.42);
+      --panel-strong: rgba(11, 37, 51, 0.88);
+      --input-line: rgba(255, 255, 255, 0.72);
+      --shadow: 0 24px 55px rgba(0, 0, 0, 0.35);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      min-height: 100%;
+      background: #000;
+      color: var(--white);
+      font-family: "HostGrotesk", "FlameSans", Arial, sans-serif;
+      overflow: hidden;
+      overscroll-behavior: none;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      min-height: 100svh;
+      touch-action: manipulation;
+    }
+
+    button,
+    input,
+    label {
+      font: inherit;
+    }
+
+    button,
+    input[type="button"],
+    input[type="submit"] {
+      appearance: none;
+      -webkit-appearance: none;
+      border-radius: 0;
+    }
+
+    .app {
+      position: relative;
+      width: 100vw;
+      height: 100svh;
+      min-height: 100svh;
+      overflow: hidden;
+      background: #000;
+      isolation: isolate;
+    }
+
+    /* =========================================================
+      FONDOS
+      Reemplazá estas URLs por tus imágenes finales.
+      Recomendación mobile: 1080x1920 o 1440x2560.
+    ========================================================= */
+
+    .cosmic-bg {
+      position: absolute;
+      inset: 0;
+      z-index: -3;
+      background:
+        linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.2)),
+        url("assets/img/bg-stars.jpg") center center / cover no-repeat;
+      transform: scale(1.04);
+    }
+
+    .cosmic-bg::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 35%, rgba(99,184,233,0.16), transparent 38%),
+        linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.34));
+      pointer-events: none;
+    }
+
+    /* =========================================================
+      LATERALES (líneas tipo zoom)
+      asset: assets/img/lateral.svg
+    ========================================================= */
+
+    .laterals {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .lateral {
+      position: absolute;
+      top: clamp(118px, 20vh, 190px);
+      bottom: clamp(52px, 9vh, 86px);
+      width: clamp(22px, 5vw, 42px);
+      background: url("assets/img/lateral.svg") center / 100% 100% no-repeat;
+      opacity: 0.82;
+    }
+
+    .lateral.left {
+      left: 8px;
+      transform: scaleX(1);
+    }
+
+    .lateral.right {
+      right: 8px;
+      transform: scaleX(-1);
+    }
+
+    @media (max-width: 560px) {
+      .lateral {
+        top: clamp(132px, 22vh, 190px);
+        bottom: clamp(46px, 7vh, 74px);
+        width: 34px;
+        opacity: 0.72;
+      }
+
+      .lateral.left {
+        left: 6px;
+      }
+
+      .lateral.right {
+        right: 6px;
+      }
+    }
+
+    .loading-bg {
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      background: linear-gradient(to bottom, #000 0%, #000 42%, #001016 58%, #123f52 100%);
+    }
+
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: calc(14px + var(--safe-top)) 22px calc(14px + var(--safe-bottom));
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateY(14px) scale(0.985);
+      transition: opacity 420ms ease, transform 420ms ease, visibility 0ms linear 420ms;
+      overflow: hidden;
+    }
+
+    .screen.is-active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+      transition: opacity 480ms ease, transform 480ms ease, visibility 0ms;
+    }
+
+    .screen.is-leaving {
+      opacity: 0;
+      transform: translateY(-10px) scale(0.99);
+    }
+
+    .content {
+      width: min(100%, 520px);
+      margin: 0 auto;
+    }
+
+.panel {
+  position: relative;
+  width: 100%;
+  background: rgba(13, 42, 58, 0.36);
+  border: 1.5px solid rgba(99, 184, 233, 0.72);
+  border-radius: clamp(34px, 9vw, 92px);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+
+  backdrop-filter: blur(1px) saturate(0.08);
+  -webkit-backdrop-filter: blur(1px) saturate(0.08);
+}
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+ 
+  opacity: 0.06;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+    .panel > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn {
+  width: min(100%, 230px);
+  min-height: 36px;
+  border: 0;
+  border-radius: 11px;
+  background: linear-gradient(180deg, #72c4f1 0%, #5daedf 100%);
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-weight: 700;
+  font-size: clamp(11px, 2.8vw, 14px);
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 160ms ease, filter 160ms ease, opacity 160ms ease;
+
+  box-shadow:
+    0 10px 8px rgba(0, 0, 0, 0.8),
+    0 4px 10px rgba(99, 184, 233, 0.22);
+
+  filter:
+    drop-shadow(0 8px 12px rgba(0, 0, 0, 0.28))
+    drop-shadow(0 0 10px rgba(99, 184, 233, 0.14));
+}
+
+.btn:active {
+  transform: scale(0.975);
+  filter:
+    drop-shadow(0 5px 8px rgba(0, 0, 0, 0.22))
+    drop-shadow(0 0 6px rgba(99, 184, 233, 0.10));
+}
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .logos {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(12px, 2.6vw, 20px);
+  margin-top: clamp(26px, 6vh, 46px);
+  margin-bottom: clamp(18px, 3vh, 28px);
+}
+
+    .logo {
+  height: clamp(38px, 7vh, 62px);
+  max-width: 96px;
+  width: auto;
+  object-fit: contain;
+}
+
+    /* Logo placeholders: sacá estas clases cuando uses PNG/SVG reales */
+    .logo-placeholder {
+      min-width: 100px;
+      height: 90px;
+      display: grid;
+      place-items: center;
+      font-family: "FlameBold", "HostGrotesk", sans-serif;
+      font-size: 22px;
+      line-height: 0.9;
+      text-align: center;
+      color: white;
+      border: 1px solid rgba(255,255,255,0.25);
+    }
+
+    .hero-title {
+  margin: 0 0 clamp(26px, 4.8vh, 42px);
+  text-align: center;
+  line-height: 0.88;
+  text-transform: uppercase;
+}
+
+    .hero-title .top {
+  display: block;
+  font-family: "FlameBold", "FlameBoldVariable", sans-serif;
+  font-size: clamp(40px, 11vw, 74px);
+  color: white;
+  letter-spacing: 0.02em;
+  text-shadow: 0 3px 12px rgba(0,0,0,0.4);
+}
+
+.hero-title .bottom {
+  display: block;
+  margin-top: 2px;
+  font-family: "FlameBold", "FlameBoldVariable", sans-serif;
+  font-size: clamp(58px, 20vw, 116px);
+  color: transparent;
+  -webkit-text-stroke: clamp(2px, 0.8vw, 3.5px) var(--blue);
+  text-stroke: clamp(2px, 0.8vw, 3.5px) var(--blue);
+  text-shadow: 0 3px 12px rgba(0,0,0,0.4);
+}
+
+    .register-content {
+  width: 100%;
+  height: 100%;
+  align-self: stretch;
+  padding-top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-3.5vh) scale(var(--screen-scale, 1));
+  transform-origin: center;
+}
+
+    .register-panel {
+  width: min(64vw, 350px);
+  min-width: 255px;
+  padding: clamp(24px, 3.8vh, 34px) clamp(22px, 5vw, 36px);
+  border-radius: clamp(24px, 5.8vw, 42px);
+}
+
+    .intro-copy {
+  margin: 0 0 clamp(24px, 3.3vh, 32px);
+  font-size: clamp(11px, 2.8vw, 15px);
+  line-height: 1.18;
+  font-weight: 200;
+}
+
+    .register-error {
+      margin: 0 0 clamp(12px, 2vh, 18px);
+      color: #ffd2d2;
+      font-size: clamp(11px, 2.6vw, 14px);
+      line-height: 1.25;
+      font-weight: 300;
+    }
+
+    .register-error[hidden] {
+      display: none;
+    }
+
+    .field {
+      display: block;
+      margin-bottom: clamp(13px, 2.3vh, 19px);
+    }
+
+    .field input {
+  width: 100%;
+  border: 0;
+  border-bottom: 1.5px solid var(--input-line);
+  border-radius: 0;
+  background: transparent;
+  color: white;
+  padding: 7px 0 6px;
+  font-size: clamp(11px, 2.7vw, 14px);
+  font-weight: 700;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+    .field input::placeholder {
+      color: white;
+      opacity: 0.95;
+    }
+
+    .terms {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 clamp(18px, 2.8vh, 24px);
+  color: rgba(255,255,255,0.9);
+  font-size: clamp(7px, 1.9vw, 10px);
+  line-height: 1.2;
+  cursor: pointer;
+  font-weight: 700;
+}
+.terms-link {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+    .terms input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .fake-check {
+      width: 9px;
+      height: 9px;
+      flex: 0 0 9px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,0.35);
+      background: rgba(0,0,0,0.24);
+    }
+
+    .fake-check::after {
+      content: "✓";
+      color: white;
+      font-size: 9px;
+      line-height: 1;
+      opacity: 0;
+      transform: scale(0.7);
+      transition: opacity 140ms ease, transform 140ms ease;
+    }
+
+    .terms input:checked + .fake-check::after {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .register-btn-wrap {
+      display: flex;
+      justify-content: center;
+    }
+
+    .story-screen {
+      padding-left: 32px;
+      padding-right: 32px;
+    }
+
+    .story-panel {
+      width: min(82vw, 560px);
+      padding: clamp(24px, 4vh, 42px) clamp(22px, 5.4vw, 48px);
+      text-align: center;
+      transform: scale(var(--screen-scale, 1));
+      transform-origin: center;
+    }
+
+    .stars-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: clamp(20px, 3.5vh, 34px);
+      color: white;
+      font-size: clamp(20px, 4.5vw, 34px);
+      line-height: 1;
+    }
+
+    .stars-row::before,
+    .stars-row::after {
+      content: "";
+      width: 25%;
+      height: 1px;
+      background: rgba(255,255,255,0.72);
+    }
+
+    .story-text {
+      font-size: clamp(12px, 2.8vw, 18px);
+      line-height: 1.18;
+      letter-spacing: -0.015em;
+    }
+
+    .story-text p {
+      margin: 0 0 clamp(16px, 2.7vh, 28px);
+    }
+
+    .story-text strong {
+      font-weight: 800;
+    }
+
+    .story-divider {
+      width: 100%;
+      height: 1px;
+      background: rgba(255,255,255,0.66);
+      margin: clamp(24px, 4vh, 42px) 0 clamp(22px, 3.5vh, 34px);
+    }
+
+    .steps-content {
+      width: min(82vw, 620px);
+      text-align: center;
+      transform: scale(var(--screen-scale, 1));
+      transform-origin: center;
+    }
+
+    .steps-title {
+      margin: 0 0 clamp(20px, 3.4vh, 32px);
+      font-family: "HostGrotesk", Arial, sans-serif;
+      font-weight: 800;
+      font-size: clamp(24px, 5.3vw, 38px);
+      line-height: 1;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .step-card {
+      padding: clamp(15px, 2.6vh, 24px) clamp(18px, 3.5vw, 32px);
+      margin-bottom: clamp(12px, 2.2vh, 18px);
+      border-radius: clamp(20px, 4.2vw, 32px);
+      text-align: center;
+    }
+
+    .step-card h2 {
+      margin: 0;
+      font-size: clamp(18px, 4vw, 28px);
+      line-height: 1;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .step-line {
+      height: 2px;
+      width: 100%;
+      margin: clamp(16px, 2.5vh, 24px) 0;
+      background: var(--blue);
+      opacity: 0.9;
+    }
+
+    .step-card p {
+      margin: 0;
+      font-size: clamp(12px, 3vw, 18px);
+      line-height: 1.3;
+    }
+
+    .start-btn-wrap {
+      margin-top: clamp(16px, 3vh, 28px);
+      display: flex;
+      justify-content: center;
+    }
+/* =========================================================
+   ENTRADA ESCALONADA — PANTALLA DE PASOS
+========================================================= */
+
+.steps-screen .step-reveal {
+  opacity: 0;
+  transform: translateY(22px) scale(0.96);
+  filter: blur(3px);
+}
+
+.steps-screen.is-active .step-reveal {
+  animation: stepRevealIn 0.72s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: var(--step-delay, 0s);
+}
+
+@keyframes stepRevealIn {
+  0% {
+    opacity: 0;
+    transform: translateY(22px) scale(0.96);
+    filter: blur(3px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+    .loading-screen {
+      background: #000;
+    }
+
+    .loading-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      padding-bottom: 16vh;
+    }
+.loading-logos {
+  position: absolute;
+  left: 50%;
+  bottom: calc(48px + var(--safe-bottom));
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(18px, 5vw, 34px);
+  transform: translateX(-50%);
+  opacity: 0.92;
+}
+
+.loading-logos img {
+  height: clamp(34px, 7vw, 54px);
+  width: auto;
+  max-width: 96px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.45));
+}
+
+@media (max-height: 680px) {
+  .loading-logos {
+    bottom: calc(30px + var(--safe-bottom));
+  }
+
+  .loading-logos img {
+    height: 32px;
+  }
+}
+    .loader-stars {
+      display: flex;
+      gap: 18px;
+      font-size: clamp(40px, 9vw, 64px);
+      line-height: 1;
+      color: transparent;
+      -webkit-text-stroke: 1.6px white;
+      text-stroke: 1.6px white;
+    }
+
+    .loader-star {
+      display: inline-block;
+      transform-origin: center;
+      transition: color 140ms ease, transform 140ms ease, opacity 140ms ease;
+      animation: starPulse 1100ms infinite;
+    }
+
+    .loader-star.is-filled {
+      color: white;
+      -webkit-text-stroke: 0 white;
+      text-stroke: 0 white;
+      transform: scale(1.08);
+    }
+
+    @keyframes starPulse {
+      0%, 100% { opacity: 0.82; }
+      50% { opacity: 1; }
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 560px) {
+      .screen {
+        padding-left: 18px;
+        padding-right: 18px;
+      }
+
+      
+
+      .logos {
+        gap: 22px;
+        margin-bottom: 42px;
+      }
+
+      .hero-title {
+        margin-bottom: clamp(60px, 5vh, 130px);
+      }
+
+      .register-panel {
+        padding: 34px 28px 40px;
+      }
+
+      .intro-copy {
+        margin-bottom: 46px;
+      }
+
+      .field {
+        margin-bottom: 32px;
+      }
+
+      .terms {
+        margin-bottom: 40px;
+      }
+
+      .btn {
+        min-height: 40px;
+        border-radius: 12px;
+      }
+
+      .story-panel {
+        padding: 42px 24px;
+        border-radius: 42px;
+      }
+
+      .stars-row {
+        gap: 8px;
+        margin-bottom: 42px;
+      }
+
+      .stars-row::before,
+      .stars-row::after {
+        width: 22%;
+      }
+
+      .story-text p {
+        margin-bottom: 24px;
+      }
+
+      .story-divider {
+        margin: 38px 0 30px;
+      }
+
+      .steps-title {
+        margin-bottom: 38px;
+      }
+
+      .step-card {
+        margin-bottom: 24px;
+      }
+
+      .step-line {
+        margin: 24px 0;
+      }
+
+      .start-btn-wrap {
+        margin-top: 22px;
+      }
+    }
+
+    @media (max-height: 760px) {
+      :root {
+        --screen-scale: 0.88;
+      }
+
+      .screen {
+        overflow: hidden;
+        place-items: center;
+      }
+    }
+
+    @media (max-height: 680px) {
+      :root {
+        --screen-scale: 0.78;
+      }
+    }
+
+    @media (max-height: 600px) {
+      :root {
+        --screen-scale: 0.68;
+      }
+    }
+
+   /* =========================================================
+  PANTALLAS EXTRA / ESTADOS
+========================================================= */
+
+.extra-screen {
+  background: #000;
+}
+
+.extra-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    linear-gradient(
+      180deg,
+      #000 0%,
+      #000 48%,
+      #031923 74%,
+      #123f52 100%
+    );
+}
+
+.extra-content {
+  width: min(88vw, 620px);
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(18px, 3.8vh, 38px);
+  text-align: center;
+  transform: scale(var(--screen-scale, 1));
+  transform-origin: center;
+}
+
+.extra-visual {
+  width: min(68vw, 330px);
+  max-height: 34svh;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 12px 22px rgba(0,0,0,0.35));
+}
+
+.extra-copy {
+  width: min(88vw, 560px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.extra-title {
+  margin: 0;
+  color: #fff;
+  font-family: "FlameBold", "FlameBoldVariable", "Arial Black", sans-serif;
+  font-size: clamp(28px, 7.4vw, 52px);
+  line-height: 1.08;
+  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: -0.01em;
+}
+
+.extra-text {
+  width: min(86vw, 500px);
+  margin: clamp(10px, 1.8vh, 16px) auto 0;
+  color: rgba(255,255,255,0.88);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: clamp(15px, 4.1vw, 23px);
+  line-height: 1.24;
+  font-weight: 400;
+  text-align: center;
+}
+
+.extra-logo {
+  position: absolute;
+  left: 50%;
+  bottom: calc(34px + var(--safe-bottom));
+  width: clamp(54px, 14vw, 82px);
+  height: auto;
+  margin: 0;
+  object-fit: contain;
+  transform: translateX(-50%);
+  opacity: 0.96;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.45));
+}
+.extra-copy {
+  padding-bottom: 78px;
+}
+
+@media (max-height: 720px) {
+  .extra-copy {
+    padding-bottom: 58px;
+  }
+}
+/* Desktop / QR desde computadora */
+.desktop-screen .extra-content {
+  width: min(92vw, 1260px);
+}
+
+.desktop-layout {
+  width: min(92vw, 1260px);
+  display: grid;
+  grid-template-columns: minmax(240px, 0.82fr) minmax(420px, 1.18fr);
+  align-items: center;
+  gap: clamp(42px, 7vw, 100px);
+}
+
+.desktop-visual {
+  width: min(32vw, 420px);
+  max-height: 68vh;
+  justify-self: end;
+  transform: rotate(-8deg);
+  filter: drop-shadow(0 28px 40px rgba(0,0,0,0.38));
+}
+
+.desktop-copy {
+  text-align: left;
+  align-items: flex-start;
+}
+
+.desktop-copy .extra-title,
+.desktop-copy .extra-text {
+  text-align: left;
+  margin-left: 0;
+}
+
+.desktop-copy .extra-title {
+  font-size: clamp(46px, 4.6vw, 82px);
+  line-height: 1.05;
+}
+
+.desktop-copy .extra-text {
+  width: min(50vw, 720px);
+  font-size: clamp(19px, 1.65vw, 28px);
+  line-height: 1.24;
+}
+
+.desktop-copy .extra-logo {
+  margin-top: clamp(48px, 8vh, 92px);
+  align-self: center;
+}
+
+@media (max-width: 760px) {
+  .desktop-layout {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(22px, 4.5vh, 38px);
+  }
+
+  .desktop-visual {
+    width: min(58vw, 260px);
+    max-height: 34svh;
+    justify-self: center;
+  }
+
+  .desktop-copy {
+    align-items: center;
+    text-align: center;
+  }
+
+  .desktop-copy .extra-title,
+  .desktop-copy .extra-text {
+    text-align: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .extra-content {
+    width: 100%;
+    gap: clamp(18px, 3.4vh, 30px);
+    justify-content: center;
+    padding-top: 2svh;
+  }
+
+  .extra-visual {
+    width: min(64vw, 260px);
+    max-height: 31svh;
+  }
+
+  .extra-title {
+    font-size: clamp(25px, 8.1vw, 38px);
+    line-height: 1.1;
+  }
+
+  .extra-text {
+    width: min(86vw, 340px);
+    font-size: clamp(14px, 4.25vw, 18px);
+    line-height: 1.25;
+  }
+
+  .extra-logo {
+  width: clamp(50px, 15vw, 70px);
+  bottom: calc(26px + var(--safe-bottom));
+}
+}
+
+@media (max-height: 720px) {
+  .extra-content {
+    gap: 18px;
+  }
+
+  .extra-visual {
+    max-height: 27svh;
+  }
+
+  .extra-logo {
+  bottom: calc(20px + var(--safe-bottom));
+  width: clamp(46px, 13vw, 64px);
+}
+}
+
+@media (max-height: 640px) {
+  .extra-visual {
+    max-height: 23svh;
+  }
+
+  .extra-title {
+    font-size: clamp(23px, 7vw, 34px);
+  }
+
+  .extra-text {
+    font-size: clamp(13px, 3.7vw, 16px);
+  }
+}
+/* =========================================================
+  PANTALLA CATÁLOGO / ESTRELLAS REALES
+========================================================= */
+
+.catalog-screen {
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+.catalog-content {
+  width: min(92vw, 760px);
+  min-height: calc(var(--app-height) - 42px - var(--safe-top) - var(--safe-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(22px, 3.8vh, 44px);
+  text-align: center;
+  transform: scale(var(--screen-scale, 1));
+  transform-origin: center;
+}
+
+.catalog-panel {
+  width: min(86vw, 620px);
+  padding:
+    clamp(30px, 5vh, 58px)
+    clamp(26px, 5.4vw, 62px)
+    clamp(32px, 5vh, 60px);
+  border-radius: clamp(40px, 8vw, 82px);
+  background: rgba(13, 42, 58, 0.54);
+  border: 1.2px solid rgba(99, 184, 233, 0.66);
+  box-shadow:
+    0 24px 55px rgba(0, 0, 0, 0.34),
+    inset 0 0 38px rgba(255,255,255,0.035);
+  backdrop-filter: blur(5px) saturate(0.9);
+  -webkit-backdrop-filter: blur(5px) saturate(0.9);
+}
+
+.catalog-stars-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(7px, 1.7vw, 14px);
+  margin-bottom: clamp(26px, 4vh, 46px);
+  color: rgba(255,255,255,0.92);
+  font-size: clamp(19px, 3.6vw, 34px);
+  line-height: 1;
+}
+
+.catalog-stars-row::before,
+.catalog-stars-row::after {
+  content: "";
+  width: 28%;
+  height: 1px;
+  background: rgba(255,255,255,0.68);
+}
+
+.catalog-title {
+  max-width: 520px;
+  margin: 0 auto clamp(26px, 4vh, 44px);
+  color: rgba(255,255,255,0.93);
+  font-family: "HostGrotesk", "FlameSans", Arial, sans-serif;
+  font-size: clamp(16px, 3.2vw, 27px);
+  line-height: 1.28;
+  font-weight: 900;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.catalog-copy {
+  max-width: 520px;
+  margin: 0 auto;
+  color: rgba(255,255,255,0.9);
+  font-family: "HostGrotesk", "FlameSans", Arial, sans-serif;
+  font-size: clamp(15px, 3vw, 25px);
+  line-height: 1.34;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+}
+
+.catalog-copy + .catalog-copy {
+  margin-top: clamp(22px, 3.4vh, 36px);
+}
+
+.catalog-codes {
+  margin: clamp(24px, 3.8vh, 40px) auto;
+  color: rgba(255,255,255,0.95);
+  font-family: "HostGrotesk", "FlameSans", Arial, sans-serif;
+  font-size: clamp(18px, 3.8vw, 32px);
+  line-height: 1.24;
+  font-weight: 900;
+  letter-spacing: 0.095em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.catalog-bottom-line {
+  width: 100%;
+  height: 1px;
+  margin-top: clamp(30px, 4.8vh, 52px);
+  background: rgba(255,255,255,0.72);
+}
+
+.catalog-outside-title {
+  width: min(92vw, 760px);
+  margin: 0;
+  color: rgba(255,255,255,0.95);
+  font-family: "HostGrotesk", "FlameSans", Arial, sans-serif;
+  font-size: clamp(20px, 4.4vw, 38px);
+  line-height: 1.32;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 4px 14px rgba(0,0,0,0.46);
+}
+
+.catalog-btn-wrap {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.catalog-btn-wrap .btn {
+  width: min(68vw, 360px);
+  min-height: 46px;
+  border-radius: 13px;
+  font-size: clamp(10px, 2.4vw, 14px);
+  letter-spacing: 0.32em;
+}
+
+/* entrada sutil */
+.catalog-screen .catalog-reveal {
+  opacity: 0;
+  transform: translateY(18px) scale(0.985);
+}
+
+.catalog-screen.is-active .catalog-reveal {
+  animation: catalogRevealIn 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: var(--catalog-delay, 0s);
+}
+
+@keyframes catalogRevealIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* MOBILE */
+@media (max-width: 560px) {
+  .catalog-screen {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .catalog-content {
+    width: 100%;
+    gap: 22px;
+    padding-top: calc(18px + var(--safe-top));
+    padding-bottom: calc(42px + var(--safe-bottom));
+    transform: none;
+  }
+
+  .catalog-panel {
+    width: min(92vw, 340px);
+    padding: 28px 20px 30px;
+    border-radius: 34px;
+  }
+
+  .catalog-stars-row {
+    margin-bottom: 26px;
+    gap: 6px;
+    font-size: 19px;
+  }
+
+  .catalog-stars-row::before,
+  .catalog-stars-row::after {
+    width: 26%;
+  }
+
+  .catalog-title {
+    max-width: 280px;
+    margin-bottom: 22px;
+    font-size: 14.5px;
+    line-height: 1.28;
+    letter-spacing: 0.04em;
+  }
+
+  .catalog-copy {
+    max-width: 286px;
+    font-size: 13.5px;
+    line-height: 1.32;
+    letter-spacing: 0.02em;
+  }
+
+  .catalog-copy + .catalog-copy {
+    margin-top: 18px;
+  }
+
+  .catalog-codes {
+    margin: 22px auto;
+    font-size: 16.5px;
+    line-height: 1.28;
+    letter-spacing: 0.095em;
+    white-space: normal;
+  }
+
+  .catalog-bottom-line {
+    margin-top: 26px;
+  }
+
+  .catalog-outside-title {
+    width: min(92vw, 340px);
+    font-size: 18px;
+    line-height: 1.38;
+    letter-spacing: 0.08em;
+  }
+
+  .catalog-btn-wrap .btn {
+    width: min(70vw, 280px);
+    min-height: 42px;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+  }
+}
+
+/* MOBILE BAJO */
+@media (max-width: 560px) and (max-height: 760px) {
+  .catalog-content {
+    gap: 18px;
+    padding-top: calc(14px + var(--safe-top));
+    padding-bottom: calc(36px + var(--safe-bottom));
+  }
+
+  .catalog-panel {
+    width: min(92vw, 330px);
+    padding: 24px 18px 26px;
+    border-radius: 30px;
+  }
+
+  .catalog-stars-row {
+    margin-bottom: 20px;
+    font-size: 17px;
+  }
+
+  .catalog-title {
+    margin-bottom: 18px;
+    font-size: 13.2px;
+    line-height: 1.25;
+  }
+
+  .catalog-copy {
+    font-size: 12.2px;
+    line-height: 1.28;
+  }
+
+  .catalog-copy + .catalog-copy {
+    margin-top: 15px;
+  }
+
+  .catalog-codes {
+    margin: 18px auto;
+    font-size: 14.5px;
+    line-height: 1.28;
+  }
+
+  .catalog-bottom-line {
+    margin-top: 20px;
+  }
+
+  .catalog-outside-title {
+    font-size: 16px;
+    line-height: 1.34;
+  }
+
+  .catalog-btn-wrap .btn {
+    min-height: 38px;
+    font-size: 9px;
+  }
+}
+
+/* MOBILE MUY BAJO */
+@media (max-width: 560px) and (max-height: 650px) {
+  .catalog-panel {
+    padding: 20px 16px 22px;
+    border-radius: 26px;
+  }
+
+  .catalog-stars-row {
+    margin-bottom: 16px;
+    font-size: 15px;
+  }
+
+  .catalog-title {
+    margin-bottom: 15px;
+    font-size: 12px;
+  }
+
+  .catalog-copy {
+    font-size: 11.2px;
+    line-height: 1.25;
+  }
+
+  .catalog-copy + .catalog-copy {
+    margin-top: 12px;
+  }
+
+  .catalog-codes {
+    margin: 14px auto;
+    font-size: 13px;
+  }
+
+  .catalog-bottom-line {
+    margin-top: 16px;
+  }
+
+  .catalog-outside-title {
+    font-size: 14.5px;
+  }
+}
+    /* =========================================================
+  PANTALLA ACCESO A SENSORES
+========================================================= */
+
+.sensor-gate-screen {
+  background: #000;
+}
+
+.sensor-gate-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(circle at 50% 34%, rgba(99,184,233,0.18), transparent 38%),
+    linear-gradient(to bottom, #000 0%, #000 44%, #001016 64%, #123f52 100%);
+}
+
+.sensor-gate-content {
+  width: min(100%, 420px);
+  min-height: 68svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(22px, 4vh, 34px);
+  text-align: center;
+  transform: scale(var(--screen-scale, 1));
+  transform-origin: center;
+}
+
+.sensor-gate-stars {
+  margin-bottom: clamp(4px, 1vh, 10px);
+  font-size: clamp(32px, 7vw, 54px);
+}
+
+.sensor-gate-title {
+  margin: 0;
+}
+
+.sensor-gate-copy {
+  width: min(82vw, 320px);
+  margin: 0;
+  color: rgba(255,255,255,0.82);
+  font-size: clamp(12px, 3vw, 16px);
+  line-height: 1.28;
+  font-weight: 500;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.55);
+}
+@media (max-width: 560px) and (max-height: 780px) {
+  .extra-screen {
+    padding-top: calc(4px + var(--safe-top));
+    padding-bottom: calc(8px + var(--safe-bottom));
+  }
+
+  .extra-content {
+    transform: scale(0.88);
+  }
+}
+
+@media (max-width: 560px) and (max-height: 680px) {
+  .extra-content {
+    transform: scale(0.78);
+  }
+}
+
+/* =========================================================
+  PANTALLA TÉRMINOS Y CONDICIONES
+========================================================= */
+
+.terms-screen {
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.terms-panel {
+  width: min(86vw, 540px);
+  max-height: 78svh;
+  padding: clamp(24px, 4vh, 38px) clamp(20px, 5vw, 34px);
+  border-radius: clamp(24px, 6vw, 42px);
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.terms-title {
+  margin: 0 0 18px;
+  font-family: "FlameBold", "FlameBoldVariable", sans-serif;
+  font-size: clamp(28px, 7vw, 48px);
+  line-height: 0.96;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.terms-scroll {
+  max-height: 45svh;
+  overflow-y: auto;
+  padding-right: 8px;
+  color: rgba(255,255,255,0.88);
+  font-size: clamp(12px, 3vw, 16px);
+  line-height: 1.35;
+  font-weight: 500;
+  -webkit-overflow-scrolling: touch;
+}
+
+.terms-scroll p {
+  margin: 0 0 14px;
+}
+
+.terms-actions {
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.terms-back-btn {
+  border: 0;
+  background: transparent;
+  color: rgba(255,255,255,0.8);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+@media (max-height: 680px) {
+  .terms-panel {
+    max-height: 84svh;
+    padding-top: 22px;
+    padding-bottom: 22px;
+  }
+
+  .terms-scroll {
+    max-height: 43svh;
+  }
+}
+/* =========================================================
+   FIX IPHONE / SAFARI: PANTALLAS INDEX SCROLLEABLES
+========================================================= */
+
+:root {
+  --app-height: 100dvh;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+.app {
+  height: var(--app-height);
+  min-height: var(--app-height);
+  overflow: hidden;
+}
+
+/* Todas las pantallas pueden scrollear si el contenido no entra */
+.screen {
+  height: var(--app-height);
+  min-height: var(--app-height);
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  scrollbar-width: none;
+  padding-bottom: calc(24px + var(--safe-bottom));
+}
+
+.screen::-webkit-scrollbar {
+  display: none;
+}
+
+/* La pantalla de carga no necesita scroll */
+.loading-screen {
+  overflow: hidden !important;
+  touch-action: manipulation;
+}
+
+.loading-content {
+  height: 100%;
+}
+
+/* Evita que el contenido quede centrado y cortado cuando es más alto que la pantalla */
+.register-screen,
+.story-screen,
+.catalog-screen,
+.steps-screen,
+.sensor-gate-screen,
+.terms-screen,
+.extra-screen {
+  place-items: start center !important;
+}
+
+/* Si entra, queda centrado. Si no entra, arranca arriba y permite scroll */
+.register-screen .content,
+.story-screen .story-panel,
+.catalog-screen .catalog-content,
+.steps-screen .steps-content,
+.sensor-gate-screen .sensor-gate-content,
+.terms-screen .terms-panel,
+.extra-screen .extra-content {
+  flex-shrink: 0;
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+/* Registro: sacamos el translateY que en iPhone chico ayuda a cortar contenido */
+.register-content {
+  height: auto;
+  min-height: calc(var(--app-height) - 28px - var(--safe-top) - var(--safe-bottom));
+  align-self: auto;
+  padding-top: clamp(18px, 4svh, 38px);
+  padding-bottom: clamp(32px, 6svh, 68px);
+  justify-content: center;
+  transform: scale(var(--screen-scale, 1));
+}
+
+/* Ajuste específico para celulares con poca altura */
+@media (max-width: 560px) and (max-height: 760px) {
+  .register-content {
+    min-height: auto;
+    justify-content: flex-start;
+    padding-top: calc(16px + var(--safe-top));
+    padding-bottom: calc(54px + var(--safe-bottom));
+    transform: none;
+  }
+
+  .logos {
+    margin-top: 0;
+    margin-bottom: 18px;
+    gap: 18px;
+  }
+
+  .logo {
+    height: 34px;
+    max-width: 78px;
+  }
+
+  .hero-title {
+    margin-bottom: 24px;
+  }
+
+  .hero-title .top {
+    font-size: clamp(32px, 9vw, 44px);
+  }
+
+  .hero-title .bottom {
+    font-size: clamp(50px, 15vw, 78px);
+  }
+
+  .register-panel {
+    width: min(82vw, 350px);
+    min-width: 250px;
+    padding: 24px 22px 28px;
+  }
+
+  .intro-copy {
+    margin-bottom: 22px;
+  }
+
+  .field {
+    margin-bottom: 18px;
+  }
+
+  .terms {
+    margin-bottom: 22px;
+  }
+
+  .btn {
+    min-height: 38px;
+  }
+
+  .story-panel {
+    margin-top: 20px;
+    margin-bottom: 34px;
+  }
+
+  .steps-content {
+    margin-top: 20px;
+    margin-bottom: 38px;
+  }
+
+  .sensor-gate-content {
+    min-height: auto;
+    margin-top: 24px;
+    margin-bottom: 42px;
+  }
+}
+
+@media (max-width: 560px) and (max-height: 640px) {
+  .register-content {
+    padding-top: calc(12px + var(--safe-top));
+    padding-bottom: calc(46px + var(--safe-bottom));
+  }
+
+  .logos {
+    margin-bottom: 12px;
+  }
+
+  .logo {
+    height: 30px;
+  }
+
+  .hero-title {
+    margin-bottom: 18px;
+  }
+
+  .hero-title .top {
+    font-size: 30px;
+  }
+
+  .hero-title .bottom {
+    font-size: 48px;
+  }
+
+  .register-panel {
+    padding: 20px 20px 24px;
+  }
+
+  .intro-copy {
+    margin-bottom: 18px;
+  }
+
+  .field {
+    margin-bottom: 14px;
+  }
+
+  .terms {
+    margin-bottom: 16px;
+  }
+}
+  </style>
+</head>
+<body>
+  <main class="app" id="app">
+    <!-- =========================================================
+      PANTALLA DE CARGA
+      Fondo de carga: reemplazar en CSS .loading-bg
+    ========================================================== -->
+    <section class="screen loading-screen is-active" data-screen="loading" aria-label="Cargando experiencia">
+  <div class="loading-bg"></div>
+
+  <div class="loading-content">
+    <div class="loader-stars" aria-hidden="true">
+      <span class="loader-star">★</span>
+      <span class="loader-star">★</span>
+      <span class="loader-star">★</span>
+      <span class="loader-star">☆</span>
+    </div>
+    <span class="sr-only">Cargando</span>
+  </div>
+
+  <div class="loading-logos" aria-label="Burger King y AUF">
+    <img src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+    <img src="assets/img/logo-auf-white.svg" alt="AUF" />
+  </div>
+</section>
+<!-- =========================================================
+  PANTALLA EXTRA / ERROR DE CARGA
+========================================================== -->
+<section class="screen extra-screen" data-screen="error" aria-label="Error al cargar">
+  <div class="extra-content">
+    <img class="extra-visual" src="assets/img/extra/a.png" alt="" />
+
+    <div class="extra-copy">
+      <h1 class="extra-title">
+        Ups...<br />
+        Parece que perdimos<br />
+        de vista las estrellas.
+      </h1>
+
+      <p class="extra-text">
+        Ocurrió un problema al cargar la experiencia.
+        Revisá tu conexión e intentá nuevamente
+        en unos segundos.
+      </p>
+
+      <img class="extra-logo" src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+    </div>
+  </div>
+</section>
+<!-- =========================================================
+  PANTALLA EXTRA / TODAVÍA NO COMENZÓ
+========================================================== -->
+<section class="screen extra-screen" data-screen="not-started" aria-label="Experiencia no iniciada">
+  <div class="extra-content">
+    <img class="extra-visual" src="assets/img/extra/b.png" alt="" />
+
+    <div class="extra-copy">
+      <h1 class="extra-title">
+        Las estrellas todavía<br />
+        no se alinearon.
+      </h1>
+
+      <p class="extra-text">
+        La experiencia Estrellas Reales aún no comenzó.
+        Muy pronto vas a poder descubrir las cuatro estrellas
+        de la Selección Uruguaya en el cielo y acceder
+        a contenido exclusivo imperdible.
+      </p>
+
+      <img class="extra-logo" src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+    </div>
+  </div>
+</section>
+<!-- =========================================================
+  PANTALLA EXTRA / FINALIZADA
+========================================================== -->
+<section class="screen extra-screen" data-screen="ended" aria-label="Experiencia finalizada">
+  <div class="extra-content">
+    <img class="extra-visual" src="assets/img/extra/c.png" alt="" />
+
+    <div class="extra-copy">
+      <h1 class="extra-title">
+        La experiencia Estrellas<br />
+        Reales finalizó.
+      </h1>
+
+      <p class="extra-text">
+        Gracias por ser parte de este homenaje
+        a las cuatro estrellas que marcaron
+        para siempre la historia del fútbol uruguayo.
+      </p>
+
+      <img class="extra-logo" src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+    </div>
+  </div>
+</section>
+<!-- =========================================================
+  PANTALLA EXTRA / DESKTOP
+========================================================== -->
+<section class="screen extra-screen desktop-screen" data-screen="desktop" aria-label="Experiencia desde celular">
+  <div class="extra-content desktop-layout">
+    <img class="desktop-visual" src="assets/img/extra/e.png" alt="" />
+
+    <div class="extra-copy desktop-copy">
+      <h1 class="extra-title">
+        Esta experiencia se vive 
+        desde el celular.
+      </h1>
+
+      <p class="extra-text">
+        Estrellas Reales utiliza movimiento, ubicación y cámara
+        para ayudarte a encontrar las estrellas en el cielo.<br />
+        Escaneá el QR desde tu dispositivo móvil y viví la experiencia completa.
+      </p>
+
+      <img class="extra-logo" src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+    </div>
+  </div>
+</section>
+<!-- =========================================================
+  PANTALLA EXTRA / PRODUCTO REQUERIDO
+========================================================== -->
+<section class="screen extra-screen" data-screen="product" aria-label="Producto requerido">
+  <div class="extra-content">
+    <img class="extra-visual" src="assets/img/extra/d.png" alt="" />
+
+    <div class="extra-copy">
+      <h1 class="extra-title">
+        Necesitás un producto
+        Estrellas Reales para
+        desbloquear la experiencia.
+      </h1>
+
+      <p class="extra-text">
+        Comprá cualquiera de los combos Estrellas Reales
+        de Burger King, escaneá el QR del pack y accedé
+        a la experiencia interactiva para descubrir
+        las cuatro estrellas de la Selección Uruguaya en el cielo.
+      </p>
+
+      <img class="extra-logo" src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+    </div>
+  </div>
+</section>
+    <!-- Fondo general. Cambiar assets/img/bg-stars.jpg por el fondo final -->
+    <div class="cosmic-bg" aria-hidden="true"></div>
+
+
+    <!-- =========================================================
+      PANTALLA 1 / REGISTRO
+      Logos: reemplazar placeholders por imágenes reales.
+    ========================================================== -->
+    <section class="screen register-screen" data-screen="register" aria-label="Registro">
+      <!-- LÍNEAS LATERALES: solo pantalla de registro -->
+      <div class="laterals" aria-hidden="true">
+        <div class="lateral left"></div>
+        <div class="lateral right"></div>
+      </div>
+      <div class="content register-content">
+        <div class="logos" aria-label="Burger King y AUF">
+          <img class="logo" src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+          <img class="logo" src="assets/img/logo-auf-white.svg" alt="AUF" />
+        </div>
+
+        <h1 class="hero-title" aria-label="Estrellas Reales">
+          <span class="top">Estrellas</span>
+          <span class="bottom">Reales</span>
+        </h1>
+
+        <form class="panel register-panel" id="registerForm" novalidate>
+          <p class="intro-copy">Registrate y descubrí las cuatro estrellas de la Selección Uruguaya de Fútbol que ahora están en el cielo.</p>
+
+          <label class="field">
+            <span class="sr-only">Nombre</span>
+            <input id="nameInput" name="name" type="text" placeholder="Nombre" autocomplete="name" />
+          </label>
+
+          <label class="field">
+            <span class="sr-only">Mail</span>
+            <input id="emailInput" name="email" type="text" placeholder="Mail" autocomplete="email" inputmode="email" />
+          </label>
+
+          <label class="terms">
+  <input id="termsInput" name="terms" type="checkbox" />
+  <span class="fake-check" aria-hidden="true"></span>
+  <span>
+    He leído y acepto los
+    <button class="terms-link" type="button" id="openTermsBtn">
+      términos y condiciones
+    </button>
+  </span>
+</label>
+
+          <p class="register-error" id="registerError" role="alert" hidden></p>
+
+          <div class="register-btn-wrap">
+            <button class="btn" type="submit">Enviar</button>
+          </div>
+        </form>
+      </div>
+    </section>
+<!-- =========================================================
+  PANTALLA / TÉRMINOS Y CONDICIONES
+========================================================== -->
+<section class="screen terms-screen" data-screen="terms" aria-label="Términos y condiciones">
+  <article class="panel terms-panel">
+    <h1 class="terms-title">
+      Términos y condiciones<br />
+      Estrellas Reales
+    </h1>
+
+    <div class="terms-scroll">
+      <p>
+        Se recomienda leer atentamente los siguientes Términos y Condiciones de uso de la Aplicación “Estrellas Reales”.
+      </p>
+
+      <p>
+        La experiencia interactiva “Estrellas Reales” (en adelante, la “Experiencia”) es desarrollada y ofrecida por Burger King Uruguay, con domicilio en la calle Charrúa 2219 de Montevideo, con fines exclusivamente recreativos, culturales y de entretenimiento.
+      </p>
+
+      <p>
+        En virtud de que los Términos pueden ser modificados en cualquier momento, se recomienda al usuario su atenta lectura en cada una de las ocasiones en que se proponga utilizar la Experiencia.
+      </p>
+
+      <p><strong>1. Acceso y funcionamiento</strong></p>
+
+      <p>
+        El acceso a la Experiencia se realiza mediante el escaneo del código QR incluido en los productos participantes de la campaña “Estrellas Reales”.
+      </p>
+
+      <p>
+        Para utilizar correctamente la Experiencia, el usuario podrá necesitar habilitar determinados permisos de su dispositivo móvil, incluyendo acceso a cámara, ubicación, brújula, sensores de movimiento y/o funcionalidades vinculadas a realidad aumentada o geolocalización astronómica.
+      </p>
+
+      <p>
+        La correcta visualización y funcionamiento de la Experiencia podrá variar según:
+      </p>
+
+      <p>
+        • El modelo de dispositivo,<br />
+        • sistema operativo,<br />
+        • versión de software,<br />
+        • navegador utilizado,<br />
+        • calidad de conexión a internet,<br />
+        • condiciones de iluminación,<br />
+        • y disponibilidad de sensores del dispositivo, entre otros.
+      </p>
+
+      <p>
+        Burger King Uruguay no garantiza compatibilidad total con todos los dispositivos móviles ni funcionamiento ininterrumpido de la plataforma.
+      </p>
+
+      <p><strong>2. Uso de la experiencia</strong></p>
+
+      <p>
+        La Experiencia tiene carácter exclusivamente recreativo y simbólico. Las representaciones visuales, ubicaciones astronómicas y contenidos asociados forman parte de una propuesta creativa y cultural vinculada a la campaña.
+      </p>
+
+      <p>
+        El usuario se compromete a utilizar la plataforma de forma adecuada, absteniéndose de realizar acciones que puedan afectar el funcionamiento, seguridad o disponibilidad de la Experiencia.
+      </p>
+
+      <p>
+        Asimismo, el usuario se compromete a no modificar de forma alguna el sistema de la aplicación y, consecuentemente, no utilizar versiones modificadas de la Aplicación con el fin de obtener acceso no autorizado a cualquier contenido y/o servicios de la misma.
+      </p>
+
+      <p>
+        No interferir ni interrumpir el acceso y utilización de la Aplicación, o redes conectadas a ésta o incumplir los requisitos, procedimientos y regulaciones de la política de conexión de redes.
+      </p>
+
+      <p><strong>3. Disponibilidad</strong></p>
+
+      <p>
+        Burger King Uruguay podrá modificar, suspender o discontinuar total o parcialmente la Experiencia en cualquier momento, sin necesidad de previo aviso, por razones técnicas, operativas, comerciales o de fuerza mayor.
+      </p>
+
+      <p><strong>4. Propiedad intelectual</strong></p>
+
+      <p>
+        Todas las marcas, nombres comerciales o signos distintivos de cualquier clase que eventualmente aparezcan en esta Aplicación son propiedad de sus respectivos titulares, sin que pueda entenderse que el uso o acceso a la misma atribuye al usuario derecho alguno sobre las citadas marcas, nombres comerciales o signos distintivos de cualquier clase.
+      </p>
+
+      <p>
+        Todos los elementos antes mencionados se encuentran protegidos por la normativa aplicable y vigente de propiedad intelectual.
+      </p>
+
+      <p>
+        Queda prohibida su reproducción, distribución o utilización comercial no autorizada.
+      </p>
+
+      <p><strong>5. Limitación de responsabilidad</strong></p>
+
+      <p>
+        Burger King Uruguay no será responsable por:
+      </p>
+
+      <p>
+        • fallas técnicas,<br />
+        • interrupciones del servicio,<br />
+        • errores de conectividad,<br />
+        • incompatibilidades de dispositivos,<br />
+        • imprecisiones derivadas de sensores del dispositivo móvil,<br />
+        • ni por daños directos o indirectos derivados del uso o imposibilidad de uso de la Experiencia.
+      </p>
+
+      <p>
+        Asimismo, Burger King Uruguay recomienda utilizar la Experiencia de forma segura y responsable, evitando su uso en situaciones que puedan representar riesgos para el usuario o terceros.
+      </p>
+
+      <p><strong>6. Aceptación</strong></p>
+
+      <p>
+        El acceso y utilización de la Experiencia implica la aceptación plena de los presentes Términos y Condiciones.
+      </p>
+
+      <p>
+        Si el usuario no estuviera de acuerdo con los aspectos contenidos en el presente documento, se recomienda la no utilización de la Aplicación.
+      </p>
+    </div>
+
+    <div class="terms-actions">
+      <button class="btn" type="button" id="acceptTermsBtn">Aceptar</button>
+      <button class="terms-back-btn" type="button" id="backFromTermsBtn">Volver</button>
+    </div>
+  </article>
+</section>
+    <!-- =========================================================
+      PANTALLA 2 / HISTORIA
+    ========================================================== -->
+    <section class="screen story-screen" data-screen="story" aria-label="Historia">
+      <article class="panel story-panel">
+        <div class="stars-row" aria-hidden="true">★★★★</div>
+
+        <div class="story-text">
+          <p><strong>Uruguay tiene cuatro mundiales:<br />1924, 1928, 1930 y 1950.</strong></p>
+          <p>Cuatro estrellas que no solo marcaron nuestra historia, sino la del fútbol mundial.</p>
+          <p><strong>Son campeonatos mundiales oficiales.</strong></p>
+          <p>Y no solo representan una forma de jugar. Constituyen la identidad de todo un país.</p>
+          <p><strong>La historia no puede reescribirse.</strong></p>
+          <p>Sin embargo, hay quienes en los últimos años han querido ponerla en duda.</p>
+          <p><strong>Un homenaje que llega al cielo.</strong></p>
+          <p>De la mano de Burger King, para ponerle fin a este debate, de una vez y para siempre.</p>
+        </div>
+
+        <div class="story-divider"></div>
+        <button class="btn" type="button" data-next="catalog">Continuar</button>
+      </article>
+    </section>
+    </section>
+
+    <!-- =========================================================
+      PANTALLA 3 / CATÁLOGO ESTRELLAS REALES
+    ========================================================== -->
+    <section class="screen catalog-screen" data-screen="catalog" aria-label="Estrellas reales oficiales">
+  <div class="catalog-content">
+    <article class="panel catalog-panel catalog-reveal" style="--catalog-delay: 0.08s;">
+      <div class="catalog-stars-row" aria-hidden="true">★★★★</div>
+
+      <h1 class="catalog-title">
+        Las cuatro estrellas de la Selección, ahora están en el cielo.
+      </h1>
+
+      <p class="catalog-copy">
+        En el cielo existen miles de estrellas reconocidas, registradas en los catálogos astronómicos oficiales, responsables de organizar y validar los cuerpos celestes.
+      </p>
+
+      <p class="catalog-copy">
+        Y entre todas ellas, podemos encontrar en el Segundo Catálogo General Argentino, las estrellas:
+      </p>
+
+      <div class="catalog-codes">
+        SCGA 1924 | SCGA 1928<br />
+        SCGA 1930 | SCGA 1950
+      </div>
+
+      <p class="catalog-copy">
+        Son estrellas reales. Oficiales. Incuestionables. Como las de la Selección Uruguaya de Fútbol.
+      </p>
+
+      <div class="catalog-bottom-line" aria-hidden="true"></div>
+    </article>
+
+    <h2 class="catalog-outside-title catalog-reveal" style="--catalog-delay: 0.22s;">
+      Por eso las transformamos en un homenaje a nuestra historia.
+    </h2>
+
+    <div class="catalog-btn-wrap catalog-reveal" style="--catalog-delay: 0.36s;">
+      <button class="btn" type="button" data-next="steps">Siguiente</button>
+    </div>
+  </div>
+</section>
+
+    <!-- =========================================================
+      PANTALLA 4 / INSTRUCCIONES
+    ========================================================== -->
+    <section class="screen steps-screen" data-screen="steps" aria-label="Tres simples pasos">
+  <div class="steps-content">
+    <h1 class="steps-title">Tres simples pasos</h1>
+
+    <article class="panel step-card step-reveal" style="--step-delay: 0.10s;">
+      <h2>Paso 1</h2>
+      <div class="step-line"></div>
+      <p>Abrí el visor de la bóveda celeste<br>para ver las estrellas.</p>
+    </article>
+
+    <article class="panel step-card step-reveal" style="--step-delay: 0.28s;">
+      <h2>Paso 2</h2>
+      <div class="step-line"></div>
+      <p>Seguí la flecha para encontrar las estrellas.</p>
+    </article>
+
+    <article class="panel step-card step-reveal" style="--step-delay: 0.46s;">
+      <h2>Paso 3</h2>
+      <div class="step-line"></div>
+      <p>Posicionate sobre una estrella para ver su contenido.</p>
+    </article>
+
+    <div class="start-btn-wrap step-reveal" style="--step-delay: 0.66s;">
+      <button class="btn" type="button" id="openSkyBtn">Comenzar</button>
+    </div>
+  </div>
+</section>
+
+   <!-- =========================================================
+  PANTALLA 4 / ACCESO A SENSORES
+========================================================== -->
+<section class="screen sensor-gate-screen" data-screen="sensor-gate" aria-label="Acceso a sensores">
+  <div class="sensor-gate-content">
+    <div class="loader-stars sensor-gate-stars" aria-hidden="true">
+      <span class="loader-star is-filled">★</span>
+      <span class="loader-star is-filled">★</span>
+      <span class="loader-star is-filled">★</span>
+      <span class="loader-star">☆</span>
+    </div>
+
+    <h1 class="hero-title sensor-gate-title" aria-label="Estrellas Reales">
+      <span class="top">Estrellas</span>
+      <span class="bottom">Reales</span>
+    </h1>
+
+    <p class="sensor-gate-copy">
+      Para abrir el visor celeste, necesitamos activar los sensores de movimiento y ubicación de tu celular.
+    </p>
+
+   
+  </div>
+</section>
+  </main>
+
+  <script>
+    /* =========================================================
+      CONFIGURACIÓN DE ASSETS A PRECARGAR
+      Agregá acá todos los fondos, logos, texturas, imágenes, JSON, etc.
+      La pantalla de carga queda activa hasta que esto termine.
+    ========================================================= */
+
+const ASSETS_TO_PRELOAD = [
+  // INDEX
+  "assets/img/bg-stars.jpg",
+  "assets/img/lateral.svg",
+  "assets/img/logo-burger-king-white.svg",
+  "assets/img/logo-auf-white.svg",
+
+  "assets/img/extra/a.png",
+  "assets/img/extra/b.png",
+  "assets/img/extra/c.png",
+  "assets/img/extra/d.png",
+  "assets/img/extra/e.png",
+
+  // BÓVEDA BASE
+  "assets/img/guide-arrow.svg",
+
+  // MISIONES - HERO
+  "assets/img/missions/scga1924.png",
+  "assets/img/missions/scga1928.png",
+  "assets/img/missions/scga1930.png",
+  "assets/img/missions/scga1950.png",
+
+  // 1924
+  "assets/img/missions/img1924.png",
+  "assets/img/missions/img1924-2.png",
+  "assets/img/missions/img1924-3.png",
+  "assets/img/missions/img1924-4.png",
+
+  // 1928
+  "assets/img/missions/img1928.png",
+  "assets/img/missions/img1928-2.png",
+  "assets/img/missions/img1928-3.png",
+
+  // 1930
+  "assets/img/missions/img1930.png",
+  "assets/img/missions/img1930-2.png",
+  "assets/img/missions/img1930-3.png",
+  "assets/img/missions/img1930-4.png",
+  "assets/img/missions/img1930-5.png",
+
+  // 1950
+  "assets/img/missions/img1950.png",
+  "assets/img/missions/img1950-2.png",
+  "assets/img/missions/img1950-3.png",
+  "assets/img/missions/img1950-4.png",
+  "assets/img/missions/img1950-5.png",
+
+  // POSTERS PHONE
+  "assets/img/posters/phone-1924.png",
+  "assets/img/posters/phone-1928.png",
+  "assets/img/posters/phone-1930.png",
+  "assets/img/posters/phone-1950.png",
+
+  // POSTERS DOWNLOAD
+  "assets/img/posters/POSTER_1924.png",
+  "assets/img/posters/POSTER_1928.png",
+  "assets/img/posters/POSTER_1930.png",
+  "assets/img/posters/POSTER_1950.png",
+];
+
+    const SCREENS = {
+  loading: document.querySelector('[data-screen="loading"]'),
+  error: document.querySelector('[data-screen="error"]'),
+  notStarted: document.querySelector('[data-screen="not-started"]'),
+  ended: document.querySelector('[data-screen="ended"]'),
+  desktop: document.querySelector('[data-screen="desktop"]'),
+  product: document.querySelector('[data-screen="product"]'),
+
+  register: document.querySelector('[data-screen="register"]'),
+  terms: document.querySelector('[data-screen="terms"]'),
+  story: document.querySelector('[data-screen="story"]'),
+  catalog: document.querySelector('[data-screen="catalog"]'),
+  steps: document.querySelector('[data-screen="steps"]'),
+  sensorGate: document.querySelector('[data-screen="sensor-gate"]'),
+};
+
+    const state = {
+      currentScreen: "loading",
+      loaderInterval: null,
+      loaderStep: 0,
+      user: {
+        name: "",
+        email: "",
+      },
+    };
+function setRealViewportHeight() {
+  document.documentElement.style.setProperty(
+    "--app-height",
+    `${window.innerHeight}px`
+  );
+}
+
+setRealViewportHeight();
+
+window.addEventListener("resize", setRealViewportHeight);
+
+window.addEventListener("orientationchange", () => {
+  setTimeout(setRealViewportHeight, 250);
+});
+    function resetStepsAnimation(screen) {
+  if (!screen || !screen.classList.contains("steps-screen")) return;
+
+  const items = screen.querySelectorAll(".step-reveal");
+
+  items.forEach((item) => {
+    item.style.animation = "none";
+    void item.offsetHeight;
+    item.style.animation = "";
+  });
+}
+
+function showScreen(screenName) {
+  const current = SCREENS[state.currentScreen];
+  const next = SCREENS[screenName];
+  if (!next || current === next) return;
+
+  if (current) {
+    current.classList.add("is-leaving");
+    current.classList.remove("is-active");
+  }
+
+  resetStepsAnimation(next);
+
+  window.setTimeout(() => {
+    if (current) current.classList.remove("is-leaving");
+    next.classList.add("is-active");
+    state.currentScreen = screenName;
+  }, 260);
+
+  ER.api.track(ER.EVENTS.page_view, { screen: screenName });
+}
+
+    function startStarLoader() {
+      const stars = Array.from(document.querySelectorAll(".loader-star"));
+
+      state.loaderInterval = window.setInterval(() => {
+        state.loaderStep = (state.loaderStep % 4) + 1;
+
+        stars.forEach((star, index) => {
+          star.classList.toggle("is-filled", index < state.loaderStep);
+          star.textContent = index < state.loaderStep ? "★" : "☆";
+        });
+      }, 280);
+    }
+
+    function stopStarLoader() {
+      if (state.loaderInterval) {
+        window.clearInterval(state.loaderInterval);
+        state.loaderInterval = null;
+      }
+    }
+
+function preloadImage(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    let done = false;
+
+    const finish = (ok) => {
+      if (done) return;
+      done = true;
+      resolve({ src, ok });
+    };
+
+    img.onload = () => finish(true);
+    img.onerror = () => finish(false);
+
+    // Evita que el splash quede colgado infinito si un asset no responde.
+    window.setTimeout(() => finish(false), 18000);
+
+    img.src = src;
+  });
+}
+
+    async function preloadFontAssets() {
+  if (!document.fonts) return;
+
+  const fontLoads = [
+    document.fonts.load("400 14px FlameSans"),
+    document.fonts.load("700 40px FlameBold"),
+    document.fonts.load("700 40px FlameBoldVariable"),
+    document.fonts.load("700 14px HostGrotesk"),
+  ];
+
+  await Promise.all(fontLoads.map((promise) => promise.catch(() => null)));
+  await document.fonts.ready.catch(() => null);
+}
+
+async function preloadAssets() {
+  const imagePromise = Promise.all(
+    ASSETS_TO_PRELOAD.map(preloadImage)
+  );
+
+  const fontPromise = preloadFontAssets();
+
+  // Esto cachea también el HTML de bóveda para que la navegación sea más rápida.
+  const bovedaPromise = fetch("./boveda-offline.html", { cache: "force-cache" })
+    .catch(() => null);
+
+  const minLoadingTime = new Promise((resolve) => {
+    window.setTimeout(resolve, 1600);
+  });
+
+  await Promise.all([
+    imagePromise,
+    fontPromise,
+    bovedaPromise,
+    minLoadingTime,
+  ]);
+}
+function setIndexLoadingText(title = "Cargando", subtitle = "Preparando experiencia") {
+  const loadingScreen = SCREENS.loading;
+  if (!loadingScreen) return;
+
+  const titleEl = loadingScreen.querySelector(".hero-title");
+  const subtitleEl = loadingScreen.querySelector(".loading-copy, .subtitle, p");
+
+  if (titleEl) {
+    titleEl.innerHTML = `
+      <span class="top">Estrellas</span>
+      <span class="bottom">Reales</span>
+    `;
+  }
+
+  if (subtitleEl) {
+    subtitleEl.textContent = subtitle;
+  }
+}
+
+function requestMotionPermissionFromIndex() {
+  return new Promise(async (resolve) => {
+    if (
+      typeof DeviceOrientationEvent !== "undefined" &&
+      typeof DeviceOrientationEvent.requestPermission === "function"
+    ) {
+      try {
+        const permission = await DeviceOrientationEvent.requestPermission();
+        resolve(permission === "granted");
+      } catch (error) {
+        resolve(false);
+      }
+
+      return;
+    }
+
+    // Android / desktop normalmente no necesita requestPermission explícito.
+    resolve(true);
+  });
+}
+
+function requestGpsFromIndex() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve({
+        ok: false,
+        lat: null,
+        lon: null,
+      });
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        resolve({
+          ok: true,
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+        });
+      },
+      () => {
+        resolve({
+          ok: false,
+          lat: null,
+          lon: null,
+        });
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 9000,
+        maximumAge: 60000,
+      }
+    );
+  });
+}
+
+async function prepararYEntrarBoveda() {
+  const openSkyBtn = document.getElementById("openSkyBtn");
+  if (openSkyBtn) openSkyBtn.disabled = true;
+
+  ER.api.track(ER.EVENTS.start_experience);
+
+  sessionStorage.removeItem("er_lat");
+  sessionStorage.removeItem("er_lon");
+  sessionStorage.removeItem("er_manual_mode");
+  sessionStorage.removeItem("er_permissions_from_index");
+
+  setIndexLoadingText("Estrellas Reales", "Preparando la bóveda celeste...");
+  showScreen("loading");
+  startStarLoader();
+
+  const motionGranted = await requestMotionPermissionFromIndex();
+
+  const gps = await requestGpsFromIndex();
+
+  if (gps.ok) {
+    sessionStorage.setItem("er_lat", String(gps.lat));
+    sessionStorage.setItem("er_lon", String(gps.lon));
+  }
+
+  /*
+    Si sensores o GPS fallan, entramos igual,
+    pero dejamos listo el modo manual en la bóveda.
+  */
+  if (!motionGranted || !gps.ok) {
+    sessionStorage.setItem("er_manual_mode", "1");
+  } else {
+    sessionStorage.setItem("er_manual_mode", "0");
+  }
+
+  sessionStorage.setItem("er_permissions_from_index", "1");
+
+  // La versión offline navega directo, sin token ni ruta /play del backend.
+  const dest = "./boveda-offline.html?start=1";
+  window.location.href = dest;
+}
+    function setupNavigation() {
+      document.querySelectorAll("[data-next]").forEach((button) => {
+      button.addEventListener("click", () => {
+    showScreen(button.dataset.next);
+      });
+    });
+   const openSkyBtn = document.getElementById("openSkyBtn");
+
+if (openSkyBtn) {
+  openSkyBtn.addEventListener("click", prepararYEntrarBoveda);
+}
+const openTermsBtn = document.getElementById("openTermsBtn");
+const acceptTermsBtn = document.getElementById("acceptTermsBtn");
+const backFromTermsBtn = document.getElementById("backFromTermsBtn");
+const termsInput = document.getElementById("termsInput");
+
+if (openTermsBtn) {
+  openTermsBtn.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    ER.api.track(ER.EVENTS.view_terms);
+    showScreen("terms");
+  });
+}
+
+if (backFromTermsBtn) {
+  backFromTermsBtn.addEventListener("click", () => {
+    showScreen("register");
+  });
+}
+
+if (acceptTermsBtn) {
+  acceptTermsBtn.addEventListener("click", () => {
+    if (termsInput) termsInput.checked = true;
+    showScreen("register");
+  });
+}
+      const form = document.getElementById("registerForm");
+      const nameInput = document.getElementById("nameInput");
+      const emailInput = document.getElementById("emailInput");
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+
+        // Modo offline: todos los campos son opcionales y se avanza sin validar.
+        state.user.name = nameInput ? nameInput.value.trim() : "";
+        state.user.email = emailInput ? emailInput.value.trim() : "";
+        showScreen("story");
+      });
+    }
+
+    function lockIOSViewportQuirks() {
+      // Ayuda a evitar zoom involuntario y comportamientos raros de Safari iOS.
+      document.addEventListener("gesturestart", (event) => event.preventDefault(), { passive: false });
+
+      let lastTouchEnd = 0;
+      document.addEventListener("touchend", (event) => {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) event.preventDefault();
+        lastTouchEnd = now;
+      }, { passive: false });
+    }
+    async function init() {
+  lockIOSViewportQuirks();
+  setupNavigation();
+  startStarLoader();
+
+  await preloadAssets();
+
+  stopStarLoader();
+
+  // Modo offline: no se valida token/sesión, campaña ni tipo de dispositivo.
+  showScreen("register");
+}
+
+    window.addEventListener("DOMContentLoaded", init);
+  </script>
+</body>
+</html>

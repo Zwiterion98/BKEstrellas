@@ -1,0 +1,5101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SkyView Ultimate: brújula por dirección</title>
+
+  <!-- Versión independiente: no usa backend, sesión, token ni analítica. -->
+  <script src="assets/js/er-api-offline.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
+<style>
+@font-face {
+  font-family: "FlameBold";
+  src: url("./assets/fonts/1.Flame-Bold 2 3 2.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "FlameSans";
+  src: url("./assets/fonts/FlameSans-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "HostGrotesk";
+  src: url("./assets/fonts/HostGrotesk-VariableFont_wght.ttf") format("truetype");
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --bg-dark: #05080d;
+  --bg-blue: #12384d;
+  --accent: #58a7e8;
+  --text: #f3f3ef;
+  --text-muted: rgba(255,255,255,0.36);
+  --panel: rgba(10, 24, 36, 0.58);
+  --line: rgba(255,255,255,0.78);
+
+  --card-bg: rgba(13, 31, 44, 0.97);
+  --card-header: #496f86;
+  --card-border: rgba(126, 157, 179, 0.34);
+
+  --mission-blue: #12384d;
+  --mission-white: #f7f4ee;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: linear-gradient(
+    180deg,
+    #000 0%,
+    #000 56%,
+    #04131d 70%,
+    #12384d 100%
+  );
+  color: var(--text);
+  font-family: "HostGrotesk", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button {
+  background: #fff;
+  color: #000;
+  border: none;
+  padding: 16px 32px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 999px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: transform 0.1s ease;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+/* =========================
+   BASE LAYERS
+========================= */
+#canvas-container {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  background: #000;
+  touch-action: none;
+}
+
+#dome-bg-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  opacity: 0.9;
+}
+
+#canvas-container.dome-bg-enabled #dome-bg-canvas {
+  display: block;
+}
+
+#canvas-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.08) 54%, rgba(0,0,0,0.42) 100%),
+    linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0) 32%, rgba(0,0,0,0.40) 100%);
+}
+
+#canvas-container canvas:not(#dome-bg-canvas) {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100% !important;
+  height: 100% !important;
+  background: transparent !important;
+}
+
+#horizon-shadow {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 35vh;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0,0,0,0.35) 0%,
+    rgba(0,0,0,0.12) 30%,
+    rgba(0,0,0,0) 100%
+  );
+  transition: opacity 0.1s linear;
+}
+
+.oculto {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* =========================
+   START / LOADING UI
+========================= */
+
+#ui-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+  transition: opacity 0.35s ease;
+}
+
+.title-flat {
+  margin-bottom: 8px;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.subtitle-flat {
+  margin-bottom: 32px;
+  font-size: 14px;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+/* =========================
+   MISSION TRACKER
+========================= */
+
+#mission-tracker {
+  position: absolute;
+  top: 26px;
+  left: 30px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 18px;
+  letter-spacing: 0.03em;
+  pointer-events: none;
+}
+
+.tracker-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255,255,255,0.34);
+  transition: color 0.25s ease, opacity 0.25s ease;
+}
+
+.tracker-item::after {
+  content: "";
+  position: absolute;
+  right: -8px;
+  top: 50%;
+  width: 1px;
+  height: 38px;
+  background: rgba(255,255,255,0.18);
+  transform: translateY(-50%);
+}
+
+.tracker-item:last-child::after {
+  display: none;
+}
+
+.tracker-star {
+  font-size: 20px;
+  line-height: 1;
+  color: rgba(255,255,255,0.34);
+  transform: translateY(-1px);
+  transition:
+    color 0.25s ease,
+    text-shadow 0.25s ease,
+    transform 0.25s ease;
+}
+
+.tracker-item.active {
+  color: rgba(255,255,255,0.92);
+}
+
+.tracker-item.active .tracker-star {
+  color: rgba(255,255,255,0.92);
+  text-shadow: none;
+}
+
+.tracker-item.completed {
+  color: rgba(255,255,255,0.96);
+}
+
+.tracker-item.completed .tracker-star {
+  color: var(--accent);
+  transform: translateY(-1px) scale(1.08);
+  text-shadow:
+    0 0 8px rgba(88,167,232,0.95),
+    0 0 18px rgba(88,167,232,0.75),
+    0 0 30px rgba(88,167,232,0.35);
+}
+
+.tracker-item.completed.active .tracker-star {
+  color: var(--accent);
+}
+
+/* =========================
+   CENTRAL SCANNER
+========================= */
+
+#scanner-ui {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 110px;
+  height: 110px;
+  z-index: 15;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+#scanner-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.35px solid rgba(255,255,255,0.78);
+}
+
+#scanner-progress {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  opacity: 0;
+  background:
+    conic-gradient(
+      from -18deg,
+      rgba(88,167,232,1) calc(var(--progress, 0) * 1%),
+      rgba(88,167,232,0) 0
+    );
+  mask: radial-gradient(
+    transparent 0 49px,
+    black 50px 55px,
+    transparent 56px 100%
+  );
+  -webkit-mask: radial-gradient(
+    transparent 0 49px,
+    black 50px 55px,
+    transparent 56px 100%
+  );
+  filter:
+    drop-shadow(0 0 6px rgba(88,167,232,0.95))
+    drop-shadow(0 0 14px rgba(88,167,232,0.72))
+    drop-shadow(0 0 32px rgba(88,167,232,0.55));
+  transition: opacity 0.15s ease;
+}
+
+#scanner-ui.capturing #scanner-progress {
+  opacity: 1;
+}
+
+#scanner-ui.capture-complete #scanner-progress {
+  opacity: 0;
+}
+
+#scanner-cross {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 28px;
+  height: 28px;
+  opacity: 0.85;
+  transform: translate(-50%, -50%);
+}
+
+#scanner-cross::before,
+#scanner-cross::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: rgba(255,255,255,0.86);
+  transform: translate(-50%, -50%);
+}
+
+#scanner-cross::before {
+  width: 1.5px;
+  height: 36px;
+}
+
+#scanner-cross::after {
+  width: 36px;
+  height: 1.5px;
+}
+
+#scanner-ui.locked-preview #scanner-cross {
+  opacity: 0;
+}
+#guide-arrow {
+  
+
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  z-index: 16;
+  pointer-events: none;
+
+  transform: translate(-50%, -50%);
+  transform-origin: 50% 50%;
+  transform: rotate(35deg);
+  opacity: 0;
+  transition: opacity 0.16s ease;
+  will-change: transform, opacity;
+}
+
+/* El SVG rota sobre su propio eje acá */
+#guide-arrow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  background-image: url("./assets/img/guide-arrow.svg");
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: contain;
+
+  transform: rotate(var(--guide-arrow-self-rotation));
+  transform-origin: 50% 50%;
+
+  filter:
+    drop-shadow(0 2px 4px rgba(0,0,0,0.55))
+    drop-shadow(0 0 7px rgba(255,255,255,0.14));
+}
+/* =========================
+   SMALL TARGET PILL
+========================= */
+
+#target-hud {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 76px);
+  z-index: 18;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transition: opacity 0.2s ease;
+}
+
+.pill {
+  max-width: 78vw;
+  padding: 7px 16px;
+  overflow: hidden;
+  background: rgba(10,24,36,0.72);
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 999px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.target-type {
+  display: block;
+  margin-top: 5px;
+  font-size: 9px;
+  color: rgba(255,255,255,0.58);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+/* =========================
+   INFO CONNECTOR
+========================= */
+
+#info-connector-layer {
+  --connector-length: 1000;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  z-index: 23;
+  overflow: visible;
+  opacity: 1;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+#info-connector-layer.hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+#info-connector-path {
+  fill: none;
+  stroke: rgba(255,255,255,0.78);
+  stroke-width: 1.05;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  stroke-dasharray: var(--connector-length);
+  stroke-dashoffset: var(--connector-length);
+  vector-effect: non-scaling-stroke;
+}
+
+#info-connector-layer.revealing #info-connector-path {
+  animation: drawInfoConnector 0.48s ease-out forwards;
+}
+
+@keyframes drawInfoConnector {
+  from {
+    stroke-dashoffset: var(--connector-length);
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* =========================
+   MISSION INFO CARD
+   Card chica que aparece al capturar estrella
+========================= */
+
+#star-info-card {
+  position: absolute;
+  top: clamp(68px, 9vh, 92px);
+  left: clamp(14px, 4vw, 42px);
+  width: min(70vw, 560px);
+  z-index: 24;
+  opacity: 1;
+  pointer-events: none;
+}
+
+#star-info-card.hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+#star-info-card .star-card {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+  background: rgba(15, 33, 44, 0.96);
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.16);
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+#star-info-card.visible .star-card {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s ease;
+}
+
+/* barra blanca lateral */
+#star-info-card .star-card::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: clamp(58px, 10vw, 84px);
+  width: 5px;
+  height: clamp(86px, 14vw, 118px);
+  background: #fff;
+  pointer-events: none;
+}
+
+/* esquina blanca inferior derecha */
+#star-info-card .star-card::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 14px;
+  height: 14px;
+  border-right: 3px solid #fff;
+  border-bottom: 3px solid #fff;
+  pointer-events: none;
+}
+
+#star-info-card .star-card-header {
+  height: clamp(48px, 7.5vw, 76px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 clamp(12px, 2vw, 18px);
+  background: #496f86;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+
+#star-card-title {
+  min-width: 0;
+  flex: 1 1 auto;
+  color: #f6f3eb;
+  font-family: "FlameBold", "Cooper Black", "Arial Black", Impact, sans-serif;
+  font-size: clamp(24px, 6.2vw, 58px);
+  line-height: 0.92;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+#star-info-card .star-card-target {
+  position: relative;
+  flex: 0 0 auto;
+  width: clamp(22px, 3.5vw, 34px);
+  height: clamp(22px, 3.5vw, 34px);
+}
+
+#star-info-card .star-card-target::before,
+#star-info-card .star-card-target::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: rgba(255,255,255,0.72);
+  transform: translate(-50%, -50%);
+}
+
+#star-info-card .star-card-target::before {
+  width: 100%;
+  height: 1px;
+}
+
+#star-info-card .star-card-target::after {
+  width: 1px;
+  height: 100%;
+}
+
+/* IMPORTANTE: target-dot queda scopiado solo a la card chica */
+#star-info-card .target-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(16px, 2.5vw, 24px);
+  height: clamp(16px, 2.5vw, 24px);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+#star-info-card .target-dot::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(6px, 0.9vw, 9px);
+  height: clamp(6px, 0.9vw, 9px);
+  background: #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+#star-info-card .star-card-body {
+  display: grid;
+  grid-template-columns: clamp(86px, 22vw, 164px) 1px minmax(0, 1fr);
+  min-height: clamp(88px, 15vw, 136px);
+  background: rgba(15, 33, 44, 0.98);
+}
+
+#star-info-card .star-card-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+  padding:
+    clamp(8px, 1.5vw, 14px)
+    8px
+    clamp(8px, 1.5vw, 12px)
+    clamp(10px, 2vw, 18px);
+}
+
+#star-info-card .star-card-name-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #fff;
+  font-family: "FlameSans", Arial, sans-serif;
+  font-size: clamp(13px, 2.8vw, 26px);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+#star-info-card .star-card-play {
+  width: 0;
+  height: 0;
+  flex: 0 0 auto;
+  border-top: clamp(5px, 0.9vw, 9px) solid transparent;
+  border-bottom: clamp(5px, 0.9vw, 9px) solid transparent;
+  border-left: clamp(6px, 1vw, 11px) solid #fff;
+  transform: translateY(1px);
+}
+
+#star-info-card .star-card-year {
+  max-width: 100%;
+  margin-top: 5px;
+  color: #fff;
+  font-family: "FlameSans", Arial, sans-serif;
+  font-size: clamp(38px, 8vw, 72px);
+  line-height: 0.82;
+  letter-spacing: -0.055em;
+  white-space: nowrap;
+}
+
+#star-info-card .star-card-divider {
+  width: 1px;
+  background: rgba(255,255,255,0.16);
+}
+
+#star-info-card .star-card-data {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+  padding:
+    clamp(9px, 1.6vw, 14px)
+    clamp(9px, 1.8vw, 16px)
+    clamp(9px, 1.4vw, 12px)
+    clamp(11px, 2vw, 18px);
+  color: #fff;
+  font-family: "FlameSans", Arial, sans-serif;
+  font-size: clamp(8.8px, 2vw, 19px);
+  line-height: 1.14;
+}
+
+#star-info-card .star-card-data strong {
+  font-weight: 400;
+}
+
+#star-info-card .star-card-data div {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+#star-info-card .star-card-gap {
+  height: 6px;
+}
+
+#star-info-card .star-card-footer {
+  height: clamp(12px, 2.4vw, 26px);
+  background: rgba(14, 31, 42, 0.98);
+  border-top: 1px solid rgba(255,255,255,0.10);
+}
+
+/* =========================
+   RESPONSIVE CARD CHICA
+========================= */
+
+@media (max-width: 480px) {
+#star-info-card {
+  top: 68px;
+  left: 12px;
+  width: 70vw;
+  min-width: 248px;
+}
+
+  #star-info-card .star-card-header {
+    height: 52px;
+    padding-left: 12px;
+    padding-right: 12px;
+    gap: 8px;
+  }
+
+  #star-card-title {
+  font-size: clamp(18px, 5.5vw, 28px);
+}
+
+  #star-info-card .star-card-target {
+    width: 24px;
+    height: 24px;
+  }
+
+  #star-info-card .target-dot {
+    width: 17px;
+    height: 17px;
+    border-width: 1.8px;
+  }
+
+  #star-info-card .target-dot::after {
+    width: 6px;
+    height: 6px;
+  }
+
+  #star-info-card .star-card-body {
+  grid-template-columns: 72px 1px minmax(0, 1fr);
+  min-height: 76px;
+}
+
+  #star-info-card .star-card-left {
+    padding: 8px 6px 8px 10px;
+  }
+
+  #star-info-card .star-card-name-row {
+  font-size: 10px;
+}
+
+  #star-info-card .star-card-play {
+    border-top-width: 5px;
+    border-bottom-width: 5px;
+    border-left-width: 7px;
+  }
+
+  #star-info-card .star-card-year {
+  font-size: 31px;
+}
+
+  #star-info-card .star-card-data {
+  padding: 8px 7px 7px 9px;
+  font-size: 7.4px;
+  line-height: 1.12;
+}
+
+  #star-info-card .star-card-footer {
+    height: 12px;
+  }
+
+  #star-info-card .star-card::before {
+    left: -4px;
+    width: 4px;
+    top: 54px;
+    height: 86px;
+  }
+
+  #star-info-card .star-card::after {
+    width: 11px;
+    height: 11px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+  }
+}
+/* =========================
+   COMPASS
+========================= */
+
+#compass-container {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  width: min(92vw, 520px);
+  height: 40px;
+  z-index: 30;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translateX(-50%);
+  mask-image: linear-gradient(to right, transparent 0%, black 16%, black 84%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 16%, black 84%, transparent 100%);
+}
+
+#compass-strip {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+#compass-strip span {
+  display: inline-block;
+  width: 64px;
+  color: rgba(255,255,255,0.88);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+#compass-pointer {
+  position: fixed;
+  bottom: 8px;
+  left: 50%;
+  z-index: 31;
+  color: #fff;
+  font-size: 14px;
+  pointer-events: none;
+  transform: translateX(-50%);
+  text-shadow: 0 2px 4px rgba(0,0,0,1);
+}
+
+/* =========================
+   DEBUG / ORIENTATION INFO
+========================= */
+
+#sys-info {
+  position: absolute;
+  left: 30px;
+  bottom: 82px;
+  z-index: 18;
+  color: rgba(255,255,255,0.42);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  line-height: 1.35;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+#sys-info.is-stacked {
+  white-space: normal;
+}
+
+#sys-info.is-stacked span {
+  display: block;
+}
+
+#orientation-panel {
+  position: absolute;
+  right: 18px;
+  bottom: 82px;
+  z-index: 12;
+  min-width: 220px;
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #e8e8e8;
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+#orientation-panel .title {
+  margin-bottom: 6px;
+  color: rgba(255,255,255,0.58);
+  font-family: "HostGrotesk", Inter, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+#orientation-panel .row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#orientation-panel .label {
+  color: rgba(255,255,255,0.45);
+}
+
+#orientation-panel .value {
+  color: #fff;
+  font-weight: 600;
+}
+
+/* =========================
+   FULLSCREEN MISSION DETAIL
+========================= */
+
+#mission-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  opacity: 1;
+  pointer-events: auto;
+  background: #000;
+  transition: opacity 0.28s ease;
+}
+
+#mission-modal.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mission-detail {
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  background: #000;
+  overflow: hidden;
+  color: #f7f4ee;
+  font-family: "HostGrotesk", Arial, sans-serif;
+}
+
+.mission-detail-scroll {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background:
+    linear-gradient(
+      180deg,
+      #000 0%,
+      #000 42%,
+      #021016 64%,
+      #12384d 100%
+    );
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.mission-detail-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.mission-detail .reveal {
+  opacity: 0;
+  transform: translateY(28px) scale(0.985);
+  transition:
+    opacity 1000ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 1000ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.mission-detail .reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.mission-hero {
+  position: relative;
+  width: 100%;
+  height: 282px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(255,255,255,.92), rgba(87,171,255,.55) 9%, transparent 27%),
+    radial-gradient(circle at 70% 30%, rgba(255,255,255,.5), transparent 20%),
+    linear-gradient(135deg, var(--nebula-a, #b86a38), var(--nebula-b, #3a78bd) 52%, var(--nebula-c, #1b1b24));
+}
+
+.mission-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,.9) 0 1px, transparent 1.4px),
+    radial-gradient(circle, rgba(255,255,255,.65) 0 1px, transparent 1.2px);
+  background-size: 42px 48px, 67px 73px;
+  background-position: 8px 12px, 21px 33px;
+  opacity: .58;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.mission-hero.has-image {
+  background: #000;
+}
+
+.mission-hero img {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.mission-hero img[src=""] {
+  display: none;
+}
+
+.mission-heading {
+  position: relative;
+  padding: 16px 16px 0;
+  background: #000;
+  border-bottom: none;
+}
+
+.mission-heading::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: rgba(247,244,238,.34);
+}
+
+.mission-heading-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.mission-eyebrow {
+  margin: 0 0 4px;
+  color: rgba(247,244,238,.78);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.mission-title {
+  margin: 0;
+  color: #f7f4ee;
+  font-family: "FlameBold", "Arial Black", Impact, sans-serif;
+  font-size: 47px;
+  line-height: .82;
+  letter-spacing: -.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.mission-target {
+  position: relative;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  margin-top: 16px;
+}
+
+.mission-target::before,
+.mission-target::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: rgba(255,255,255,.75);
+  transform: translate(-50%,-50%);
+}
+
+.mission-target::before {
+  width: 26px;
+  height: 1px;
+}
+
+.mission-target::after {
+  width: 1px;
+  height: 26px;
+}
+
+.mission-target span {
+  position: absolute;
+  inset: 6px;
+  border: 1.5px solid #fff;
+  border-radius: 50%;
+}
+
+.mission-target span::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
+  transform: translate(-50%,-50%);
+}
+
+.mission-down-mark {
+  position: relative;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  margin: 12px 0 0 4px;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid #fff;
+  transform: none;
+}
+
+.mission-block {
+  position: relative;
+  padding: 20px 22px;
+  background: transparent;
+}
+
+.mission-block.compact {
+  padding-top: 14px;
+}
+
+.mission-headline {
+  margin: 0 0 18px;
+  max-width: 315px;
+  color: #f7f4ee;
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 19px;
+  line-height: 1.08;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.mission-headline.center {
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+  max-width: 280px;
+}
+
+.mission-copy {
+  position: relative;
+  width: 100%;
+  margin: 0;
+  color: rgba(255,255,255,.86);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.28;
+  font-weight: 400;
+}
+
+.mission-copy strong {
+  color: #fff;
+  font-weight: 900;
+}
+
+.mission-copy + .mission-copy {
+  margin-top: 14px;
+}
+
+.mission-copy-line {
+  position: relative;
+  padding-left: 12px;
+}
+
+.mission-copy-line::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 0;
+  width: 1px;
+  background: rgba(247,244,238,.44);
+}
+
+.mission-copy-free {
+  margin-top: 18px;
+}
+
+.mission-vector {
+  position: relative;
+  padding-left: 25px;
+}
+
+.mission-vector::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  bottom: 5px;
+  width: 1px;
+  background: rgba(247,244,238,.44);
+}
+
+.mission-vector-item {
+  position: relative;
+  margin: 0 0 24px;
+  color: rgba(255,255,255,.86);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 400;
+}
+
+.mission-vector-item:last-child {
+  margin-bottom: 0;
+}
+
+.mission-vector-item::before {
+  content: "★";
+  position: absolute;
+  left: -25px;
+  top: -1px;
+  z-index: 2;
+  width: 12px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: #000;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.mission-vector-item.no-star::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  left: -22px;
+  top: 5px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.18);
+}
+
+.mission-vector-item strong {
+  color: #fff;
+  font-weight: 900;
+}
+
+.mission-img {
+  position: relative;
+  width: 100%;
+  aspect-ratio: var(--img-ratio, 16 / 9);
+  overflow: hidden;
+  background: #000;
+}
+
+.mission-img.tall {
+  aspect-ratio: var(--img-ratio, 1.25 / 1);
+}
+
+.mission-img.portrait {
+  aspect-ratio: var(--img-ratio, 4 / 5);
+}
+
+.mission-img img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+
+  object-fit: cover;
+  object-position: var(--img-position, center center);
+
+  transform: scale(var(--img-scale, 1.035));
+  transform-origin: var(--img-origin, center center);
+
+  margin: 0;
+  padding: 0;
+}
+
+.mission-mini-map img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center center;
+}
+
+.mission-inline-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 136px;
+  align-items: center;
+  gap: 18px;
+  padding: 32px 20px;
+  background: #000;
+}
+
+.mission-inline-title {
+  margin: 0;
+  color: #fff;
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 19px;
+  line-height: 1.05;
+  font-weight: 900;
+}
+
+.mission-mini-map {
+  width: 136px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #111;
+  border: 1px solid rgba(255,255,255,.18);
+}
+
+.mission-quote {
+  padding: 26px 22px 30px;
+  background: transparent;
+}
+
+.mission-quote p {
+  margin: 0;
+  color: #fff;
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 21px;
+  line-height: 1.16;
+  font-weight: 900;
+}
+
+.mission-quote p + p {
+  margin-top: 20px;
+}
+
+.mission-blue {
+  background: transparent;
+}
+.mission-spacer-lg {
+  height: 170px;
+  background: #000;
+}
+
+.mission-end {
+  padding: 32px 22px 52px;
+  background: transparent;
+  text-align: center;
+}
+.mission-back-btn {
+  width: 184px;
+  height: 38px;
+  border: 0;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #73c6f3 0%, #58a9dc 100%);
+  color: rgba(255,255,255,.82);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .36em;
+  text-transform: uppercase;
+  box-shadow: 0 11px 15px rgba(0,0,0,.42);
+}
+
+body.mission-modal-open {
+  overflow: hidden;
+}
+/* =========================
+   POSTER DOWNLOAD SCREEN
+========================= */
+
+.poster-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+}
+
+.poster-screen.hidden {
+  display: none;
+}
+
+.poster-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    linear-gradient(
+      180deg,
+      #000 0%,
+      #000 45%,
+      #031923 73%,
+      #123f52 100%
+    );
+}
+
+.poster-bg::after {
+  content: "";
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: -10%;
+  height: 34%;
+  background:
+    radial-gradient(
+      ellipse at 50% 100%,
+      rgba(98, 184, 233, 0.42) 0%,
+      rgba(18, 63, 82, 0.32) 32%,
+      rgba(18, 63, 82, 0) 72%
+    );
+  pointer-events: none;
+}
+
+.poster-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  padding:
+    calc(28px + env(safe-area-inset-top, 0px))
+    0
+    calc(28px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.poster-title-wrap {
+  flex: 0 0 auto;
+  margin-top: clamp(8px, 2vh, 22px);
+  margin-bottom: clamp(18px, 3.2vh, 34px);
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 260ms ease,
+    transform 260ms ease;
+}
+
+.poster-title-wrap.is-changing {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.poster-kicker {
+  font-family: "FlameBold", "FlameBoldVariable", "Arial Black", sans-serif;
+  font-size: clamp(26px, 7vw, 54px);
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.poster-title {
+  margin: 0;
+  font-family: "FlameBold", "FlameBoldVariable", "Arial Black", sans-serif;
+  font-size: clamp(74px, 22vw, 160px);
+  line-height: 0.78;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+}
+
+
+.poster-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.poster-carousel {
+  position: relative;
+  width: 100%;
+  height: min(40vh, 420px);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.poster-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(48vw, 310px);
+  height: min(38vh, 420px);
+  border-radius: clamp(16px, 4vw, 30px);
+  overflow: hidden;
+  border: 1px solid rgba(98, 184, 233, 0.75);
+  box-shadow:
+    0 0 20px rgba(98, 184, 233, 0.22),
+    0 24px 45px rgba(0,0,0,0.54);
+  background: rgba(0,0,0,0.38);
+  transform: translate(-50%, -50%) scale(0.76);
+  opacity: 0;
+  transition:
+    transform 520ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 520ms ease,
+    filter 520ms ease;
+  pointer-events: none;
+}
+
+.poster-card img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.poster-card.is-active {
+  z-index: 4;
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  filter: brightness(1);
+}
+
+.poster-card.is-prev {
+  z-index: 2;
+  opacity: 0.55;
+  transform: translate(calc(-50% - 42vw), -50%) scale(0.82);
+  filter: brightness(0.42) saturate(0.8);
+}
+
+.poster-card.is-next {
+  z-index: 2;
+  opacity: 0.55;
+  transform: translate(calc(-50% + 42vw), -50%) scale(0.82);
+  filter: brightness(0.42) saturate(0.8);
+}
+
+.poster-card.is-far-prev {
+  z-index: 1;
+  opacity: 0.18;
+  transform: translate(calc(-50% - 74vw), -50%) scale(0.72);
+  filter: brightness(0.25) saturate(0.65);
+}
+
+.poster-card.is-far-next {
+  z-index: 1;
+  opacity: 0.18;
+  transform: translate(calc(-50% + 74vw), -50%) scale(0.72);
+  filter: brightness(0.25) saturate(0.65);
+}
+
+.poster-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 8;
+  width: 44px;
+  height: 74px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 62px;
+  line-height: 1;
+  font-family: Arial, sans-serif;
+  display: grid;
+  place-items: center;
+  transform: translateY(-50%);
+  cursor: pointer;
+  opacity: 0.98;
+}
+
+.poster-arrow-left {
+  left: 10px;
+}
+
+.poster-arrow-right {
+  right: 10px;
+}
+.poster-download-btn {
+  width: min(84vw, 390px);
+  min-height: 56px;
+  margin-top: clamp(26px, 4vh, 42px);
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #72c4f1 0%, #5daedf 100%);
+  color: #fff;
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: clamp(12px, 3.15vw, 18px);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+
+  white-space: nowrap;
+  overflow: hidden;
+
+  box-shadow:
+    0 10px 18px rgba(0,0,0,0.42),
+    0 0 18px rgba(99,184,233,0.28);
+  cursor: pointer;
+}
+
+.poster-download-label {
+  display: inline-block;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.poster-download-btn:active {
+  transform: scale(0.98);
+}
+
+.poster-download-icon {
+  flex: 0 0 auto;
+  width: 25px;
+  height: 25px;
+  border: 1px solid rgba(255,255,255,0.82);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+.poster-copy {
+  width: min(84vw, 760px);
+  margin: clamp(34px, 6vh, 66px) auto 0;
+  color: rgba(255,255,255,0.88);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: clamp(20px, 5.2vw, 34px);
+  line-height: 1.22;
+  font-weight: 500;
+}
+
+@media (max-width: 480px) {
+  .poster-content {
+    padding-top: calc(30px + env(safe-area-inset-top, 0px));
+  }
+
+  .poster-title-wrap {
+    margin-bottom: 26px;
+  }
+
+.poster-carousel {
+  height: 37vh;
+}
+
+.poster-card {
+  width: 50vw;
+  height: 35vh;
+}
+
+  .poster-card.is-prev {
+    transform: translate(calc(-50% - 43vw), -50%) scale(0.82);
+  }
+
+  .poster-card.is-next {
+    transform: translate(calc(-50% + 43vw), -50%) scale(0.82);
+  }
+
+.poster-download-btn {
+  width: min(86vw, 340px);
+  margin-top: 28px;
+  min-height: 52px;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  gap: 10px;
+}
+
+  .poster-copy {
+    margin-top: 36px;
+  }
+}
+
+@media (max-height: 720px) {
+  .poster-title {
+    font-size: clamp(76px, 22vw, 140px);
+  }
+
+.poster-carousel {
+  height: 34vh;
+}
+
+.poster-card {
+  height: 32vh;
+}
+
+  .poster-copy {
+    margin-top: 26px;
+    font-size: clamp(17px, 4.5vw, 25px);
+  }
+}
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 480px) {
+  #star-info-card {
+    top: 26px;
+    left: 12px;
+    width: calc(100vw - 18px);
+  }
+
+  .star-card-header {
+    height: 40px;
+    padding-left: 10px;
+    padding-right: 10px;
+    gap: 8px;
+  }
+
+  #star-card-title {
+    font-size: clamp(18px, 5.8vw, 28px);
+  }
+
+  .star-card-target {
+    width: 20px;
+    height: 20px;
+  }
+
+  .target-dot {
+    width: 14px;
+    height: 14px;
+    border-width: 1.6px;
+  }
+
+  .target-dot::after {
+    width: 5px;
+    height: 5px;
+  }
+
+  .star-card-body {
+    grid-template-columns: 70px 1px minmax(0, 1fr);
+    min-height: 78px;
+  }
+
+  .star-card-left {
+    padding: 7px 6px 7px 10px;
+  }
+
+  .star-card-name-row {
+    font-size: 9.5px;
+    gap: 4px;
+  }
+
+  .star-card-play {
+    border-top-width: 4px;
+    border-bottom-width: 4px;
+    border-left-width: 5px;
+  }
+
+  .star-card-year {
+    margin-top: 3px;
+    font-size: 27px;
+  }
+
+  .star-card-data {
+    padding: 7px 7px 7px 9px;
+    font-size: 8.8px;
+    line-height: 1.15;
+  }
+
+  .star-card-gap {
+    height: 4px;
+  }
+
+  .star-card-footer {
+    height: 9px;
+  }
+
+  .star-card::before {
+    left: -4px;
+    width: 4px;
+    top: 50px;
+    height: 88px;
+  }
+
+  .star-card::after {
+    width: 11px;
+    height: 11px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+  }
+}
+
+@media (max-width: 420px) {
+  #mission-tracker {
+    top: 20px;
+    left: 14px;
+    gap: 10px;
+    font-size: 13px;
+  }
+
+  .tracker-item {
+    gap: 5px;
+  }
+
+  .tracker-item::after {
+    right: -6px;
+    height: 24px;
+  }
+
+  .tracker-star {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 360px) {
+  .mission-hero {
+    height: 250px;
+  }
+
+  .mission-title {
+    font-size: 42px;
+  }
+
+  .mission-headline {
+    font-size: 17px;
+  }
+
+  .mission-copy,
+  .mission-vector-item {
+    font-size: 12px;
+  }
+.mission-vector-item br {
+  display: block;
+  content: "";
+  margin-top: 10px;
+}
+  .mission-quote p {
+    font-size: 19px;
+  }
+
+  .mission-inline-grid {
+    grid-template-columns: minmax(0, 1fr) 118px;
+    gap: 12px;
+  }
+
+  .mission-mini-map {
+    width: 118px;
+  }
+}
+
+@media (max-height: 720px) {
+  .mission-detail-scroll {
+    min-height: auto;
+  }
+}
+/* =========================
+   SKY CONTROLS
+   Switch sutil para fondo y modo manual
+========================= */
+
+#sky-controls {
+  position: absolute;
+  right: 18px;
+  top: 76px;
+  z-index: 34;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  opacity: 1;
+  transition: opacity 0.25s ease;
+  pointer-events: auto;
+}
+
+#sky-controls.oculto {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sky-switch {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  height: 24px;
+  padding: 4px 6px 4px 9px;
+  border-radius: 999px;
+  background: rgba(7, 18, 28, 0.52);
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: rgba(255,255,255,0.62);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.sky-switch input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sky-switch i {
+  position: relative;
+  width: 28px;
+  height: 14px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.14);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12);
+}
+
+.sky-switch i::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.72);
+  transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.sky-switch input:checked + i {
+  background: rgba(88,167,232,0.38);
+}
+
+.sky-switch input:checked + i::after {
+  transform: translateX(14px);
+  background: #fff;
+  box-shadow: 0 0 8px rgba(88,167,232,0.85);
+}
+
+body.manual-nav-active #canvas-container {
+  cursor: grab;
+}
+
+body.manual-nav-active #canvas-container:active {
+  cursor: grabbing;
+}
+
+@media (max-width: 480px) {
+  #sky-controls {
+    top: 58px;
+    right: 10px;
+    gap: 5px;
+  }
+
+  .sky-switch {
+    height: 22px;
+    font-size: 8px;
+    padding-left: 7px;
+  }
+
+  .sky-switch i {
+    width: 25px;
+    height: 13px;
+  }
+
+  .sky-switch i::after {
+    width: 9px;
+    height: 9px;
+  }
+
+  .sky-switch input:checked + i::after {
+    transform: translateX(12px);
+  }
+}
+/* =========================
+   MODE FEEDBACK
+   Toast visual al cambiar Manual / Movimiento
+========================= */
+
+#mode-feedback {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 90;
+  opacity: 1;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s ease;
+}
+
+#mode-feedback.hidden {
+  opacity: 0;
+  transform: translate(-50%, -44%) scale(0.96);
+}
+
+.mode-feedback-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 230px;
+  max-width: calc(100vw - 48px);
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(7, 18, 28, 0.76);
+  border: 1px solid rgba(255,255,255,0.16);
+  color: #fff;
+  box-shadow:
+    0 18px 40px rgba(0,0,0,0.42),
+    0 0 22px rgba(88,167,232,0.16);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.mode-feedback-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(88,167,232,0.22);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.mode-feedback-title {
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mode-feedback-text {
+  margin-top: 4px;
+  color: rgba(255,255,255,0.68);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+#mission-modal-continue.is-downloadable-content {
+  width: min(78vw, 310px);
+  min-width: 238px;
+  min-height: 38px;
+  padding: 0 18px;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+
+  font-size: clamp(8.5px, 2.45vw, 11px);
+  line-height: 1;
+  letter-spacing: 0.14em;
+}
+@media (max-width: 480px) {
+  .mode-feedback-card {
+    min-width: 214px;
+    padding: 12px 14px;
+    border-radius: 16px;
+  }
+
+  .mode-feedback-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+  }
+
+  .mode-feedback-title {
+    font-size: 12px;
+  }
+
+  .mode-feedback-text {
+    font-size: 10px;
+  }
+}
+/* =========================
+   BÓVEDA LOADING STARS
+========================= */
+
+.boveda-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+}
+
+.boveda-loader-stars {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: rgba(255,255,255,0.35);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.boveda-loader-stars span {
+  transition:
+    color 0.22s ease,
+    text-shadow 0.22s ease,
+    transform 0.22s ease;
+}
+
+.boveda-loader-stars span.is-filled {
+  color: #58a7e8;
+  transform: scale(1.08);
+  text-shadow:
+    0 0 8px rgba(88,167,232,0.95),
+    0 0 18px rgba(88,167,232,0.75),
+    0 0 30px rgba(88,167,232,0.35);
+}
+
+.boveda-loader-title {
+  margin: 0;
+  font-family: "FlameBold", "Arial Black", Impact, sans-serif;
+  font-size: clamp(36px, 11vw, 68px);
+  line-height: 0.86;
+  text-transform: uppercase;
+}
+
+.boveda-loader-title span {
+  display: block;
+}
+
+.boveda-loader-copy {
+  max-width: 260px;
+  margin: 0;
+  color: rgba(255,255,255,0.56);
+  font-family: "HostGrotesk", Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.boveda-loading-logos {
+  position: absolute;
+  left: 50%;
+  bottom: calc(48px + env(safe-area-inset-bottom, 0px));
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(18px, 5vw, 34px);
+  transform: translateX(-50%);
+  opacity: 0.92;
+  pointer-events: none;
+}
+
+.boveda-loading-logos img {
+  height: clamp(34px, 7vw, 54px);
+  width: auto;
+  max-width: 96px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.45));
+}
+
+@media (max-height: 680px) {
+  .boveda-loading-logos {
+    bottom: calc(30px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .boveda-loading-logos img {
+    height: 32px;
+  }
+}
+/* Ocultar temporalmente switch de fondo */
+#sky-controls .sky-switch:first-child {
+  display: none !important;
+}
+</style>
+</head>
+<body>
+
+
+  <div id="target-hud">
+    <div class="pill" id="target-name">--</div>
+    <span class="target-type" id="target-desc">--</span>
+  </div>
+  
+  <svg id="info-connector-layer" class="hidden" aria-hidden="true">
+  <path id="info-connector-path"></path>
+</svg>
+
+<div id="star-info-card" class="hidden">
+  <div class="star-card">
+    <div class="star-card-header">
+      <span id="star-card-title">COLOMBES1924</span>
+
+      <span class="star-card-target" aria-hidden="true">
+        <span class="target-dot"></span>
+      </span>
+    </div>
+
+    <div class="star-card-body">
+      <div class="star-card-left">
+        <div class="star-card-name-row">
+          <span class="star-card-play"></span>
+          <span id="star-card-code">SCGA</span>
+        </div>
+
+        <div id="star-card-year" class="star-card-year">1924</div>
+      </div>
+
+      <div class="star-card-divider"></div>
+
+      <div class="star-card-data">
+        <div><strong>RA:</strong> <span id="star-card-ra">08h 18m 35.33s</span></div>
+        <div><strong>Dec:</strong> <span id="star-card-dec">−26° 14' 53.6"</span></div>
+        <div><strong>Gmag (mag):</strong> <span id="star-card-gmag">9.14</span></div>
+        <div class="star-card-gap"></div>
+        <div><strong>Gaia DR3:</strong> <span id="star-card-gaia">5694395051252245376</span></div>
+      </div>
+    </div>
+
+    <div class="star-card-footer"></div>
+  </div>
+</div>
+<div id="mission-modal" class="hidden">
+  <article id="mission-detail" class="mission-detail">
+    <section id="mission-detail-scroll" class="mission-detail-scroll">
+      <div class="mission-hero">
+        <img id="mission-hero-img" src="" alt="" />
+      </div>
+
+      <header class="mission-heading reveal">
+        <div class="mission-heading-row">
+          <div>
+            <p class="mission-eyebrow">Estrella</p>
+            <h1 id="mission-detail-title" class="mission-title">SCGA 1924</h1>
+          </div>
+
+          <div class="mission-target" aria-hidden="true">
+            <span></span>
+          </div>
+        </div>
+
+        <div class="mission-down-mark" aria-hidden="true"></div>
+      </header>
+
+      <main id="mission-detail-body"></main>
+
+      <section class="mission-end reveal">
+        <button id="mission-modal-continue" class="mission-back-btn" type="button">
+          Volver
+        </button>
+      </section>
+    </section>
+  </article>
+</div>
+  <div id="horizon-shadow"></div>
+<div id="mission-tracker">
+  <div class="tracker-item active" data-mission-id="scga1924">
+    <span class="tracker-star">★</span><span>1924</span>
+  </div>
+  <div class="tracker-item" data-mission-id="scga1928">
+    <span class="tracker-star">★</span><span>1928</span>
+  </div>
+  <div class="tracker-item" data-mission-id="scga1930">
+    <span class="tracker-star">★</span><span>1930</span>
+  </div>
+  <div class="tracker-item" data-mission-id="scga1950">
+    <span class="tracker-star">★</span><span>1950</span>
+  </div>
+</div>
+
+<div id="scanner-ui">
+  <div id="guide-arrow" aria-hidden="true"></div>
+  <div id="scanner-ring"></div>
+  <div id="scanner-progress"></div>
+  <div id="scanner-cross"></div>
+</div>
+  <div id="compass-container" class="oculto">
+  <div id="compass-strip">
+    <span>N</span><span>NE</span><span>E</span><span>SE</span><span>S</span><span>SO</span><span>O</span><span>NO</span>
+    <span>N</span><span>NE</span><span>E</span><span>SE</span><span>S</span><span>SO</span><span>O</span><span>NO</span>
+    <span>N</span><span>NE</span><span>E</span><span>SE</span><span>S</span><span>SO</span><span>O</span><span>NO</span>
+  </div>
+</div>
+<div id="compass-pointer" class="oculto">▲</div>
+
+  <div id="orientation-panel" class="oculto">
+  <div class="title">Vista del observador</div>
+  <div class="row"><span class="label">dirección</span><span class="value" id="look-direction">--</span></div>
+  <div class="row"><span class="label">azimut</span><span class="value" id="look-azimuth">--</span></div>
+  <div class="row"><span class="label">altura</span><span class="value" id="look-altitude">--</span></div>
+  <div class="row"><span class="label">norte ref</span><span class="value" id="northref-val">--</span></div>
+</div>
+
+<div id="sky-controls" class="oculto">
+  <label class="sky-switch">
+    <span>Fondo</span>
+    <input id="bg-render-switch" type="checkbox" />
+    <i></i>
+  </label>
+
+  <label class="sky-switch">
+    <span>Manual</span>
+    <input id="manual-nav-switch" type="checkbox" />
+    <i></i>
+  </label>
+</div>
+
+<div id="mode-feedback" class="hidden">
+  <div class="mode-feedback-card">
+    <div class="mode-feedback-icon" id="mode-feedback-icon">↔</div>
+    <div>
+      <div class="mode-feedback-title" id="mode-feedback-title">Modo manual</div>
+      <div class="mode-feedback-text" id="mode-feedback-text">Arrastrá para mirar la bóveda</div>
+    </div>
+  </div>
+</div>
+
+<div id="canvas-container"></div>
+  <div id="sys-info" class="oculto">SYS.OFF</div>
+
+<div id="ui-layer">
+  <div class="boveda-loader">
+    <div class="boveda-loader-stars" aria-hidden="true">
+      <span class="is-filled">★</span>
+      <span>☆</span>
+      <span>☆</span>
+      <span>☆</span>
+    </div>
+
+    <h1 class="boveda-loader-title" aria-label="Estrellas Reales">
+      <span>Estrellas</span>
+      <span>Reales</span>
+    </h1>
+
+    <p class="boveda-loader-copy">Preparando la bóveda celeste...</p>
+  </div>
+</div>
+<section id="poster-screen" class="poster-screen hidden" aria-label="Contenido descargable">
+  <div class="poster-bg"></div>
+
+  <div class="poster-content">
+    <div class="poster-title-wrap">
+      <div class="poster-kicker">★ ESTRELLA ★</div>
+      <h1 id="poster-title" class="poster-title">1930</h1>
+    </div>
+
+    <div class="poster-carousel" id="poster-carousel">
+      <button class="poster-arrow poster-arrow-left" id="poster-prev" type="button" aria-label="Póster anterior">
+        ‹
+      </button>
+
+      <div class="poster-stage" id="poster-stage"></div>
+
+      <button class="poster-arrow poster-arrow-right" id="poster-next" type="button" aria-label="Póster siguiente">
+        ›
+      </button>
+    </div>
+
+    <button class="poster-download-btn" id="poster-download-btn" type="button">
+  <span class="poster-download-label">DESCARGAR&nbsp;PÓSTER</span>
+  <span class="poster-download-icon">↓</span>
+</button>
+
+    <p class="poster-copy">
+      Descargá los pósters de las <br>
+      estrellas reales y compartilos <br>
+      etiquetando a @BurgerKingUy.
+    </p>
+  </div>
+</section>
+<script>
+let scene, camera, renderer, starGroup;
+let backgroundDome = null;
+let raycaster, centerScreen;
+let hoverRing;
+let skyDome = null;
+let missionStarSprite = null;
+let missionStarMesh = null;
+let objetosInteractivos = [];
+let objetoEnfocado = null;
+let astrosDinamicos = [];
+let missionStarIcon = null;
+let captureProgress = 0;
+let captureStartTime = null;
+let captureCompleted = false;
+let infoCardShown = false;
+let infoCardRevealTimeout = null;
+let pendingMissionAdvance = false;
+let domeZenithY = null;
+let domeY = null;
+let domeScale = null;
+let domeTilt = null;
+let domeBackgroundEnabled = false;
+let manualNavigationEnabled = false;
+let modeFeedbackTimeout = null;
+let bovedaLoaderInterval = null;
+let bovedaLoaderStep = 0;
+
+const preloadedMissionImages = new Map();
+const missionPreloadPromises = new Map();
+
+let manualAzimuth = 0;
+let manualAltitude = 0;
+let manualDragActive = false;
+let manualDragPointerId = null;
+let manualLastX = 0;
+let manualLastY = 0;
+
+const DOME_BG_URL = './assets/img/bg-dome-square.png';
+
+/*
+  Offset de rotación.
+  Si el fondo queda rotado, probá:
+  Math.PI / 2
+  Math.PI
+  -Math.PI / 2
+*/
+const DOME_BG_AZIMUTH_OFFSET = 0;
+
+/*
+  Calidad del fondo.
+  Más bajo = más rápido.
+  Recomendado mobile: 0.32 a 0.45.
+*/
+const DOME_BG_RENDER_SCALE = 0.38;
+const DOME_BG_SOURCE_SIZE = 1024;
+const DOME_BG_MIN_RENDER_INTERVAL = 70; // ms
+
+let domeBgCanvas = null;
+let domeBgCtx = null;
+
+let domeBgSourceCanvas = null;
+let domeBgSourceCtx = null;
+let domeBgSourceData = null;
+let domeBgReady = false;
+let domeBgWidth = 0;
+let domeBgHeight = 0;
+
+let domeRayX = null;
+let domeRayY = null;
+let domeRayZ = null;
+let domeBgImageData = null;
+
+let domeLastRenderTime = 0;
+let domeLastQuat = new THREE.Quaternion();
+let domeHasLastQuat = false;
+let domeFrameToggle = 0;
+const CAPTURE_DURATION = 3000;
+const GUIDE_ARROW_RADIUS = 82;
+const GUIDE_ARROW_FADE_START = 190;
+const GUIDE_ARROW_FADE_END = 68;
+
+const GUIDE_ARROW_ANGLE_OFFSET = 0;
+
+  const uiLayer = document.getElementById('ui-layer');
+  const hud = document.getElementById('target-hud');
+  const hudName = document.getElementById('target-name');
+  const hudDesc = document.getElementById('target-desc');
+  const compassStrip = document.getElementById('compass-strip');
+  const horizonShadow = document.getElementById('horizon-shadow');
+const guideArrow = document.getElementById('guide-arrow');
+const scannerUi = document.getElementById('scanner-ui');
+
+  const lookDirectionVal = document.getElementById('look-direction');
+  const lookAzimuthVal = document.getElementById('look-azimuth');
+  const lookAltitudeVal = document.getElementById('look-altitude');
+  const northRefVal = document.getElementById('northref-val');
+
+const COMPASS_STEP = 64;               // ancho de cada letra
+const COMPASS_CYCLE_WIDTH = 8 * 64;    // 8 direcciones = 512px
+let compassAzimuthVisual = null;       // azimut visual suavizado
+
+// CAMBIÁ esta ruta por la tuya
+const SKY_TEXTURE_URL = './assets/img/bg-dome.jpg';
+
+ let usuarioLat = 0, usuarioLon = 0;
+let brujulaDetectada = false;
+let headingOffset = 0;
+let currentAlpha = 0, currentBeta = 0, currentGamma = 0;
+
+// filtro anti-salto para iPhone
+let headingEstable = null;
+const TILT_GUARD_DEG = 38;
+const HEADING_JUMP_DEG = 110;
+const LOW_SPIN_THRESHOLD = 90;
+const BUILD_LABEL = '2026-04-30 22:00 UTC';
+
+// Sigue existiendo como dato de diagnóstico
+let northCalibration = null;
+
+  const planetas = ['Sun', 'Moon', 'Venus', 'Mars', 'Jupiter', 'Saturn'];
+
+  const estrellas = [
+    { id: 'scga1924', n: "SCGA 1924 (Puppis)", ra: 8.3098, dec: -26.2482 },
+    { id: 'scga1928', n: "SCGA 1928 (Puppis)", ra: 8.3198, dec: -23.0249 },
+    { id: 'scga1930', n: "SCGA 1930 (Puppis)", ra: 8.3217, dec: -23.7969 },
+    { id: 'scga1950', n: "SCGA 1950 (Volans)", ra: 8.2952, dec: -69.1289 },
+
+    { id: 'sirius', n: "Sirio", ra: 6.75, dec: -16.71 },
+    { id: 'canopus', n: "Canopus", ra: 6.39, dec: -52.69 },
+    { id: 'arcturus', n: "Arturo", ra: 14.26, dec: 19.18 },
+    { id: 'rigelkent', n: "Alfa Centauri", ra: 14.66, dec: -60.83 },
+    { id: 'vega', n: "Vega", ra: 18.61, dec: 38.78 },
+    { id: 'capella', n: "Capella", ra: 5.28, dec: 45.99 },
+    { id: 'rigel', n: "Rigel", ra: 5.24, dec: -8.2 },
+    { id: 'procyon', n: "Procyon", ra: 7.65, dec: 5.22 },
+    { id: 'achernar', n: "Achernar", ra: 1.63, dec: -57.24 },
+    { id: 'betelgeuse', n: "Betelgeuse", ra: 5.91, dec: 7.4 },
+    { id: 'hadar', n: "Beta Centauri", ra: 14.06, dec: -60.37 },
+    { id: 'altair', n: "Altair", ra: 19.84, dec: 8.86 },
+    { id: 'aldebaran', n: "Aldebarán", ra: 4.59, dec: 16.50 },
+    { id: 'spica', n: "Spica", ra: 13.41, dec: -11.16 },
+    { id: 'antares', n: "Antares", ra: 16.49, dec: -26.43 },
+    { id: 'pollux', n: "Pólux", ra: 7.75, dec: 28.02 },
+    { id: 'fomalhaut', n: "Fomalhaut", ra: 22.96, dec: -29.62 },
+    { id: 'deneb', n: "Deneb", ra: 20.69, dec: 45.28 },
+
+    { id: 'acrux', n: "Acrux", ra: 12.44, dec: -63.09 },
+    { id: 'mimosa', n: "Mimosa", ra: 12.78, dec: -59.68 },
+    { id: 'gacrux', n: "Gacrux", ra: 12.51, dec: -57.11 },
+    { id: 'imai', n: "Imai", ra: 12.25, dec: -58.74 },
+    { id: 'bellatrix', n: "Bellatrix", ra: 5.41, dec: 6.34 },
+    { id: 'alnilam', n: "Alnilam", ra: 5.6, dec: -1.2 },
+    { id: 'alnitak', n: "Alnitak", ra: 5.67, dec: -1.94 },
+    { id: 'mintaka', n: "Mintaka", ra: 5.53, dec: -0.29 },
+    { id: 'saiph', n: "Saiph", ra: 5.79, dec: -9.66 },
+
+    { id: 'polaris', n: "Estrella Polar", ra: 2.53, dec: 89.26 }
+  ];
+
+const missionStars = [
+  {
+    id: 'scga1924',
+    title: 'COLOMBES 1924',
+    code: 'SCGA',
+    year: '1924',
+     visualAzOffset: -18,
+    raText: '08h 18m 35.33s',
+    decText: '−26° 14\' 53.6"',
+    gmagText: '9.14',
+    gaiaText: '5694395051252245376',
+    detail: {
+      theme: ['#b86a38', '#3a78bd', '#1b1b24'],
+      title: 'SCGA 1924',
+      hero: 'assets/img/missions/scga1924.png',
+      sections: [
+        {
+  type: 'intro',
+  lineUntil: 2,
+  headline: 'Un homenaje a los campeones de Colombes 1924.',
+  paragraphs: [
+    'En 1924, cuando la Selección Uruguaya viajó a Europa, no llevaba cámaras, ni transmisión en vivo, ni multitudes siguiéndola minuto a minuto.',
+    'Llevaba otra cosa: un fútbol desconocido, una convicción silenciosa y el peso invisible de un país chico que nadie miraba.',
+    'Del otro lado del mundo, en el Stade Olympique Yves-du-Manoir, empezó a escribirse algo que primero fue sorpresa, después asombro… <strong>y finalmente leyenda.</strong>'
+  ]
+},
+        { type: 'image', src: 'assets/img/missions/img1924.png', bg: '#584536' },
+        {
+          type: 'vector',
+          items: [
+            'El 26 de mayo de 1924 llegó el primer golpe. Uruguay debutó contra Yugoslavia y ganó 7 a 0. No fue solo una victoria: fue una irrupción. Europa, que esperaba un rival exótico, se encontró con un equipo que no corría la cancha, la pensaba.',
+            'Los goles caían mientras el público pasaba del murmullo a la ovación, sin entender del todo lo que estaba viendo.',
+            'Mientras tanto, en Montevideo, no había gritos de gol en tiempo real. Había silencio, espera y ansiedad. Las noticias tardaban días. Llegaban en frases incompletas, en resultados que parecían exageraciones. Pero no lo eran. Partido a partido, Uruguay avanzaba, y el asombro crecía.',
+            '<strong>Hasta que llegó el 9 de junio de 1924. La final.</strong>',
+            'Uruguay frente a Suiza, otra vez en Colombes. Y ahí, en el momento decisivo, apareció el talento que define épocas: Héctor Scarone. Su gol fue el quiebre.',
+            'Después vendrían los otros —Pedro Petrone, Ángel Romano— y el 3 a 0 final que no dejó dudas.'
+          ]
+        },
+        { type: 'inline-map', title: 'La primera estrella estaba en el cielo.', src: 'assets/img/missions/img1924-2.png' },
+        { type: 'image', src: 'assets/img/missions/img1924-3.png', bg: '#3e3a33' },
+        {
+          type: 'vector',
+          blue: true,
+          items: [
+            'En Europa, la prensa se rindió. No había cómo explicar aquello sin decirlo con todas las letras: Uruguay era el mejor del mundo.',
+            'Y entonces llegó el reconocimiento. Un equipo venido de un país pequeño, consagrándose ante los ojos de todos. Era la confirmación de que aquel debut imposible, aquel gol en la final, aquella tarde de junio, no habían sido hechos aislados. Habían sido capítulos de algo más grande.'
+          ]
+        },
+        { type: 'image', src: 'assets/img/missions/img1924-4.png', bg: '#314235' },
+        {
+          type: 'quote',
+          paragraphs: [
+            'Porque lo que Uruguay hizo en Colombes no fue solo ganar. Fue decirle al mundo, sin pedir permiso, que el fútbol también podía ser arte.',
+            'Y desde entonces, cada vez que se habla de 1924, no se recuerda solo un campeonato. Se recuerda el momento en que Uruguay dejó de ser desconocido… y pasó a ser eterno.'
+          ]
+        }
+      ]
+    }
+  },
+  {
+    id: 'scga1928',
+    title: 'ÁMSTERDAM 1928',
+    code: 'SCGA',
+    year: '1928',
+    visualAzOffset: 0,
+    raText: '08h 19m 11.27s',
+    decText: '−23° 01\' 29.5"',
+    gmagText: '9.47',
+    gaiaText: '5699516301534709504',
+    detail: {
+      theme: ['#4c226b', '#7f4bcf', '#12384d'],
+      title: 'SCGA 1928',
+      hero: 'assets/img/missions/scga1928.png',
+      sections: [
+        {
+          type: 'intro',
+          headline: 'La llegada de la segunda estrella.',
+          paragraphs: [
+            'Cuando Uruguay volvió a cruzar el océano para los Juegos Olímpicos de Ámsterdam, ya no era un desconocido. Era el campeón del mundo.',
+            '<strong>Y esta vez, el desafío era distinto: sostener la grandeza.</strong>'
+          ]
+        },
+        {
+          type: 'vector',
+          items: [
+            'El 30 de mayo de 1928 llegó el primer mensaje. En su debut, Uruguay enfrentó a Holanda y ganó 2 a 0. No hubo asombro, hubo autoridad. Cada pase y cada movimiento tenían la seguridad de quien sabe exactamente lo que está haciendo.',
+            'Ya no había incredulidad en las tribunas: había respeto.'
+          ]
+        },
+        { type: 'image', src: 'assets/img/missions/img1928.png', bg: '#7f714f' },
+        {
+  type: 'vector',
+  items: [
+    'Y el recorrido no hizo más que reafirmarlo. Uruguay avanzó en el torneo sin perder nunca su identidad: precisión, inteligencia, control.<br /><br />Superó a Alemania con un contundente 4 a 1, y en semifinales dejó atrás a Italia por 3 a 2 en un partido intenso, donde el talento volvió a inclinar la balanza.',
+    '<strong>Ya no quedaban dudas: no era el recuerdo de 1924… era la continuidad de una supremacía.</strong>'
+  ]
+},
+{ type: 'image', portrait: true, src: 'assets/img/missions/img1928-2.png', bg: '#3e3a33' },
+{
+          type: 'vector',
+          headline: 'Hasta que llegó el momento definitivo: la final contra Argentina.',
+          items: [
+            'El 10 de junio, en el Olympisch Stadion, Uruguay y Argentina empataron 1 a 1 en un partido áspero, tenso, jugado con el peso de dos países que ya se conocían demasiado.',
+            'Cada pelota dividida era una batalla, cada avance una amenaza. Uruguay se puso en ventaja con gol de Pedro Petrone, pero Argentina respondió. Y el empate no resolvió nada: dejó la historia en suspenso.',
+            'Hubo que esperar. Hubo que volver a empezar.',
+            'Dos días después, el 13 de junio de 1928, el desempate. Mismo escenario, pero otro clima. Ya no era solo fútbol: era resistencia, era carácter. Y ahí, cuando el margen desaparece y el error pesa el doble, Uruguay volvió a imponerse.',
+            'Primero golpeó Pedro Petrone. Después, en el momento justo, apareció Héctor Scarone para marcar la diferencia. Argentina descontó y empujó hasta el final, pero ya no alcanzaba. Uruguay sostuvo, resistió, y terminó de escribir la historia.',
+            '<strong>El 2 a 1 no fue solo un resultado. Fue una confirmación. Uruguay, nuevamente campeón olímpico.</strong>'
+          ]
+        },
+        { type: 'image', src: 'assets/img/missions/img1928-3.png', bg: '#314235' },
+        {
+          type: 'quote',
+          paragraphs: [
+            'En Olympisch Stadion, los jugadores celestes recibieron el oro con la misma calma con la que jugaban. Ya no eran revelación. Eran referencia. El mundo ya no los descubría: los reconocía.',
+            'Porque si 1924 había sido la irrupción… 1928 fue la confirmación definitiva.',
+            'Uruguay no había llegado para sorprender. Había llegado para quedarse.'
+          ]
+        }
+      ]
+    }
+  },
+  {
+    id: 'scga1930',
+    title: 'URUGUAY 1930',
+    code: 'SCGA',
+    year: '1930',
+    visualAzOffset: 18,
+    raText: '08h 19m 18.27s',
+    decText: '−23° 47\' 49"',
+    gmagText: '7.00',
+    gaiaText: '5696450279001453184',
+    detail: {
+      theme: ['#832f4c', '#1d7a84', '#1d1734'],
+      title: 'SCGA 1930',
+      hero: 'assets/img/missions/scga1930.png',
+      sections: [
+        {
+          type: 'intro',
+          headline: 'Cuando Uruguay se volvió leyenda',
+          paragraphs: [
+            'Mientras las delegaciones europeas cruzaban el Atlántico en barco durante semanas, Montevideo se preparaba para recibir el torneo más importante que el fútbol había tenido hasta entonces.',
+            '<strong>El Estadio Centenario se construía contrarreloj.</strong>',
+            'Las lluvias retrasaban las obras, los obreros seguían trabajando y algunas tribunas todavía conservaban el cemento fresco el día de la inauguración.'
+          ]
+        },
+        { type: 'image', tall: true, src: 'assets/img/missions/img1930.png', bg: '#5b554c' },
+        {
+          type: 'vector',
+          headline: 'Uruguay debutó el 18 de julio frente a Perú.',
+          centerHeadline: true,
+          items: [
+            'Fue un partido incómodo, cerrado, nervioso.',
+            'El gol no aparecía y el murmullo en las tribunas empezaba a crecer. Hasta que, a falta de veinte minutos, Héctor Castro encontró el espacio y rompió el empate.',
+            'El 1 a 0 alivió al estadio entero.'
+          ]
+        },
+        { type: 'image', tall: true, src: 'assets/img/missions/img1930-2.png', bg: '#34424a' },
+        {
+          type: 'vector',
+          items: [
+            'Sin escalas ni contratiempos, Uruguay venció 4 a 0 a Rumania, recuperando la tranquilidad, para luego derrotar 6 a 1 a Yugoslavia en la semifinal. Aunque los yugoslavos golpearon primero y silenciaron el Centenario durante algunos minutos, Uruguay reaccionó rápido.'
+          ]
+        },
+        { type: 'image', tall: true, src: 'assets/img/missions/img1930-3.png', bg: '#69492c' },
+        {
+          type: 'vector',
+          headline: 'Y entonces llegó la final.',
+          items: [
+            'El 30 de julio de 1930, el Estadio Centenario se llenó para recibir el partido más importante que el fútbol había vivido hasta ese momento: Uruguay contra Argentina.',
+            'Las tribunas desbordaban horas antes del comienzo. Afuera del estadio, miles de personas intentaban acercarse aunque ya no hubiera lugar. Adentro, el clima era irrepetible. Se jugaba un lugar definitivo en la historia.',
+            'Argentina golpeó primero. Uruguay respondió.',
+            'El partido cambió de dueño constantemente. Al entretiempo, Argentina ganaba 2 a 1.'
+          ]
+        },
+        { type: 'image', tall: true, src: 'assets/img/missions/img1930-4.png', bg: '#4d554a' },
+        {
+          type: 'vector',
+          blue: true,
+          items: [
+            'Y entonces llegó la reacción.',
+            'Primero José Pedro Cea. Después, Santos Iriarte. Y sobre el final, Héctor Castro —que jugaba sin parte de su brazo derecho— marcó el último gol de la tarde.',
+            'El 4 a 2 no fue solamente una victoria.'
+          ]
+        },
+        {
+          type: 'quote',
+          paragraphs: [
+            'Fue la confirmación definitiva de una era. Uruguay no solo había organizado el torneo más importante jamás realizado. Lo había ganado.'
+          ]
+        },
+        { type: 'image', tall: true, src: 'assets/img/missions/img1930-5.png', bg: '#43524b' }
+      ]
+    }
+  },
+  {
+  id: 'scga1950',
+  title: 'MARACANAZO 1950',
+  code: 'SCGA',
+  year: '1950',
+  visualAzOffset: 34,
+  raText: '08h 17m 42.89s',
+  decText: '−69° 07\' 44.2"',
+  gmagText: '8.46',
+  gaiaText: '5270171338893585792',
+  detail: {
+    theme: ['#38a8b6', '#d74b58', '#0b1f34'],
+    title: 'SCGA 1950',
+    hero: 'assets/img/missions/scga1950.png',
+    sections: [
+      {
+        type: 'intro',
+        headline: '1950: El partido que silenció a un país',
+        paragraphs: [
+          'El fútbol volvió después de la guerra en un mundo distinto.',
+          'Tres doce años sin mundiales, Europa todavía cargaba las marcas del conflicto y muchas selecciones llegaban reconstruyéndose. Brasil organizaba el torneo y todo parecía preparado para una coronación local. Estadios gigantescos, tribunas desbordadas y un país entero convencido de que había llegado su momento.',
+          '<strong>Pero Uruguay seguía ahí.</strong>',
+          'La Celeste debutó con un demoledor 8 a 0 frente a Bolivia, y tras le permitió meterse en el cuadrangular final junto a Brasil, España y Suecia, donde todos jugarían contra todos para definir al campeón.'
+        ]
+      },
+
+      {
+        type: 'image',
+        src: 'assets/img/missions/img1950.png',
+        bg: '#4f5b56'
+      },
+
+      {
+        type: 'vector',
+        items: [
+          'Primero llegó el empate contra España, en un partido áspero y tenso, que no tuvo cerca de perderlo. Después apareció Suecia, y Uruguay volvió a quedar contra las cuerdas. Pero reaccionó con goles de Ghiggia y Óscar Míguez, para ganarlo 3 a 2 en la hora.'
+        ]
+      },
+
+      {
+        type: 'image',
+        src: 'assets/img/missions/img1950-2.png',
+        bg: '#5d5a4e'
+      },
+
+      {
+        type: 'vector',
+        items: [
+          'Por su parte, Brasil les había vencido 6 a 1 y 7 a 1 respectivamente. Así fue que todo quedó servido para el último partido.',
+          '<strong>El 16 de julio de 1950 y ante la presencia de 200 mil personas, un amplio favorito Brasil enfrentaría a un modesto Uruguay en un recién construido Maracaná, creado para la ocasión.</strong>',
+          'Brasil solo necesitaba empatar para ser campeón. En las tribunas ya había música, banderas, diarios preparados y una certeza compartida por casi todo el país: la copa se quedaría en Río.'
+        ]
+      },
+
+      {
+        type: 'image',
+        src: 'assets/img/missions/img1950-3.png',
+        bg: '#5a5b52'
+      },
+
+      {
+        type: 'vector',
+        items: [
+          'Tras 45 minutos chatos, el primer tiempo terminó 0 a 0. Pero apenas comenzó el segundo, Friaça marcó el 1 a 0 para Brasil y el estadio explotó.',
+          'El sonido era ensordecedor y todo parecía encaminarse hacia el desenlace esperado. Entonces Obdulio Varela agarró la pelota y caminó lentamente hacia mitad de cancha. Discutió el gol.',
+          'Frenó el partido. Hizo esperar al estadio entero. Mientras el Maracaná quería llevarse a Uruguay por delante, Obdulio obligó al partido a detenerse.'
+        ]
+      },
+
+      {
+        type: 'image',
+        src: 'assets/img/missions/img1950-4.png',
+        bg: '#4f4a35'
+      },
+
+      {
+        type: 'vector',
+        blue: true,
+        headline: 'Y poco a poco, Uruguay volvió a meterse en juego.',
+        items: [
+          'A los 66 minutos, Ghiggia desbordó por la derecha y encontró a Schiaffino entrando al área. El empate cayó como un golpe seco sobre el estadio. Pero incluso con el 1 a 1, Brasil era campeón.',
+          'El reloj avanzaba. Las tribunas empezaban a recuperar el aliento. Y el Maracaná volvió lentamente a acercarse a la fiesta que prometía ser. Hasta que faltando once minutos, Ghiggia volvió a avanzar por la banda derecha.',
+          'Todos esperaban el centro. Los defensores. El arquero. Todo el estadio. Pero Ghiggia remató al primer palo. La pelota entró. <strong>Y el Maracaná quedó en silencio.</strong>'
+        ]
+      },
+
+      {
+        type: 'image',
+        src: 'assets/img/missions/img1950-5.png',
+        bg: '#4b4535'
+      },
+
+      {
+        type: 'quote',
+        paragraphs: [
+          'Uruguay ganó 2 a 1.',
+          'El estadio se convirtió en una foto. No hubo reacción inmediata. Casi 200 mil personas sin entender lo que acababa de pasar.',
+          'Aquella tarde, Uruguay hizo algo que parecía imposible: convirtió una derrota inevitable en la mayor hazaña deportiva de todos los tiempos. Y desde entonces, el mundo encontró una nueva palabra para nombrar lo imposible: Maracanazo.'
+        ]
+      }
+    ]
+  }
+}
+];
+
+function getMissionVisualAzOffset(id) {
+  const mission = missionStars.find(item => item.id === id);
+  return mission?.visualAzOffset || 0;
+}
+
+const POSTER_ITEMS = [
+  {
+    year: '1924',
+    phone: 'assets/img/posters/phone-1924.png',
+    download: 'assets/img/posters/POSTER_1924.png'
+  },
+  {
+    year: '1928',
+    phone: 'assets/img/posters/phone-1928.png',
+    download: 'assets/img/posters/POSTER_1928.png'
+  },
+  {
+    year: '1930',
+    phone: 'assets/img/posters/phone-1930.png',
+    download: 'assets/img/posters/POSTER_1930.png'
+  },
+  {
+    year: '1950',
+    phone: 'assets/img/posters/phone-1950.png',
+    download: 'assets/img/posters/POSTER_1950.png'
+  }
+];
+
+let posterIndex = 3;
+let posterTouchStartX = 0;
+let posterTouchEndX = 0;
+function getGuideArrowOpacity(distance) {
+  if (distance <= GUIDE_ARROW_FADE_END) return 0;
+  if (distance >= GUIDE_ARROW_FADE_START) return 1;
+
+  const t = (distance - GUIDE_ARROW_FADE_END) /
+    (GUIDE_ARROW_FADE_START - GUIDE_ARROW_FADE_END);
+
+  return THREE.MathUtils.clamp(t, 0, 1);
+}
+function ajustarTextoCard() {
+  const title = document.getElementById('star-card-title');
+  const year = document.getElementById('star-card-year');
+  const leftCol = document.querySelector('.star-card-left');
+
+  if (title) {
+    title.style.fontSize = '';
+
+    requestAnimationFrame(() => {
+      let size = parseFloat(getComputedStyle(title).fontSize);
+      const minSize = window.innerWidth <= 360 ? 18 : 22;
+
+      while (title.scrollWidth > title.clientWidth && size > minSize) {
+        size -= 1;
+        title.style.fontSize = `${size}px`;
+      }
+    });
+  }
+
+  if (year && leftCol) {
+    year.style.fontSize = '';
+
+    requestAnimationFrame(() => {
+      let size = parseFloat(getComputedStyle(year).fontSize);
+      const minSize = window.innerWidth <= 360 ? 36 : 40;
+
+      while (year.scrollWidth > leftCol.clientWidth && size > minSize) {
+        size -= 1;
+        year.style.fontSize = `${size}px`;
+      }
+    });
+  }
+}
+let currentMissionIndex = 0;
+  function seededRandom(seed) {
+    const x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+  }
+
+  function generarEstrellasExtra(cantidad = 520) {
+    const extra = [];
+    for (let i = 0; i < cantidad; i++) {
+      const r1 = seededRandom(i * 1.137 + 11.7);
+      const r2 = seededRandom(i * 1.913 + 27.1);
+      const r3 = seededRandom(i * 2.271 + 41.9);
+
+      extra.push({
+        id: `extra_${i + 1}`,
+        n: `Star ${String(i + 1).padStart(3, '0')}`,
+        ra: r1 * 24,
+        dec: Math.asin((r2 * 2) - 1) * 180 / Math.PI,
+        mag: 1.5 + r3 * 4.5,
+        extra: true
+      });
+    }
+    return extra;
+  }
+
+  const estrellasExtra = generarEstrellasExtra(520);
+  const todasLasEstrellas = [...estrellas, ...estrellasExtra];
+
+  const constelaciones = [
+    ['betelgeuse', 'bellatrix'], ['bellatrix', 'rigel'], ['rigel', 'saiph'], ['saiph', 'betelgeuse'],
+    ['mintaka', 'alnilam'], ['alnilam', 'alnitak'],
+    ['gacrux', 'acrux'], ['mimosa', 'imai']
+  ];
+function crearSkyDome() {
+  const loader = new THREE.TextureLoader();
+
+  loader.load(
+    SKY_TEXTURE_URL,
+    (texture) => {
+      if (THREE.SRGBColorSpace) {
+        texture.colorSpace = THREE.SRGBColorSpace;
+      } else {
+        texture.encoding = THREE.sRGBEncoding;
+      }
+
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.generateMipmaps = true;
+
+      if (renderer && renderer.capabilities) {
+        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      }
+
+      const geometry = new THREE.SphereGeometry(2200, 128, 96);
+
+      const material = new THREE.MeshBasicMaterial({
+        map: texture,
+        side: THREE.BackSide,
+        depthWrite: false,
+        depthTest: false,
+        transparent: false
+      });
+
+      skyDome = new THREE.Mesh(geometry, material);
+
+      /*
+        IMPORTANTE:
+        Esto mueve el centro de la imagen hacia el zenit.
+        Antes el centro del bg-dome quedaba mirando al frente/horizonte.
+      */
+      skyDome.rotation.x = Math.PI / 2;
+
+      /*
+        Ajuste fino opcional:
+        Si el fondo queda mirando al lado contrario,
+        probá cambiar este valor por Math.PI.
+      */
+      skyDome.rotation.z = 0;
+
+      skyDome.renderOrder = -1000;
+      skyDome.frustumCulled = false;
+
+      scene.add(skyDome);
+    },
+    undefined,
+    (err) => {
+      console.warn('No se pudo cargar la textura de la bóveda:', err);
+    }
+  );
+}
+function initDomeBackground() {
+  const container = document.getElementById('canvas-container');
+  if (!container) return;
+
+  domeBgCanvas = document.createElement('canvas');
+  domeBgCanvas.id = 'dome-bg-canvas';
+  container.prepend(domeBgCanvas);
+
+  domeBgCtx = domeBgCanvas.getContext('2d', {
+    alpha: true,
+    desynchronized: true
+  });
+
+  domeBgSourceCanvas = document.createElement('canvas');
+  domeBgSourceCtx = domeBgSourceCanvas.getContext('2d', {
+    willReadFrequently: true
+  });
+
+  const img = new Image();
+
+  img.onload = () => {
+    domeBgSourceCanvas.width = DOME_BG_SOURCE_SIZE;
+    domeBgSourceCanvas.height = DOME_BG_SOURCE_SIZE;
+
+    domeBgSourceCtx.drawImage(
+      img,
+      0,
+      0,
+      DOME_BG_SOURCE_SIZE,
+      DOME_BG_SOURCE_SIZE
+    );
+
+    domeBgWidth = DOME_BG_SOURCE_SIZE;
+    domeBgHeight = DOME_BG_SOURCE_SIZE;
+
+    domeBgSourceData = domeBgSourceCtx.getImageData(
+      0,
+      0,
+      domeBgWidth,
+      domeBgHeight
+    ).data;
+
+    domeBgReady = true;
+
+resizeDomeBackground();
+
+if (domeBgCanvas) {
+  domeBgCanvas.style.display = domeBackgroundEnabled ? 'block' : 'none';
+}
+
+if (domeBackgroundEnabled) {
+  renderDomeBackground(true);
+}
+  };
+
+  img.onerror = () => {
+    console.warn('No se pudo cargar el fondo de bóveda:', DOME_BG_URL);
+  };
+
+  img.src = DOME_BG_URL;
+}
+
+function resizeDomeBackground() {
+  if (!domeBgCanvas || !camera) return;
+
+  const screenW = window.innerWidth;
+  const screenH = window.innerHeight;
+
+  const w = Math.max(120, Math.round(screenW * DOME_BG_RENDER_SCALE));
+  const h = Math.max(220, Math.round(screenH * DOME_BG_RENDER_SCALE));
+
+  domeBgCanvas.width = w;
+  domeBgCanvas.height = h;
+
+  domeBgCanvas.style.width = '100%';
+  domeBgCanvas.style.height = '100%';
+
+  domeBgImageData = domeBgCtx.createImageData(w, h);
+
+  domeRayX = new Float32Array(w * h);
+  domeRayY = new Float32Array(w * h);
+  domeRayZ = new Float32Array(w * h);
+
+  const aspect = w / h;
+  const tanHalfFov = Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
+
+  let i = 0;
+
+  for (let y = 0; y < h; y++) {
+    const sy = 1 - ((y + 0.5) / h) * 2;
+
+    for (let x = 0; x < w; x++) {
+      const sx = ((x + 0.5) / w) * 2 - 1;
+
+      const rx = sx * tanHalfFov * aspect;
+      const ry = sy * tanHalfFov;
+      const rz = -1;
+
+      const invLen = 1 / Math.sqrt(rx * rx + ry * ry + rz * rz);
+
+      domeRayX[i] = rx * invLen;
+      domeRayY[i] = ry * invLen;
+      domeRayZ[i] = rz * invLen;
+
+      i++;
+    }
+  }
+
+  domeHasLastQuat = false;
+}
+
+function renderDomeBackground(force = false) {
+  if (!domeBackgroundEnabled) return;
+  if (
+    !domeBgReady ||
+    !domeBgCtx ||
+    !domeBgImageData ||
+    !domeBgSourceData ||
+    !camera ||
+    !domeRayX
+  ) {
+    return;
+  }
+
+  const now = performance.now();
+
+  /*
+    Limitamos FPS del fondo.
+    Las estrellas y UI siguen a 60fps; solo el fondo se actualiza menos.
+  */
+  if (!force && now - domeLastRenderTime < DOME_BG_MIN_RENDER_INTERVAL) {
+    return;
+  }
+
+  /*
+    Si la cámara casi no cambió, no redibujamos.
+  */
+  const q = camera.quaternion;
+
+  if (!force && domeHasLastQuat) {
+    const dot = Math.abs(domeLastQuat.dot(q));
+
+    if (dot > 0.99992) {
+      return;
+    }
+  }
+
+  domeLastRenderTime = now;
+  domeLastQuat.copy(q);
+  domeHasLastQuat = true;
+
+  const w = domeBgCanvas.width;
+  const h = domeBgCanvas.height;
+  const out = domeBgImageData.data;
+
+  const sxData = domeRayX;
+  const syData = domeRayY;
+  const szData = domeRayZ;
+
+  const qx = q.x;
+  const qy = q.y;
+  const qz = q.z;
+  const qw = q.w;
+
+  const cx = domeBgWidth * 0.5;
+  const cy = domeBgHeight * 0.5;
+  const maxRadius = Math.min(domeBgWidth, domeBgHeight) * 0.5;
+
+  const sourceW = domeBgWidth;
+  const sourceH = domeBgHeight;
+  const source = domeBgSourceData;
+
+  const azOffset = DOME_BG_AZIMUTH_OFFSET;
+
+  const brightness = 0.78;
+
+  for (let i = 0, p = 0; i < sxData.length; i++, p += 4) {
+    const x = sxData[i];
+    const y = syData[i];
+    const z = szData[i];
+
+    /*
+      Rotación de vector por quaternion.
+      Versión inline para evitar crear THREE.Vector3 por pixel.
+    */
+    const tx = 2 * (qy * z - qz * y);
+    const ty = 2 * (qz * x - qx * z);
+    const tz = 2 * (qx * y - qy * x);
+
+    const wx = x + qw * tx + (qy * tz - qz * ty);
+    const wy = y + qw * ty + (qz * tx - qx * tz);
+    const wz = z + qw * tz + (qx * ty - qy * tx);
+
+    /*
+      Proyección polar:
+      zenit = centro,
+      horizonte = borde,
+      nadir vuelve a centro.
+    */
+    const clampedY = Math.max(-1, Math.min(1, wy));
+    const theta = Math.acos(clampedY);
+    const rho = Math.sin(theta);
+
+    const az = Math.atan2(wx, -wz) + azOffset;
+
+    const srcX = cx + Math.sin(az) * rho * maxRadius;
+    const srcY = cy - Math.cos(az) * rho * maxRadius;
+
+    const ix = Math.max(0, Math.min(sourceW - 1, srcX | 0));
+    const iy = Math.max(0, Math.min(sourceH - 1, srcY | 0));
+
+    const sp = (iy * sourceW + ix) * 4;
+
+    out[p] = source[sp] * brightness;
+    out[p + 1] = source[sp + 1] * brightness;
+    out[p + 2] = source[sp + 2] * brightness;
+    out[p + 3] = 255;
+  }
+
+  domeBgCtx.putImageData(domeBgImageData, 0, 0);
+}function normalizeDegrees(value) {
+  return ((value % 360) + 360) % 360;
+}
+
+function setDomeBackgroundEnabled(enabled) {
+  domeBackgroundEnabled = enabled;
+
+  const container = document.getElementById('canvas-container');
+  const input = document.getElementById('bg-render-switch');
+
+  if (input) input.checked = enabled;
+  if (container) container.classList.toggle('dome-bg-enabled', enabled);
+
+  if (enabled) {
+    if (!domeBgCanvas) {
+      initDomeBackground();
+    } else {
+      domeBgCanvas.style.display = 'block';
+      resizeDomeBackground();
+      renderDomeBackground(true);
+    }
+  } else {
+    if (domeBgCanvas && domeBgCtx) {
+      domeBgCtx.clearRect(0, 0, domeBgCanvas.width, domeBgCanvas.height);
+      domeBgCanvas.style.display = 'none';
+    }
+  }
+}
+function mostrarFeedbackModo(mode) {
+  const feedback = document.getElementById('mode-feedback');
+  const icon = document.getElementById('mode-feedback-icon');
+  const title = document.getElementById('mode-feedback-title');
+  const text = document.getElementById('mode-feedback-text');
+
+  if (!feedback || !icon || !title || !text) return;
+
+  if (mode === 'manual') {
+    icon.textContent = '↔';
+    title.textContent = 'Modo manual';
+    text.textContent = 'Arrastrá para mirar la bóveda';
+  } else {
+    icon.textContent = '◉';
+    title.textContent = 'Modo movimiento';
+    text.textContent = 'Mové el celular para explorar';
+  }
+
+  clearTimeout(modeFeedbackTimeout);
+
+  feedback.classList.remove('hidden');
+
+  modeFeedbackTimeout = setTimeout(() => {
+    feedback.classList.add('hidden');
+  }, 1450);
+}
+
+function getMissionImageSources(mission) {
+  const sources = new Set();
+
+  if (!mission || !mission.detail) return [];
+
+  if (mission.detail.hero) {
+    sources.add(mission.detail.hero);
+  }
+
+  (mission.detail.sections || []).forEach((section) => {
+    if ((section.type === 'image' || section.type === 'inline-map') && section.src) {
+      sources.add(section.src);
+    }
+  });
+
+  return [...sources];
+}
+
+function preloadImage(src) {
+  if (!src) return Promise.resolve(null);
+
+  if (preloadedMissionImages.has(src)) {
+    return Promise.resolve(preloadedMissionImages.get(src));
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+
+    img.onload = () => {
+      preloadedMissionImages.set(src, img);
+      resolve(img);
+    };
+
+    img.onerror = () => {
+      console.warn('No se pudo precargar imagen:', src);
+      resolve(null);
+    };
+
+    img.src = src;
+  });
+}
+
+function preloadMissionImages(mission) {
+  if (!mission) return Promise.resolve([]);
+
+  if (missionPreloadPromises.has(mission.id)) {
+    return missionPreloadPromises.get(mission.id);
+  }
+
+  const sources = getMissionImageSources(mission);
+
+  const promise = Promise.all(sources.map(preloadImage));
+
+  missionPreloadPromises.set(mission.id, promise);
+
+  return promise;
+}
+
+function preloadAllMissionImages() {
+  if (!Array.isArray(missionStars)) return Promise.resolve([]);
+
+  return Promise.all(
+    missionStars.map((mission) => preloadMissionImages(mission))
+  );
+}
+function setManualNavigationEnabled(enabled, showFeedback = true) {
+  const previousValue = manualNavigationEnabled;
+
+  manualNavigationEnabled = enabled;
+
+  const input = document.getElementById('manual-nav-switch');
+  if (input) input.checked = enabled;
+
+  document.body.classList.toggle('manual-nav-active', enabled);
+
+  if (enabled && camera) {
+    const look = getObserverLookFromCamera();
+    manualAzimuth = look.azimuth;
+    manualAltitude = THREE.MathUtils.clamp(look.altitude, -85, 88);
+  }
+
+  if (showFeedback && previousValue !== enabled) {
+    mostrarFeedbackModo(enabled ? 'manual' : 'movement');
+  }
+}
+
+function setupSkyControls() {
+  const bgSwitch = document.getElementById('bg-render-switch');
+  const manualSwitch = document.getElementById('manual-nav-switch');
+
+  if (bgSwitch) {
+    bgSwitch.checked = false;
+    bgSwitch.addEventListener('change', () => {
+      setDomeBackgroundEnabled(bgSwitch.checked);
+    });
+  }
+
+  if (manualSwitch) {
+    manualSwitch.checked = false;
+    manualSwitch.addEventListener('change', () => {
+      setManualNavigationEnabled(manualSwitch.checked);
+    });
+  }
+
+setDomeBackgroundEnabled(false);
+setManualNavigationEnabled(false, false);
+}
+
+function setupManualDragControls() {
+  const container = document.getElementById('canvas-container');
+  if (!container) return;
+
+  container.addEventListener('pointerdown', (event) => {
+    if (!manualNavigationEnabled) return;
+
+    manualDragActive = true;
+    manualDragPointerId = event.pointerId;
+    manualLastX = event.clientX;
+    manualLastY = event.clientY;
+
+    container.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  }, { passive: false });
+
+  container.addEventListener('pointermove', (event) => {
+    if (!manualNavigationEnabled) return;
+    if (!manualDragActive || event.pointerId !== manualDragPointerId) return;
+
+    const dx = event.clientX - manualLastX;
+    const dy = event.clientY - manualLastY;
+
+    manualLastX = event.clientX;
+    manualLastY = event.clientY;
+
+    manualAzimuth = normalizeDegrees(manualAzimuth - dx * 0.18);
+    manualAltitude = THREE.MathUtils.clamp(manualAltitude - dy * 0.18, -85, 88);
+
+    event.preventDefault();
+  }, { passive: false });
+
+  function endDrag(event) {
+    if (event.pointerId !== manualDragPointerId) return;
+
+    manualDragActive = false;
+    manualDragPointerId = null;
+  }
+
+  container.addEventListener('pointerup', endDrag);
+  container.addEventListener('pointercancel', endDrag);
+  container.addEventListener('pointerleave', endDrag);
+}
+function preloadPosterAssets() {
+  const sources = [];
+
+  POSTER_ITEMS.forEach((item) => {
+    sources.push(item.phone);
+    sources.push(item.download);
+  });
+
+  return Promise.all(sources.map(preloadImage));
+}
+let bovedaAssetsPreloadPromise = null;
+
+function preloadBovedaAssets() {
+  if (bovedaAssetsPreloadPromise) return bovedaAssetsPreloadPromise;
+
+  const baseAssets = [
+    "assets/img/logo-burger-king-white.svg",
+    "assets/img/logo-auf-white.svg",
+    "assets/img/guide-arrow.svg",
+  ];
+
+  bovedaAssetsPreloadPromise = Promise.all([
+    Promise.all(baseAssets.map(preloadImage)),
+    preloadAllMissionImages(),
+    preloadPosterAssets(),
+  ]).catch(() => null);
+
+  return bovedaAssetsPreloadPromise;
+}
+function getPosterWrappedIndex(index) {
+  return (index + POSTER_ITEMS.length) % POSTER_ITEMS.length;
+}
+
+function getPosterPositionClass(index, currentIndex) {
+  const total = POSTER_ITEMS.length;
+  const diff = (index - currentIndex + total) % total;
+
+  if (diff === 0) return 'is-active';
+  if (diff === 1) return 'is-next';
+  if (diff === total - 1) return 'is-prev';
+  if (diff === 2) return 'is-far-next';
+  return 'is-far-prev';
+}
+
+function renderPosterCarousel() {
+  const stage = document.getElementById('poster-stage');
+  const title = document.getElementById('poster-title');
+
+  if (!stage || !title) return;
+
+  const activeItem = POSTER_ITEMS[getPosterWrappedIndex(posterIndex)];
+  title.textContent = activeItem.year;
+
+  stage.innerHTML = '';
+
+  POSTER_ITEMS.forEach((item, index) => {
+    const card = document.createElement('div');
+    card.className = `poster-card ${getPosterPositionClass(index, posterIndex)}`;
+    card.dataset.year = item.year;
+
+    const img = document.createElement('img');
+    img.src = item.phone;
+    img.alt = `Póster Estrella ${item.year}`;
+
+    card.appendChild(img);
+    stage.appendChild(card);
+  });
+}
+
+let submitSent = false;
+
+function openPosterScreen(startYear = '1950') {
+  const screen = document.getElementById('poster-screen');
+  if (!screen) return;
+
+  const foundIndex = POSTER_ITEMS.findIndex((item) => item.year === String(startYear));
+ posterIndex = foundIndex >= 0 ? foundIndex : 0;
+
+setPosterIndex(posterIndex, false);
+
+  screen.classList.remove('hidden');
+  document.body.classList.add('poster-screen-open');
+
+  // Completion point: mark the flow done once per session.
+  ER.api.track(ER.EVENTS.page_view, { page: 'poster' });
+
+  if (!submitSent) {
+    submitSent = true;
+    ER.api.submit().catch(() => { submitSent = false; });
+  }
+}
+
+function closePosterScreen() {
+  const screen = document.getElementById('poster-screen');
+  if (!screen) return;
+
+  screen.classList.add('hidden');
+  document.body.classList.remove('poster-screen-open');
+}
+
+function setPosterIndex(newIndex, animateTitle = true) {
+  const titleWrap = document.querySelector('.poster-title-wrap');
+
+  posterIndex = getPosterWrappedIndex(newIndex);
+
+  if (!animateTitle || !titleWrap) {
+    renderPosterCarousel();
+    return;
+  }
+
+  titleWrap.classList.add('is-changing');
+
+  window.setTimeout(() => {
+    renderPosterCarousel();
+
+    requestAnimationFrame(() => {
+      titleWrap.classList.remove('is-changing');
+    });
+  }, 220);
+}
+
+function movePosterCarousel(direction) {
+  setPosterIndex(posterIndex + direction, true);
+}
+
+function downloadCurrentPoster() {
+  const item = POSTER_ITEMS[getPosterWrappedIndex(posterIndex)];
+  if (!item) return;
+
+  ER.api.track(ER.EVENTS.download_poster, { year: item.year });
+
+  const link = document.createElement('a');
+  link.href = item.download;
+  link.download = `Estrella_Real_${item.year}.png`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+function setupPosterScreen() {
+  const prev = document.getElementById('poster-prev');
+  const next = document.getElementById('poster-next');
+  const download = document.getElementById('poster-download-btn');
+  const carousel = document.getElementById('poster-carousel');
+
+  if (prev) {
+    prev.addEventListener('click', () => movePosterCarousel(-1));
+  }
+
+  if (next) {
+    next.addEventListener('click', () => movePosterCarousel(1));
+  }
+
+  if (download) {
+    download.addEventListener('click', downloadCurrentPoster);
+  }
+
+  if (carousel) {
+    carousel.addEventListener('touchstart', (event) => {
+      posterTouchStartX = event.touches[0].clientX;
+      posterTouchEndX = posterTouchStartX;
+    }, { passive: true });
+
+    carousel.addEventListener('touchmove', (event) => {
+      posterTouchEndX = event.touches[0].clientX;
+    }, { passive: true });
+
+    carousel.addEventListener('touchend', () => {
+      const delta = posterTouchEndX - posterTouchStartX;
+
+      if (Math.abs(delta) < 42) return;
+
+      if (delta < 0) {
+        movePosterCarousel(1);
+      } else {
+        movePosterCarousel(-1);
+      }
+    });
+  }
+}
+  function init3D() {
+  scene = new THREE.Scene();
+  scene.background = null;
+
+  camera = new THREE.PerspectiveCamera(
+    70,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    2500
+  );
+
+  renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    alpha: true
+  });
+
+  renderer.setClearColor(0x000000, 0);
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  if (renderer.outputColorSpace !== undefined && THREE.SRGBColorSpace) {
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+  } else if (renderer.outputEncoding !== undefined) {
+    renderer.outputEncoding = THREE.sRGBEncoding;
+  }
+
+  const canvasContainer = document.getElementById('canvas-container');
+  canvasContainer.appendChild(renderer.domElement);
+
+  starGroup = new THREE.Group();
+  scene.add(starGroup);
+
+  raycaster = new THREE.Raycaster();
+  raycaster.params.Points.threshold = 15;
+  centerScreen = new THREE.Vector2(0, 0);
+
+  const ringGeo = new THREE.RingGeometry(35, 38, 32);
+  const ringMat = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.8
+  });
+
+  hoverRing = new THREE.Mesh(ringGeo, ringMat);
+  hoverRing.visible = false;
+  scene.add(hoverRing);
+
+  missionStarSprite = createStarSprite('★', '#ffffff', 64);
+  missionStarSprite.visible = false;
+  scene.add(missionStarSprite);
+setupManualDragControls();
+  animar();
+}
+
+  function azAltToVector(azimuth, altitude, radius = 500) {
+    const azRad = THREE.MathUtils.degToRad(azimuth);
+    const altRad = THREE.MathUtils.degToRad(altitude);
+    return new THREE.Vector3(
+      radius * Math.cos(altRad) * Math.sin(azRad),
+      radius * Math.sin(altRad),
+      -radius * Math.cos(altRad) * Math.cos(azRad)
+    );
+  }
+function createStarSprite(symbol = '★', color = '#ffffff', size = 96) {
+const canvas = document.createElement('canvas');
+canvas.width = 256;
+canvas.height = 256;
+
+const ctx = canvas.getContext('2d');
+
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+ctx.textAlign = 'center';
+ctx.textBaseline = 'middle';
+ctx.font = '900 150px Arial';
+
+ctx.shadowColor = 'rgba(88,167,232,0.35)';
+ctx.shadowBlur = 18;
+
+ctx.fillStyle = '#ffffff';
+ctx.fillText(symbol, canvas.width / 2, canvas.height / 2 + 4);
+
+const texture = new THREE.CanvasTexture(canvas);
+texture.needsUpdate = true;
+
+const material = new THREE.SpriteMaterial({
+  map: texture,
+  transparent: true,
+  depthWrite: false
+});
+
+const sprite = new THREE.Sprite(material);
+sprite.scale.set(size, size, 1);
+
+return sprite;
+}
+  function generarCieloReal() {
+    const fechaActual = new Date();
+    const observador = new Astronomy.Observer(usuarioLat, usuarioLon, 0);
+    const posicionesEstrellas = {};
+
+    planetas.forEach(cuerpo => {
+      const equ_2000 = Astronomy.Equator(cuerpo, fechaActual, observador, true, true);
+      const horizonte = Astronomy.Horizon(fechaActual, observador, equ_2000.ra, equ_2000.dec, 'normal');
+      const pos = azAltToVector(horizonte.azimuth, horizonte.altitude, 500);
+
+      const size = (cuerpo === 'Sun' || cuerpo === 'Moon') ? 16 : 8;
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(size, 32, 32),
+        new THREE.MeshBasicMaterial({ color: cuerpo === 'Sun' ? 0xffdd44 : 0xeeeeee })
+      );
+      mesh.position.copy(pos);
+      mesh.userData = {
+        nombre: cuerpo === 'Sun' ? 'Sol' : cuerpo === 'Moon' ? 'Luna' : cuerpo,
+        tipo: 'Sistema Solar'
+      };
+
+      starGroup.add(mesh);
+      objetosInteractivos.push(mesh);
+      astrosDinamicos.push({ mesh: mesh, tipoRef: 'planeta', id: cuerpo });
+    });
+
+    todasLasEstrellas.forEach(estrella => {
+  const horizonte = Astronomy.Horizon(fechaActual, observador, estrella.ra, estrella.dec, 'normal');
+
+  const visualAzimuth = normalizeDegrees(
+    horizonte.azimuth + getMissionVisualAzOffset(estrella.id)
+  );
+
+  const pos = azAltToVector(visualAzimuth, horizonte.altitude, 800);
+  posicionesEstrellas[estrella.id] = pos;
+     const tam = estrella.extra ? Math.max(1.2, 4.2 - ((estrella.mag ?? 4) * 0.55)) : 5;
+
+const mesh = new THREE.Mesh(
+  new THREE.SphereGeometry(tam, estrella.extra ? 8 : 16, estrella.extra ? 8 : 16),
+  new THREE.MeshBasicMaterial({ color: 0xffffff })
+);
+      mesh.position.copy(pos);
+      mesh.userData = {
+  nombre: estrella.n,
+  tipo: estrella.extra
+    ? 'Estrella de fondo'
+    :  (['scga1924', 'scga1928', 'scga1930', 'scga1950'].includes(estrella.id) ? 'Objetivo Colombes' : 'Estrella principal'),  ra: estrella.ra,
+  dec: estrella.dec,
+  code: estrella.code,
+  short: estrella.short,
+  gmag: estrella.gmag ?? null,
+  gaia: estrella.gaia ?? null,
+  constellation: estrella.constellation ?? null,
+  mission: ['scga1924', 'scga1928', 'scga1930', 'scga1950'].includes(estrella.id),
+  defaultScale: tam,
+  isStarIcon: false
+};
+
+      starGroup.add(mesh);
+      if (!estrella.extra) {
+        objetosInteractivos.push(mesh);
+      }
+      astrosDinamicos.push({ mesh: mesh, tipoRef: 'estrella', ra: estrella.ra, dec: estrella.dec, id: estrella.id, extra: !!estrella.extra, mag: estrella.mag ?? null });
+    });
+
+    const lineMaterial = new THREE.LineBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.2
+    });
+
+    constelaciones.forEach(par => {
+      if (posicionesEstrellas[par[0]] && posicionesEstrellas[par[1]]) {
+        const puntos = [posicionesEstrellas[par[0]], posicionesEstrellas[par[1]]];
+        const lineGeo = new THREE.BufferGeometry().setFromPoints(puntos);
+        const linea = new THREE.Line(lineGeo, lineMaterial);
+
+        starGroup.add(linea);
+        astrosDinamicos.push({ mesh: linea, tipoRef: 'linea', p1: par[0], p2: par[1] });
+      }
+    });
+
+    const dustGeo = new THREE.BufferGeometry();
+    const dustVerts = [];
+    for (let i = 0; i < 1500; i++) {
+      const rPos = azAltToVector(Math.random() * 360, (Math.random() * 180) - 90, 1000);
+      dustVerts.push(rPos.x, rPos.y, rPos.z);
+    }
+    dustGeo.setAttribute('position', new THREE.Float32BufferAttribute(dustVerts, 3));
+    starGroup.add(new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: 0x555555, size: 2 })));
+
+    setInterval(actualizarTiempoYPosiciones, 60000);
+  }
+function actualizarConectorInfoCard() {
+  const svg = document.getElementById('info-connector-layer');
+  const path = document.getElementById('info-connector-path');
+  const scanner = document.getElementById('scanner-ui');
+  const card = document.getElementById('star-info-card');
+
+  if (!svg || !path || !scanner || !card) return;
+
+  const scannerRect = scanner.getBoundingClientRect();
+  const cardRect = card.getBoundingClientRect();
+
+  const startX = scannerRect.left + scannerRect.width / 2;
+  const startY = scannerRect.top;
+
+  const endX = cardRect.left;
+  const endY = cardRect.top + Math.min(Math.max(cardRect.height * 0.30, 38), 70);
+
+  const outerLeftX = Math.max(6, cardRect.left - Math.min(70, window.innerWidth * 0.13));
+
+  const midY = Math.max(
+    cardRect.bottom + 18,
+    startY - Math.max(38, Math.min(72, scannerRect.height * 0.58))
+  );
+
+  const topY = Math.max(8, endY - Math.max(22, Math.min(46, cardRect.height * 0.25)));
+
+  const d = [
+    `M ${startX} ${startY}`,
+    `V ${midY}`,
+    `H ${outerLeftX}`,
+    `V ${topY}`,
+    `L ${endX} ${endY}`
+  ].join(' ');
+
+  svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`);
+  svg.setAttribute('width', window.innerWidth);
+  svg.setAttribute('height', window.innerHeight);
+  path.setAttribute('d', d);
+
+  const len = path.getTotalLength();
+  svg.style.setProperty('--connector-length', len);
+}
+
+function mostrarInfoEstrella() {
+  const card = document.getElementById('star-info-card');
+  const connector = document.getElementById('info-connector-layer');
+
+  if (!card || !connector) return;
+
+  clearTimeout(infoCardRevealTimeout);
+
+  // Primero medimos con la card disponible pero todavía invisible.
+  card.classList.remove('hidden', 'visible');
+  connector.classList.remove('hidden', 'revealing');
+
+  actualizarConectorInfoCard();
+
+  // Reinicia animación del vector.
+  void connector.offsetWidth;
+
+  connector.classList.add('revealing');
+
+  // La card aparece después de que el vector se forma.
+  infoCardRevealTimeout = setTimeout(() => {
+    card.classList.add('visible');
+  }, 480);
+}
+  function actualizarTiempoYPosiciones() {
+    const nuevaFecha = new Date();
+    const observador = new Astronomy.Observer(usuarioLat, usuarioLon, 0);
+    const posicionesActualizadas = {};
+
+    astrosDinamicos.forEach(astro => {
+      if (astro.tipoRef === 'planeta' || astro.tipoRef === 'estrella') {
+        let horizonte;
+        if (astro.tipoRef === 'planeta') {
+          const equ_2000 = Astronomy.Equator(astro.id, nuevaFecha, observador, true, true);
+          horizonte = Astronomy.Horizon(nuevaFecha, observador, equ_2000.ra, equ_2000.dec, 'normal');
+        } else {
+          horizonte = Astronomy.Horizon(nuevaFecha, observador, astro.ra, astro.dec, 'normal');
+        }
+
+        const visualAzimuth = astro.tipoRef === 'estrella'
+          ? normalizeDegrees(horizonte.azimuth + getMissionVisualAzOffset(astro.id))
+          : horizonte.azimuth;
+
+        const nuevaPos = azAltToVector(
+          visualAzimuth,
+          horizonte.altitude,
+          astro.tipoRef === 'planeta' ? 500 : 800
+        );
+
+        astro.mesh.position.copy(nuevaPos);
+        if (astro.id) posicionesActualizadas[astro.id] = nuevaPos;
+      }
+    });
+
+    astrosDinamicos.forEach(astro => {
+      if (astro.tipoRef === 'linea' && posicionesActualizadas[astro.p1] && posicionesActualizadas[astro.p2]) {
+        const positions = astro.mesh.geometry.attributes.position.array;
+        positions[0] = posicionesActualizadas[astro.p1].x;
+        positions[1] = posicionesActualizadas[astro.p1].y;
+        positions[2] = posicionesActualizadas[astro.p1].z;
+        positions[3] = posicionesActualizadas[astro.p2].x;
+        positions[4] = posicionesActualizadas[astro.p2].y;
+        positions[5] = posicionesActualizadas[astro.p2].z;
+        astro.mesh.geometry.attributes.position.needsUpdate = true;
+      }
+    });
+  }
+
+  function procesarSensores(e) {
+    if (e.alpha === null) return;
+
+    currentAlpha = e.alpha;
+    currentBeta = e.beta ?? 0;
+    currentGamma = e.gamma ?? 0;
+
+    let absoluteHeading = null;
+
+    if (typeof e.webkitCompassHeading === 'number') {
+      absoluteHeading = e.webkitCompassHeading;
+      brujulaDetectada = true;
+    } else if (e.absolute === true && typeof e.alpha === 'number') {
+      absoluteHeading = (360 - e.alpha + 360) % 360;
+      brujulaDetectada = true;
+    }
+
+    if (absoluteHeading !== null) {
+      headingOffset = absoluteHeading;
+
+      if (northCalibration === null) {
+        northCalibration = absoluteHeading;
+      }
+    }
+  }
+function mostrarCargaBoveda(texto = "Preparando la bóveda celeste...") {
+  if (!uiLayer) return;
+
+  uiLayer.classList.remove("oculto");
+
+  uiLayer.innerHTML = `
+  <div class="boveda-loader">
+    <div class="boveda-loader-stars" aria-hidden="true">
+      <span class="is-filled">★</span>
+      <span>☆</span>
+      <span>☆</span>
+      <span>☆</span>
+    </div>
+
+    <h1 class="boveda-loader-title" aria-label="Estrellas Reales">
+      <span>Estrellas</span>
+      <span>Reales</span>
+    </h1>
+
+    <p class="boveda-loader-copy">${texto}</p>
+  </div>
+
+  <div class="boveda-loading-logos" aria-label="Burger King y AUF">
+    <img src="assets/img/logo-burger-king-white.svg" alt="Burger King" />
+    <img src="assets/img/logo-auf-white.svg" alt="AUF" />
+  </div>
+`;
+
+  iniciarLoaderBoveda();
+}
+
+function iniciarLoaderBoveda() {
+  detenerLoaderBoveda();
+
+  const stars = Array.from(document.querySelectorAll(".boveda-loader-stars span"));
+
+  bovedaLoaderInterval = window.setInterval(() => {
+    bovedaLoaderStep = (bovedaLoaderStep % 4) + 1;
+
+    stars.forEach((star, index) => {
+      const active = index < bovedaLoaderStep;
+      star.classList.toggle("is-filled", active);
+      star.textContent = active ? "★" : "☆";
+    });
+  }, 280);
+}
+
+function detenerLoaderBoveda() {
+  if (bovedaLoaderInterval) {
+    window.clearInterval(bovedaLoaderInterval);
+    bovedaLoaderInterval = null;
+  }
+}
+function updateSysInfoText() {
+  const sysInfo = document.getElementById("sys-info");
+  if (!sysInfo) return;
+
+  sysInfo.innerHTML = `
+    <span>LAT:${usuarioLat.toFixed(2)}</span>
+    <span class="sys-separator"> // </span>
+    <span>LON:${usuarioLon.toFixed(2)}</span>
+  `;
+
+  fitSysInfoLayout();
+}
+
+function fitSysInfoLayout() {
+  const sysInfo = document.getElementById("sys-info");
+  const panel = document.getElementById("orientation-panel");
+
+  if (!sysInfo || !panel) return;
+
+  sysInfo.classList.remove("is-stacked");
+
+  requestAnimationFrame(() => {
+    const sysRect = sysInfo.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+
+    const overlapsHorizontally = sysRect.right + 12 > panelRect.left;
+    const similarHeight = Math.abs(sysRect.top - panelRect.top) < 80;
+
+    if (overlapsHorizontally && similarHeight) {
+      sysInfo.classList.add("is-stacked");
+    }
+  });
+}
+  async function iniciarApp(options = {}) {
+  const params = new URLSearchParams(window.location.search);
+  const vieneDesdeIndex = options.fromIndex || params.get("start") === "1";
+
+  mostrarCargaBoveda("Preparando la bóveda celeste...");
+
+  let usarModoManualPorDefecto = sessionStorage.getItem("er_manual_mode") === "1";
+
+  /*
+    Si se abre directo boveda.html sin pasar por Index,
+    todavía pedimos permisos acá.
+    Si viene desde Index, NO mostramos textos intermedios,
+    porque los permisos ya se pidieron con el botón Comenzar.
+  */
+  if (!vieneDesdeIndex) {
+    if (
+      typeof DeviceOrientationEvent !== "undefined" &&
+      typeof DeviceOrientationEvent.requestPermission === "function"
+    ) {
+      try {
+        const permisoSensores = await DeviceOrientationEvent.requestPermission();
+
+        if (permisoSensores !== "granted") {
+          usarModoManualPorDefecto = true;
+        }
+      } catch (e) {
+        usarModoManualPorDefecto = true;
+      }
+    }
+  }
+
+  const storedLat = parseFloat(sessionStorage.getItem("er_lat"));
+  const storedLon = parseFloat(sessionStorage.getItem("er_lon"));
+
+  const usarPosicion = async (lat, lon) => {
+    usuarioLat = lat;
+    usuarioLon = lon;
+
+    updateSysInfoText();
+    document.getElementById("sys-info").classList.remove("oculto");
+
+    generarCieloReal();
+
+    currentMissionIndex = 0;
+    actualizarMissionTracker();
+    actualizarInfoCard(getCurrentMission());
+
+    northCalibration = null;
+
+    if ("ondeviceorientationabsolute" in window) {
+      window.addEventListener("deviceorientationabsolute", procesarSensores);
+    } else {
+      window.addEventListener("deviceorientation", procesarSensores);
+    }
+
+    if (usarModoManualPorDefecto) {
+      setManualNavigationEnabled(true, false);
+    }
+
+    await Promise.all([
+  preloadBovedaAssets(),
+  new Promise((resolve) => setTimeout(resolve, 900)),
+]);
+
+detenerLoaderBoveda();
+
+uiLayer.classList.add("oculto");
+
+document.getElementById("compass-container").classList.remove("oculto");
+document.getElementById("compass-pointer").classList.remove("oculto");
+document.getElementById("orientation-panel").classList.remove("oculto");
+
+const skyControls = document.getElementById("sky-controls");
+if (skyControls) skyControls.classList.remove("oculto");
+  };
+
+  if (Number.isFinite(storedLat) && Number.isFinite(storedLon)) {
+    usarPosicion(storedLat, storedLon);
+    return;
+  }
+
+  if (!navigator.geolocation) {
+    usarModoManualPorDefecto = true;
+    usarPosicion(-34.91, -56.17);
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      sessionStorage.setItem("er_lat", String(pos.coords.latitude));
+      sessionStorage.setItem("er_lon", String(pos.coords.longitude));
+
+      usarPosicion(pos.coords.latitude, pos.coords.longitude);
+    },
+    () => {
+      /*
+        Fallback Montevideo.
+        La experiencia sigue funcionando en modo manual.
+      */
+      usarModoManualPorDefecto = true;
+      sessionStorage.setItem("er_manual_mode", "1");
+
+      usarPosicion(-34.91, -56.17);
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 9000,
+      maximumAge: 60000,
+    }
+  );
+}
+
+  function azimuthToDirection(azimuth) {
+    const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
+    return dirs[Math.round((((azimuth % 360) + 360) % 360) / 45) % 8];
+  }
+function shortestAngleDiff(from, to) {
+  let diff = to - from;
+  while (diff > 180) diff -= 360;
+  while (diff < -180) diff += 360;
+  return diff;
+}
+  function directionToIndex(dir) {
+    return ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'].indexOf(dir);
+  }
+function getAzAltFromWorldPosition(pos) {
+  const dir = pos.clone()
+    .sub(camera.position)
+    .normalize();
+
+  let azimuth = THREE.MathUtils.radToDeg(Math.atan2(dir.x, -dir.z));
+  azimuth = (azimuth + 360) % 360;
+
+  const altitude = THREE.MathUtils.radToDeg(Math.asin(dir.y));
+
+  return {
+    azimuth,
+    altitude,
+    direction: azimuthToDirection(azimuth)
+  };
+}
+  function getObserverLookFromCamera() {
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+
+    let azimuth = THREE.MathUtils.radToDeg(Math.atan2(dir.x, -dir.z));
+    azimuth = (azimuth + 360) % 360;
+
+    const altitude = THREE.MathUtils.radToDeg(Math.asin(dir.y));
+
+    return {
+      azimuth,
+      altitude,
+      direction: azimuthToDirection(azimuth)
+    };
+  }
+function worldToScreen(pos) {
+  const projected = pos.clone().project(camera);
+
+  const cameraForward = new THREE.Vector3();
+  camera.getWorldDirection(cameraForward);
+
+  const toTarget = pos.clone()
+    .sub(camera.position)
+    .normalize();
+
+  const inFront = cameraForward.dot(toTarget) > 0.02;
+
+  const inFrustum =
+    projected.x >= -1 &&
+    projected.x <= 1 &&
+    projected.y >= -1 &&
+    projected.y <= 1 &&
+    projected.z >= -1 &&
+    projected.z <= 1;
+
+  return {
+    x: (projected.x * 0.5 + 0.5) * window.innerWidth,
+    y: (-projected.y * 0.5 + 0.5) * window.innerHeight,
+    z: projected.z,
+    inFront,
+    inFrustum,
+    isVisible: inFront && inFrustum
+  };
+}
+  function actualizarPanelOrientaciones() {
+  const look = getObserverLookFromCamera();
+
+  lookDirectionVal.textContent = look.direction;
+  lookAzimuthVal.textContent = `${look.azimuth.toFixed(1)}°`;
+  lookAltitudeVal.textContent = `${look.altitude.toFixed(1)}°`;
+  northRefVal.textContent = northCalibration != null ? `${northCalibration.toFixed(1)}°` : '--';
+
+  // =========================
+  // BRÚJULA INFERIOR FLUIDA
+  // =========================
+
+  if (compassAzimuthVisual === null) {
+    compassAzimuthVisual = look.azimuth;
+  }
+
+  // suavizado angular
+  const diff = shortestAngleDiff(compassAzimuthVisual, look.azimuth);
+  compassAzimuthVisual += diff * 0.14;
+  compassAzimuthVisual = (compassAzimuthVisual + 360) % 360;
+
+  // Conversión de azimut a píxeles:
+  // 45° = 64px
+  const pxPerDegree = COMPASS_STEP / 45;
+
+  // Usamos la segunda vuelta (la del medio) para que siempre haya margen
+  // + COMPASS_STEP/2 centra la letra exactamente en la flecha
+  const x = -(
+    COMPASS_CYCLE_WIDTH +               // segunda vuelta
+    (compassAzimuthVisual * pxPerDegree) +
+    (COMPASS_STEP / 2)                  // centra la letra en la flecha
+  );
+
+  if (compassStrip) {
+    compassStrip.style.transform = `translateX(${x}px)`;
+  }
+}
+function setMissionStarVisual(astro, useStarIcon) {
+  if (!astro || !astro.mesh || astro.extra || !missionStarSprite) return;
+
+  const mesh = astro.mesh;
+
+  if (useStarIcon) {
+    // Guardamos cuál estrella está convertida
+    missionStarMesh = mesh;
+
+    // Ocultamos visualmente la bolita original, pero sin eliminarla
+    // para que siga funcionando la posición y la lógica.
+    if (mesh.material) {
+      mesh.material.transparent = true;
+      mesh.material.opacity = 0;
+      mesh.material.needsUpdate = true;
+    }
+
+    // Ponemos el ícono ★ exactamente donde está ESA estrella
+    missionStarSprite.position.copy(mesh.position);
+    missionStarSprite.visible = true;
+
+    mesh.userData.isStarIcon = true;
+  } else {
+    // Restauramos la estrella original
+    if (mesh.material) {
+      mesh.material.transparent = true;
+      mesh.material.opacity = 1;
+      mesh.material.needsUpdate = true;
+    }
+
+    // Si la estrella que sale era la convertida, ocultamos el sprite
+    if (missionStarMesh === mesh) {
+      missionStarSprite.visible = false;
+      missionStarMesh = null;
+    }
+
+    mesh.userData.isStarIcon = false;
+  }
+}
+
+
+
+function actualizarConectorInfoCard() {
+  const svg = document.getElementById('info-connector-layer');
+  const path = document.getElementById('info-connector-path');
+  const scanner = document.getElementById('scanner-ui');
+  const card = document.getElementById('star-info-card');
+
+  if (!svg || !path || !scanner || !card) return;
+
+  const scannerRect = scanner.getBoundingClientRect();
+  const cardRect = card.getBoundingClientRect();
+
+  // Centro superior del aro del scanner
+  const startX = scannerRect.left + scannerRect.width / 2;
+  const startY = scannerRect.top;
+
+  // Entrada a la card por el lado izquierdo, alineada al cuerpo de datos
+  const endX = cardRect.left;
+  const endY = cardRect.top + cardRect.height * 0.66;
+
+  // Primero sube, después va hacia la izquierda, baja/sube y entra a la card
+  const verticalUp = Math.max(72, Math.min(180, startY - cardRect.bottom + 40));
+  const midY = startY - verticalUp;
+  const midX = cardRect.left - 26;
+
+  const d = [
+    `M ${startX} ${startY}`,
+    `V ${midY}`,
+    `H ${midX}`,
+    `V ${endY}`,
+    `H ${endX}`
+  ].join(' ');
+
+  svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`);
+  svg.setAttribute('width', window.innerWidth);
+  svg.setAttribute('height', window.innerHeight);
+  path.setAttribute('d', d);
+
+  const len = path.getTotalLength();
+  svg.style.setProperty('--connector-length', len);
+}
+
+function mostrarInfoEstrella() {
+  const card = document.getElementById('star-info-card');
+  const connector = document.getElementById('info-connector-layer');
+
+  if (!card || !connector) return;
+
+  clearTimeout(infoCardRevealTimeout);
+
+  // La card tiene que dejar de estar hidden ANTES de medirla.
+  // Pero todavía no mostramos la .star-card porque aparece recién con .visible.
+  card.classList.remove('hidden', 'visible');
+  connector.classList.remove('hidden', 'revealing');
+
+  actualizarConectorInfoCard();
+
+  // Reinicia la animación del SVG
+  void connector.offsetWidth;
+
+  connector.classList.add('revealing');
+
+  infoCardRevealTimeout = setTimeout(() => {
+    card.classList.add('visible');
+  }, 380);
+}
+
+function ocultarInfoEstrella() {
+  const card = document.getElementById('star-info-card');
+  const connector = document.getElementById('info-connector-layer');
+
+  clearTimeout(infoCardRevealTimeout);
+
+  if (card) {
+    card.classList.remove('visible');
+    card.classList.add('hidden');
+  }
+
+  if (connector) {
+    connector.classList.remove('revealing');
+    connector.classList.add('hidden');
+  }
+
+  infoCardShown = false;
+}
+
+
+function actualizarCargaCaptura(insideCircle) {
+  const scannerProgress = document.getElementById('scanner-progress');
+
+  if (!scannerProgress) return;
+
+  if (insideCircle && !captureCompleted) {
+    if (captureStartTime === null) {
+      captureStartTime = performance.now();
+      scannerUi.classList.add('capturing');
+    }
+
+    const elapsed = performance.now() - captureStartTime;
+    captureProgress = Math.min(elapsed / CAPTURE_DURATION, 1);
+
+    scannerProgress.style.setProperty('--progress', captureProgress * 100);
+    if (captureProgress >= 0.25 && !infoCardShown) {
+      actualizarInfoCard(getCurrentMission());
+      mostrarInfoEstrella();
+      infoCardShown = true;
+    }
+
+if (captureProgress >= 1) {
+  captureCompleted = true;
+  scannerUi.classList.remove('capturing');
+  scannerUi.classList.add('capture-complete');
+
+  completarMisionActual();
+}
+ } else if (!insideCircle) {
+  captureStartTime = null;
+  captureProgress = 0;
+  captureCompleted = false;
+
+  scannerUi.classList.remove('capturing');
+  scannerUi.classList.remove('capture-complete');
+  scannerProgress.style.setProperty('--progress', 0);
+
+  ocultarInfoEstrella();
+}
+}
+function getCurrentMission() {
+  return missionStars[currentMissionIndex] ?? null;
+}
+
+function getCurrentMissionAstro() {
+  const mission = getCurrentMission();
+  if (!mission) return null;
+
+  return astrosDinamicos.find(
+    astro => astro.id === mission.id && astro.tipoRef === 'estrella'
+  );
+}
+
+function actualizarInfoCard(mission) {
+  if (!mission) return;
+
+  const title = document.getElementById('star-card-title');
+  const code = document.getElementById('star-card-code');
+  const year = document.getElementById('star-card-year');
+  const ra = document.getElementById('star-card-ra');
+  const dec = document.getElementById('star-card-dec');
+  const gmag = document.getElementById('star-card-gmag');
+  const gaia = document.getElementById('star-card-gaia');
+
+  if (title) title.textContent = mission.title;
+  if (code) code.textContent = mission.code;
+  if (year) year.textContent = mission.year;
+  if (ra) ra.textContent = mission.raText;
+  if (dec) dec.textContent = mission.decText;
+  if (gmag) gmag.textContent = mission.gmagText;
+  if (gaia) gaia.textContent = mission.gaiaText;
+  ajustarTextoCard();
+}
+
+function actualizarMissionTracker() {
+  const items = document.querySelectorAll('#mission-tracker .tracker-item');
+
+  items.forEach((item, index) => {
+    item.classList.toggle('completed', index < currentMissionIndex);
+    item.classList.toggle('active', index === currentMissionIndex);
+  });
+}
+let missionRevealObserver = null;
+
+async function abrirModalMision(mission) {
+  const modal = document.getElementById('mission-modal');
+  const scroll = document.getElementById('mission-detail-scroll');
+  const heroImg = document.getElementById('mission-hero-img');
+  const body = document.getElementById('mission-detail-body');
+
+  if (!modal || !mission) return;
+
+  /*
+    Limpieza inmediata para evitar que se vea la imagen
+    anterior mientras carga la nueva pantalla.
+  */
+  if (heroImg) {
+    heroImg.onload = null;
+    heroImg.onerror = null;
+    heroImg.removeAttribute('src');
+    heroImg.alt = '';
+  }
+
+  if (body) {
+    body.innerHTML = '';
+  }
+
+  /*
+    Si todavía no terminó la precarga, esperamos esta misión.
+    Como ya preloadAllMissionImages corre al inicio, normalmente
+    esto debería ser instantáneo.
+  */
+  await preloadMissionImages(mission);
+
+  renderMissionDetail(mission);
+const continueBtn = document.getElementById('mission-modal-continue');
+
+if (continueBtn) {
+  if (mission.id === 'scga1950') {
+continueBtn.innerHTML = 'CONTENIDO&nbsp;DESCARGABLE';
+    continueBtn.classList.add('is-downloadable-content');
+  } else {
+    continueBtn.textContent = 'VOLVER';
+    continueBtn.classList.remove('is-downloadable-content');
+  }
+}
+  modal.classList.remove('hidden');
+  document.body.classList.add('mission-modal-open');
+
+  ER.api.track(ER.EVENTS.view_content, { mission: mission.id });
+
+  if (scroll) scroll.scrollTop = 0;
+}
+
+function cerrarModalMision() {
+  const modal = document.getElementById('mission-modal');
+
+  if (modal) modal.classList.add('hidden');
+
+  document.body.classList.remove('mission-modal-open');
+}
+
+function renderMissionDetail(mission) {
+  const detail = mission.detail;
+  const root = document.getElementById('mission-detail');
+  const hero = document.querySelector('.mission-hero');
+  const heroImg = document.getElementById('mission-hero-img');
+  const title = document.getElementById('mission-detail-title');
+  const body = document.getElementById('mission-detail-body');
+
+  if (!detail || !root || !hero || !heroImg || !title || !body) return;
+
+  const [a, b, c] = detail.theme || ['#b86a38', '#3a78bd', '#1b1b24'];
+
+  root.style.setProperty('--nebula-a', a);
+  root.style.setProperty('--nebula-b', b);
+  root.style.setProperty('--nebula-c', c);
+
+  title.textContent = detail.title || mission.title;
+
+  hero.classList.remove('has-image');
+
+  heroImg.onload = null;
+  heroImg.onerror = null;
+  heroImg.removeAttribute('src');
+  heroImg.alt = '';
+
+  body.innerHTML = '';
+
+  if (detail.hero) {
+    const preloaded = preloadedMissionImages.get(detail.hero);
+
+    heroImg.onload = () => {
+      hero.classList.add('has-image');
+    };
+
+    heroImg.onerror = () => {
+      hero.classList.remove('has-image');
+      heroImg.removeAttribute('src');
+    };
+
+    heroImg.alt = detail.title || mission.title;
+    heroImg.src = preloaded ? preloaded.src : detail.hero;
+
+    if (preloaded) {
+      hero.classList.add('has-image');
+    }
+  }
+
+  (detail.sections || []).forEach((section) => {
+    body.appendChild(createMissionSection(section));
+  });
+
+  setupMissionReveal();
+}
+
+function createMissionSection(section) {
+  if (section.type === 'intro') {
+  const el = document.createElement('section');
+  el.className = 'mission-block compact reveal';
+
+  const paragraphs = section.paragraphs || [];
+  const lineUntil = Number.isFinite(section.lineUntil)
+    ? section.lineUntil
+    : paragraphs.length;
+
+  const linedParagraphs = paragraphs.slice(0, lineUntil);
+  const freeParagraphs = paragraphs.slice(lineUntil);
+
+  el.innerHTML = `
+    <h2 class="mission-headline">${section.headline || ''}</h2>
+
+    ${
+      linedParagraphs.length
+        ? `<div class="mission-copy-line">
+            ${linedParagraphs.map(p => `<p class="mission-copy">${p}</p>`).join('')}
+          </div>`
+        : ''
+    }
+
+    ${
+      freeParagraphs.length
+        ? `<div class="mission-copy-free">
+            ${freeParagraphs.map(p => `<p class="mission-copy">${p}</p>`).join('')}
+          </div>`
+        : ''
+    }
+  `;
+
+  return el;
+}
+
+  if (section.type === 'image') {
+  const el = document.createElement('div');
+
+  el.className = `mission-img${section.tall ? ' tall' : ''}${section.portrait ? ' portrait' : ''} reveal`;
+
+  el.style.setProperty('--img-bg', section.bg || '#000');
+  el.style.setProperty('--img-position', section.position || 'center center');
+  el.style.setProperty('--img-scale', section.scale || '1.035');
+  el.style.setProperty('--img-origin', section.origin || 'center center');
+
+  if (section.ratio) {
+    el.style.setProperty('--img-ratio', section.ratio);
+  }
+
+  const img = document.createElement('img');
+  const preloaded = preloadedMissionImages.get(section.src);
+
+  img.alt = '';
+  img.src = preloaded ? preloaded.src : section.src;
+
+  img.onerror = () => el.remove();
+
+  el.appendChild(img);
+
+  return el;
+}
+
+  if (section.type === 'inline-map') {
+  const el = document.createElement('section');
+  el.className = 'mission-inline-grid reveal';
+
+  const title = document.createElement('h3');
+  title.className = 'mission-inline-title';
+  title.textContent = section.title || '';
+
+  const map = document.createElement('div');
+  map.className = 'mission-mini-map';
+
+  const img = document.createElement('img');
+  const preloaded = preloadedMissionImages.get(section.src);
+
+  img.alt = section.title || '';
+  img.src = preloaded ? preloaded.src : section.src;
+
+  img.onerror = () => img.remove();
+
+  map.appendChild(img);
+  el.appendChild(title);
+  el.appendChild(map);
+
+  return el;
+}
+
+  if (section.type === 'vector') {
+    const el = document.createElement('section');
+    el.className = `mission-block${section.blue ? ' mission-blue' : ''} reveal`;
+
+    const headline = section.headline
+      ? `<h2 class="mission-headline${section.centerHeadline ? ' center' : ''}">${section.headline}</h2>`
+      : '';
+
+    el.innerHTML = `
+      ${headline}
+      <div class="mission-vector">
+        ${(section.items || []).map((item, index) => {
+          const cls = index === 0 || item.includes('<strong>') ? 'mission-vector-item' : 'mission-vector-item no-star';
+          return `<p class="${cls}">${item}</p>`;
+        }).join('')}
+      </div>
+    `;
+
+    return el;
+  }
+
+  if (section.type === 'quote') {
+    const el = document.createElement('section');
+    el.className = 'mission-quote reveal';
+
+    el.innerHTML = (section.paragraphs || [])
+      .map(p => `<p>${p}</p>`)
+      .join('');
+
+    return el;
+  }
+
+  if (section.type === 'spacer') {
+    const el = document.createElement('div');
+    el.className = 'mission-spacer-lg reveal';
+    return el;
+  }
+
+  return document.createElement('div');
+}
+
+function setupMissionReveal() {
+  const scroll = document.getElementById('mission-detail-scroll');
+  if (!scroll) return;
+
+  if (missionRevealObserver) missionRevealObserver.disconnect();
+
+  missionRevealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-visible');
+        missionRevealObserver.unobserve(entry.target);
+      }
+    });
+  }, {
+    root: scroll,
+    threshold: 0.12,
+    rootMargin: '0px 0px -8% 0px'
+  });
+
+ scroll.querySelectorAll('.reveal').forEach((el, index) => {
+  el.style.transitionDelay = `${Math.min(index * 90, 520)}ms`;
+  missionRevealObserver.observe(el);
+});
+}
+const missionModalClose = document.getElementById('mission-modal-close');
+
+if (missionModalClose) {
+  missionModalClose.addEventListener('click', avanzarASiguienteMision);
+}
+function avanzarASiguienteMision() {
+const mission = getCurrentMission();
+
+if (mission && mission.id === 'scga1950') {
+  const modal = document.getElementById('mission-modal');
+
+  if (modal) {
+    modal.classList.add('hidden');
+    document.body.classList.remove('mission-modal-open');
+  }
+
+  openPosterScreen('1950');
+  return;
+}
+  cerrarModalMision();
+
+  currentMissionIndex = Math.min(currentMissionIndex + 1, missionStars.length);
+  actualizarMissionTracker();
+
+  pendingMissionAdvance = false;
+
+  captureStartTime = null;
+  captureProgress = 0;
+  captureCompleted = false;
+
+  const scannerProgress = document.getElementById('scanner-progress');
+  if (scannerProgress) scannerProgress.style.setProperty('--progress', 0);
+
+  scannerUi.classList.remove('capturing');
+  scannerUi.classList.remove('capture-complete');
+  scannerUi.classList.remove('locked-preview');
+
+  if (missionStarMesh && missionStarSprite) {
+    if (missionStarMesh.material) {
+      missionStarMesh.material.opacity = 1;
+      missionStarMesh.material.needsUpdate = true;
+    }
+
+    missionStarSprite.visible = false;
+    missionStarMesh.userData.isStarIcon = false;
+    missionStarMesh = null;
+  }
+
+  ocultarInfoEstrella();
+}
+function completarMisionActual() {
+  const mission = getCurrentMission();
+  if (!mission || pendingMissionAdvance) return;
+
+  pendingMissionAdvance = true;
+
+  actualizarInfoCard(mission);
+  mostrarInfoEstrella();
+
+  scannerUi.classList.remove('capturing');
+  scannerUi.classList.add('capture-complete');
+
+  abrirModalMision(mission);
+}
+function actualizarGuiaVisual() {
+  if (pendingMissionAdvance) {
+    guideArrow.style.opacity = '0';
+    return;
+  }
+
+  const target = getCurrentMissionAstro();
+
+  if (!target || !target.mesh) {
+    guideArrow.style.opacity = '0';
+    scannerUi.classList.remove('locked-preview');
+    actualizarCargaCaptura(false);
+    setMissionStarVisual(target, false);
+    return;
+  }
+
+  const screen = worldToScreen(target.mesh.position);
+  const centerX = window.innerWidth / 2;
+  const centerY = window.innerHeight / 2;
+
+  const dx = screen.x - centerX;
+  const dy = screen.y - centerY;
+  const dist = Math.hypot(dx, dy);
+
+  /*
+    Solo capturamos si está realmente delante de la cámara.
+    Esto evita que se active en el lado opuesto de la bóveda.
+  */
+  const insideCircle = screen.isVisible && dist <= 54;
+
+  scannerUi.classList.toggle('locked-preview', insideCircle);
+  setMissionStarVisual(target, insideCircle);
+  actualizarCargaCaptura(insideCircle);
+
+  if (missionStarSprite && missionStarSprite.visible && missionStarMesh) {
+    missionStarSprite.position.copy(missionStarMesh.position);
+  }
+
+  /*
+    Si la estrella está detrás de la cámara, no usamos la proyección
+    invertida. Mostramos una guía lateral simple para girar.
+  */
+  if (!screen.inFront) {
+    const look = getObserverLookFromCamera();
+    const targetLook = getAzAltFromWorldPosition(target.mesh.position);
+
+    const deltaAz = shortestAngleDiff(look.azimuth, targetLook.azimuth);
+    const angle = deltaAz > 0 ? 90 : -90;
+    guideArrow.classList.remove('is-near-target');
+    guideArrow.style.opacity = '0.92';
+
+    guideArrow.style.transform =
+      `translate(-50%, -50%) rotate(${angle}deg) translateY(-${GUIDE_ARROW_RADIUS}px)`;
+
+    return;
+  }
+
+  const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+  /*
+    Opacidad según cercanía:
+    lejos = 1
+    cerca = 0
+  */
+  const arrowOpacity = getGuideArrowOpacity(dist);
+
+  guideArrow.classList.toggle('is-near-target', arrowOpacity <= 0.03);
+  guideArrow.style.opacity = String(arrowOpacity);
+
+  guideArrow.style.transform =
+    `translate(-50%, -50%) rotate(${angle}deg) translateY(-${GUIDE_ARROW_RADIUS}px)`;
+}
+function actualizarFondoBoveda(altitude) {
+  const container = document.getElementById('canvas-container');
+  if (!container) return;
+
+  /*
+    altitude:
+    +90 = zenit
+    0   = horizonte
+    -90 = nadir
+
+    Queremos:
+    - zenit: centro del disco visible en pantalla
+    - horizonte: centro del disco más arriba
+    - nadir: ver más del disco completo / bordes
+  */
+
+  const minAlt = -90;
+  const maxAlt = 90;
+
+  const t = THREE.MathUtils.clamp(
+    (altitude - minAlt) / (maxAlt - minAlt),
+    0,
+    1
+  );
+
+  /*
+    Interpolaciones:
+    t=0   => nadir
+    t=0.5 => horizonte
+    t=1   => zenit
+  */
+
+  // posición vertical del centro del disco
+  const nadirY = 30;
+  const horizonY = -42;
+  const zenithY = 0;
+
+  let targetY;
+  if (t < 0.5) {
+    const tt = t / 0.5;
+    targetY = nadirY + (horizonY - nadirY) * tt;
+  } else {
+    const tt = (t - 0.5) / 0.5;
+    targetY = horizonY + (zenithY - horizonY) * tt;
+  }
+
+  // escala del disco:
+  // más chico en nadir para que se vean más bordes
+  // más grande en horizonte
+  // intermedio en zenit
+  const nadirScale = 1.12;
+  const horizonScale = 2.15;
+  const zenithScale = 1.35;
+
+  let targetScale;
+  if (t < 0.5) {
+    const tt = t / 0.5;
+    targetScale = nadirScale + (horizonScale - nadirScale) * tt;
+  } else {
+    const tt = (t - 0.5) / 0.5;
+    targetScale = horizonScale + (zenithScale - horizonScale) * tt;
+  }
+
+  // inclinación visual para simular curvatura
+  const nadirTilt = -68;
+  const horizonTilt = 0;
+  const zenithTilt = 68;
+
+  let targetTilt;
+  if (t < 0.5) {
+    const tt = t / 0.5;
+    targetTilt = nadirTilt + (horizonTilt - nadirTilt) * tt;
+  } else {
+    const tt = (t - 0.5) / 0.5;
+    targetTilt = horizonTilt + (zenithTilt - horizonTilt) * tt;
+  }
+
+  // suavizado
+  if (domeY === null) domeY = targetY;
+  else domeY += (targetY - domeY) * 0.08;
+
+  if (domeScale === null) domeScale = targetScale;
+  else domeScale += (targetScale - domeScale) * 0.08;
+
+  if (domeTilt === null) domeTilt = targetTilt;
+  else domeTilt += (targetTilt - domeTilt) * 0.08;
+
+  container.style.setProperty('--dome-y', `${domeY.toFixed(2)}vh`);
+  container.style.setProperty('--dome-scale', domeScale.toFixed(3));
+  container.style.setProperty('--dome-tilt', `${domeTilt.toFixed(2)}deg`);
+}
+  function actualizarCamaraYUI() {
+  let forward = null;
+
+  if (manualNavigationEnabled) {
+    const targetDir = azAltToVector(manualAzimuth, manualAltitude, 10);
+
+    camera.position.set(0, 0, 0);
+    camera.up.set(0, 1, 0);
+    camera.lookAt(targetDir);
+
+    forward = targetDir.clone().normalize();
+  } else {
+    if (!brujulaDetectada) return;
+
+    const alphaRad = brujulaDetectada
+      ? THREE.MathUtils.degToRad(360 - headingOffset)
+      : THREE.MathUtils.degToRad(currentAlpha);
+
+    const betaRad = THREE.MathUtils.degToRad(currentBeta || 0);
+    const gammaRad = THREE.MathUtils.degToRad(currentGamma || 0);
+    const screenRot = window.orientation ? THREE.MathUtils.degToRad(window.orientation) : 0;
+
+    const qDispositivo = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(betaRad, alphaRad, -gammaRad, 'YXZ')
+    );
+
+    qDispositivo.multiply(
+      new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5))
+    );
+
+    qDispositivo.multiply(
+      new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 0, 1),
+        -screenRot
+      )
+    );
+
+    forward = new THREE.Vector3(0, 0, -1)
+      .applyQuaternion(qDispositivo)
+      .normalize();
+
+    let azimuth = THREE.MathUtils.radToDeg(Math.atan2(forward.x, -forward.z));
+    azimuth = normalizeDegrees(azimuth);
+
+    const altitude = THREE.MathUtils.radToDeg(Math.asin(forward.y));
+
+    const targetDir = azAltToVector(azimuth, altitude, 10);
+
+    camera.position.set(0, 0, 0);
+    camera.up.set(0, 1, 0);
+    camera.lookAt(targetDir);
+  }
+
+  if (forward && horizonShadow) {
+    if (forward.y < 0.1) {
+      let opacidadSombra = 1.0 - ((forward.y + 0.2) / 0.3);
+      if (opacidadSombra > 1) opacidadSombra = 1;
+      if (opacidadSombra < 0) opacidadSombra = 0;
+      horizonShadow.style.opacity = opacidadSombra;
+    } else {
+      horizonShadow.style.opacity = 0;
+    }
+  }
+
+  actualizarPanelOrientaciones();
+  actualizarGuiaVisual();
+}
+
+  function verificarIntersecciones() {
+    raycaster.setFromCamera(centerScreen, camera);
+    const colisiones = raycaster.intersectObjects(objetosInteractivos.filter(obj => obj.visible));
+    if (colisiones.length > 0) {
+      const objetivo = colisiones[0].object;
+
+      if (objetoEnfocado !== objetivo) {
+        if (objetoEnfocado) objetoEnfocado.scale.set(1, 1, 1);
+        objetoEnfocado = objetivo;
+        objetoEnfocado.scale.set(1.5, 1.5, 1.5);
+      }
+
+      // Ocultamos el círculo visual de captura
+        hoverRing.visible = false;
+
+     hudName.innerText = objetivo.userData.nombre;
+hudDesc.innerText = objetivo.userData.tipo;
+
+// Las estrellas de misión usan la card grande, no la pill chica.
+hud.style.opacity = objetivo.userData.mission ? 0 : 0.85;
+
+} else {
+      if (objetoEnfocado) {
+        objetoEnfocado.scale.set(1, 1, 1);
+        objetoEnfocado = null;
+      }
+      hoverRing.visible = false;
+      hud.style.opacity = 0;
+    }
+  }
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  resizeDomeBackground();
+  renderDomeBackground();
+}
+  function animar() {
+    requestAnimationFrame(animar);
+    actualizarCamaraYUI();
+     if (domeBackgroundEnabled) {
+    renderDomeBackground();
+  }
+    verificarIntersecciones();
+     renderDomeBackground();
+    renderer.render(scene, camera);
+  }
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  if (domeBackgroundEnabled) {
+    resizeDomeBackground();
+    renderDomeBackground(true);
+  }
+
+  actualizarConectorInfoCard();
+  window.addEventListener('resize', fitSysInfoLayout);
+window.addEventListener('orientationchange', () => {
+  setTimeout(fitSysInfoLayout, 250);
+});
+});
+const missionModalContinue = document.getElementById('mission-modal-continue');
+
+if (missionModalContinue) {
+  missionModalContinue.addEventListener('click', avanzarASiguienteMision);
+}
+ER.api.track(ER.EVENTS.page_view, { page: 'boveda' });
+
+setupSkyControls();
+preloadBovedaAssets();
+setupPosterScreen();
+init3D();
+const params = new URLSearchParams(window.location.search);
+
+if (params.get("start") === "1") {
+  iniciarApp({ fromIndex: true });
+}
+
+// En modo offline se conserva boveda-offline.html?start=1 en la URL.
+</script>
+</body>
+</html>
